@@ -24,6 +24,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+
+      # Stamp every script and stylesheet address with this commit, so browsers (which may keep
+      # files for up to 10 minutes) never run an older copy after a deploy.
+      - name: Stamp asset versions
+        run: sed -i "s/?v=dev/?v=${GITHUB_SHA::8}/g" dashboard/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dashboard
