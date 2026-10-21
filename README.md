@@ -10,7 +10,7 @@ A wall display for an always-on Android tablet: **Google Calendar**, a **househo
 
 ## What it does
 
-- **Schedule.** What's left today, then the next few days. The event in progress is a solid orange block with a progress bar; one starting within the hour gets a countdown. All-day events become tags, declined events are hidden.
+- **Schedule.** What's left today, then the next few days. **Tap any event for the full details** (complete title, time and duration, full location, video link, calendar and notes). The event in progress is a solid orange block with a progress bar; one starting within the hour gets a countdown. All-day events become tags, declined events are hidden.
 - **To-do list.** Tap to check off. **Checked items stay on screen, struck through, for 24 hours**, then vanish; tap one to bring it back. Add items with the big button, by voice, or from your phone via Google Tasks.
 - **Weather.** Now, the next 6 hours, 5 days, and a plain-English rain outlook. Open-Meteo, no key.
 - **Typefaces.** Five to choose from in Settings (Bricolage, Fraunces, Archivo, Space Grotesk, Big Shoulders), self-hosted and previewed live.

@@ -50,7 +50,7 @@ window.Google = (() => {
     const end = new Date(start.getTime() + days * 86400000);
     const q = new URLSearchParams({
       timeMin: start.toISOString(), timeMax: end.toISOString(), singleEvents: 'true', orderBy: 'startTime', maxResults: '100',
-      fields: 'items(id,iCalUID,summary,location,status,eventType,start,end,attendees(self,responseStatus))',
+      fields: 'items(id,iCalUID,summary,description,location,hangoutLink,conferenceData(entryPoints(entryPointType,uri)),status,eventType,start,end,attendees(self,responseStatus))',
     });
     const lists = await Promise.all(cals.map(async (cal) => {
       const res = await call(`${CAL}/calendars/${encodeURIComponent(cal.id)}/events?${q}`);
@@ -65,7 +65,9 @@ window.Google = (() => {
       const allDay = !!(ev.start && ev.start.date);
       const item = {
         id: ev.id, title: ev.summary || '(No title)', location: ev.location || '',
-        calendar: cal.primary ? '' : cal.name, color: cal.color, allDay,
+        calendar: cal.primary ? '' : cal.name, calendarName: cal.name, color: cal.color, allDay,
+        description: (ev.description || '').slice(0, 2000),
+        meet: ev.hangoutLink || (((ev.conferenceData || {}).entryPoints || []).find((e) => e.entryPointType === 'video') || {}).uri || '',
         start: allDay ? ev.start.date : ev.start.dateTime,
         end: allDay ? ev.end.date : ev.end.dateTime,   // all-day end is exclusive, as the display expects
       };

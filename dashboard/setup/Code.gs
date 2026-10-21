@@ -84,6 +84,8 @@ function getEvents_() {
         id: ev.getId(),
         title: ev.getTitle() || '(No title)',
         location: ev.getLocation() || '',
+        description: (ev.getDescription() || '').slice(0, 2000),
+        calendarName: cal.getName(),
         calendar: cal.getName(),
         color: cal.getColor(),
         allDay: allDay,

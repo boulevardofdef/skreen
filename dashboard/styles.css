@@ -353,6 +353,20 @@ body.native .field.native-only { display: flex; }
 .welcome .lede { font-size: 1.3rem; line-height: 1.35; color: var(--muted); margin: 0 0 1rem; }
 .welcome p { font-size: 1.05rem; line-height: 1.5; margin: 0.6rem 0; }
 
+/* Event details */
+.event-sheet { width: min(40rem, 92vw); position: relative; padding-top: 2.4rem; }
+.ev-bar { position: absolute; left: 0; right: 0; top: 0; height: 0.7rem; background: var(--c, var(--accent)); }
+.event-sheet h3 { font-size: 2rem; line-height: 1.12; margin: 0 0 1.2rem; overflow-wrap: anywhere; }
+.ev-rows { display: flex; flex-direction: column; max-height: 52vh; overflow-y: auto; }
+.ev-row { display: grid; grid-template-columns: 6.4rem minmax(0, 1fr); gap: 1rem; padding: 0.85rem 0; border-top: 1px solid var(--rule); }
+.ev-row > b { font: 600 0.78rem/1.6 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.ev-row > div { font-size: 1.15rem; line-height: 1.4; overflow-wrap: anywhere; white-space: pre-wrap; }
+.ev-row small { display: block; font: 400 0.95rem/1.4 var(--mono); color: var(--muted); }
+.ev-row i { display: inline-block; width: 0.7rem; height: 0.7rem; margin-right: 0.5rem; background: var(--c); }
+.event, .pill { cursor: pointer; }
+.event:active { background: var(--wash); }
+.event.now:active { background: #ff7048; }
+
 /* ─── Setup guide ────────────────────────────────────────────────────────── */
 
 .guide { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: 17rem minmax(0, 1fr); background: #0e0d0b; user-select: text; }

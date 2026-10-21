@@ -238,8 +238,12 @@
 
   const normalizeEvent = (e) => (e.allDay ? { ...e, s: parseDate(e.start), e: parseDate(e.end) } : { ...e, s: new Date(e.start), e: new Date(e.end) });
 
+  const evKey = (ev) => `${ev.id}|${ev.start}`;
+  let agendaIndex = new Map();
+
   function renderAgenda() {
     const el = $('agenda');
+    agendaIndex = new Map();
     const now = new Date();
     const today = startOfDay(now);
     const events = state.events.map(normalizeEvent);
@@ -260,7 +264,7 @@
       html += `<div class="day${i >= 2 ? ' later' : ''}">`;
       html += `<div class="day-head"><span class="name">${name}</span><span>${esc(sub)}</span></div>`;
       if (allDay.length) {
-        html += '<div class="allday">' + allDay.map((ev) => `<span class="pill" style="--c:${esc(ev.color || '#e8c887')}">${esc(ev.title)}</span>`).join('') + '</div>';
+        html += '<div class="allday">' + allDay.map((ev) => { agendaIndex.set(evKey(ev), ev); return `<span class="pill" data-key="${esc(evKey(ev))}" style="--c:${esc(ev.color || '#e8c887')}">${esc(ev.title)}</span>`; }).join('') + '</div>';
       }
       if (i === 0 && !timed.length) {
         html += `<div class="empty">${endedToday ? Icons.check : Icons.sunny}${endedToday ? 'That’s everything for today' : 'Nothing scheduled today'}</div>`;
@@ -285,11 +289,69 @@
     const meta = ev.location ? `${Icons.pin}${esc(ev.location.split('\n')[0])}` : ev.calendar ? esc(ev.calendar) : '';
     const progress = running ? `<div class="progress" style="width:${Math.min(100, ((now - ev.s) / (ev.e - ev.s)) * 100).toFixed(1)}%"></div>` : '';
 
-    return `<div class="event${running ? ' now' : ''}" style="--c:${esc(ev.color || '#e8c887')}">
+    agendaIndex.set(evKey(ev), ev);
+    return `<div class="event${running ? ' now' : ''}" data-key="${esc(evKey(ev))}" style="--c:${esc(ev.color || '#e8c887')}">
       <div class="when"><div class="start">${start}</div>${end ? `<div class="end">${end}</div>` : ''}</div>
       <div><div class="title">${esc(ev.title)}${chip}</div>${meta ? `<div class="meta">${meta}</div>` : ''}</div>${progress}
     </div>`;
   }
+
+  // ─── Event details ─────────────────────────────────────────────────────────
+
+  const eventSheet = $('eventSheet');
+  let eventTimer = null;
+
+  // Calendar descriptions are often HTML; turn them into plain text (never into live markup).
+  function plainText(html) {
+    if (!html) return '';
+    const withBreaks = String(html).replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|h\d)>/gi, '\n').replace(/<li[^>]*>/gi, '• ');
+    const doc = new DOMParser().parseFromString(withBreaks, 'text/html');
+    doc.querySelectorAll('script, style').forEach((n) => n.remove());
+    const text = doc.body.textContent || '';
+    return text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+  const durationText = (mins) => (mins < 60 ? `${mins} min` : mins % 60 ? `${Math.floor(mins / 60)} hr ${mins % 60} min` : `${mins / 60} hr`);
+
+  function showEvent(ev) {
+    const longDate = { weekday: 'long', month: 'long', day: 'numeric' };
+    let when;
+    if (ev.allDay) {
+      const last = addDays(ev.e, -1);
+      when = last > ev.s
+        ? `${esc(fmtDate(ev.s, longDate))}<small>to ${esc(fmtDate(last, longDate))} · All day</small>`
+        : `${esc(fmtDate(ev.s, longDate))}<small>All day</small>`;
+    } else {
+      const sameDay = startOfDay(ev.s).getTime() === startOfDay(new Date(ev.e - 1)).getTime();
+      const mins = Math.round((ev.e - ev.s) / 60000);
+      when = sameDay
+        ? `${esc(fmtDate(ev.s, longDate))}<small>${esc(fmtTime(ev.s))} – ${esc(fmtTime(ev.e))} · ${durationText(mins)}</small>`
+        : `${esc(fmtDate(ev.s, longDate))}, ${esc(fmtTime(ev.s))}<small>until ${esc(fmtDate(ev.e, { weekday: 'long', month: 'short', day: 'numeric' }))}, ${esc(fmtTime(ev.e))}</small>`;
+    }
+    const rows = [['When', when]];
+    if (ev.location) rows.push(['Where', esc(ev.location)]);
+    if (ev.meet && ev.meet !== ev.location) rows.push(['Video', esc(ev.meet)]);
+    const cal = ev.calendarName || ev.calendar;
+    if (cal) rows.push(['Calendar', `<i></i>${esc(cal)}`]);
+    const notes = plainText(ev.description);
+    if (notes) rows.push(['Notes', esc(notes)]);
+
+    eventSheet.style.setProperty('--c', ev.color || '#ff5b2e');
+    $('evTitle').textContent = ev.title;
+    $('evRows').innerHTML = rows.map(([k, v]) => `<div class="ev-row" style="--c:${esc(ev.color || '#e8c887')}"><b>${k}</b><div>${v}</div></div>`).join('');
+    if (!eventSheet.open) eventSheet.showModal();
+    $('evRows').scrollTop = 0;
+    // A wall display shouldn't be left showing a pop-up.
+    clearTimeout(eventTimer);
+    eventTimer = setTimeout(() => { if (eventSheet.open) eventSheet.close(); }, 90000);
+  }
+  $('agenda').addEventListener('click', (e) => {
+    const el = e.target.closest('[data-key]');
+    const ev = el && agendaIndex.get(el.dataset.key);
+    if (ev) showEvent(ev);
+  });
+  $('evClose').addEventListener('click', () => eventSheet.close());
+  eventSheet.addEventListener('click', (e) => { if (e.target === eventSheet) eventSheet.close(); });
+  eventSheet.addEventListener('close', () => clearTimeout(eventTimer));
 
   // ─── To-do list ────────────────────────────────────────────────────────────
 
