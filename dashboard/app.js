@@ -8,10 +8,11 @@
     backendUrl: '', secret: '',
     lat: null, lon: null, place: '',
     units: 'fahrenheit', clock: '12',
-    bg: 'auto', photoMinutes: '5',
+    bg: 'auto',
     showcaseMinutes: '5', pixelShift: '1',
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
     dayBrightness: 'system', nightBrightness: '3',
+    signedIn: false, calendarIds: [], taskListId: '', welcomed: false,
   };
   const STORE_KEY = 'skreen-settings';
   const LEGACY_KEY = 'kitchen-dashboard-settings';
@@ -25,7 +26,11 @@
   function saveSettings() { try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch (_) {} }
 
   let cfg = loadSettings();
-  const isDemo = () => !cfg.backendUrl;
+  // Where the data comes from: Google sign-in (Android app), the older Apps Script, or sample data.
+  const canSignIn = () => !!(window.SkreenNative && window.SkreenNative.signIn);
+  const usingGoogle = () => canSignIn() && !!cfg.signedIn;
+  const usingScript = () => !usingGoogle() && !!cfg.backendUrl;
+  const isDemo = () => !usingGoogle() && !usingScript();
 
   // A link like  …/?backend=URL&key=SECRET  configures a device without typing.
   (function importLink() {
@@ -69,7 +74,6 @@
   const state = {
     events: [], tasks: [], weather: null,
     lastSync: null, syncError: null,
-    photosEnabled: false,
     mutating: 0, lastMutation: 0,
     nightDismissedUntil: 0,
     bgKey: '',
@@ -90,6 +94,43 @@
     return data;
   }
 
+  // Android app: ask the native side for a Google access token.
+  const pendingTokens = new Map();
+  let tokenSeq = 0;
+  window.skreenToken = (id, token, err) => {
+    const p = pendingTokens.get(id);
+    if (!p) return;
+    pendingTokens.delete(id);
+    if (token) p.resolve(token); else p.reject(new Error(err || 'no token'));
+  };
+  const nativeToken = (method) => new Promise((resolve, reject) => {
+    const id = ++tokenSeq;
+    pendingTokens.set(id, { resolve, reject });
+    try { NATIVE[method](id); } catch (e) { pendingTokens.delete(id); reject(e); }
+    setTimeout(() => { if (pendingTokens.has(id)) { pendingTokens.delete(id); reject(new Error('timed out')); } }, method === 'signIn' ? 300000 : 30000);
+  });
+  if (NATIVE && NATIVE.getToken) Google.init(() => nativeToken('getToken'));
+
+  // One interface, whichever source is in use.
+  const backend = {
+    async dashboard() {
+      if (usingGoogle()) {
+        const [events, tasks] = await Promise.all([Google.events(cfg.calendarIds, AGENDA_DAYS), Google.tasks(cfg.taskListId)]);
+        return { events, tasks };
+      }
+      const d = await api('dashboard');
+      return { events: d.events || [], tasks: d.tasks || [] };
+    },
+    async addTask(title) {
+      if (usingGoogle()) return Google.addTask(cfg.taskListId, title);
+      return (await api('addTask', { title })).task;
+    },
+    async setDone(id, done) {
+      if (usingGoogle()) return Google.setDone(cfg.taskListId, id, done);
+      return api(done ? 'completeTask' : 'uncompleteTask', { id });
+    },
+  };
+
   async function refreshData() {
     if (isDemo()) {
       state.events = demoEvents();
@@ -99,15 +140,14 @@
       return;
     }
     try {
-      const data = await api('dashboard');
-      state.events = data.events || [];
+      const data = await backend.dashboard();
+      state.events = data.events;
       // Don't clobber the list while a tap is still being saved.
-      if (!state.mutating && Date.now() - state.lastMutation > 4000) state.tasks = data.tasks || [];
-      state.photosEnabled = !!data.photos;
+      if (!state.mutating && Date.now() - state.lastMutation > 4000) state.tasks = data.tasks;
       state.lastSync = new Date();
       state.syncError = null;
     } catch (err) {
-      state.syncError = err.message || String(err);
+      state.syncError = err instanceof Google.AuthError ? 'auth' : (err.message || String(err));
       console.warn('Sync failed', err);
     }
     renderAll();
@@ -295,7 +335,7 @@
     renderTasks();
     showToast(`Done: ${t.title}`, 'Undo', () => restoreTask(t));
     if (isDemo()) return persistDemo();
-    mutate(() => api('completeTask', { id: t.id })).catch(() => {
+    mutate(() => backend.setDone(t.id, true)).catch(() => {
       t.done = false; t.completed = null; renderTasks();
       showToast('Couldn’t save — check your connection');
     });
@@ -307,7 +347,7 @@
     t.completed = null;
     renderTasks();
     if (isDemo()) return persistDemo();
-    mutate(() => api('uncompleteTask', { id: t.id })).catch(() => {
+    mutate(() => backend.setDone(t.id, false)).catch(() => {
       showToast('Couldn’t undo — check your connection');
     });
   }
@@ -318,8 +358,8 @@
       const tmp = { id: 'tmp-' + Math.random().toString(36).slice(2), title, done: false, pending: !isDemo() };
       state.tasks.unshift(tmp);
       if (isDemo()) return;
-      mutate(() => api('addTask', { title }))
-        .then(({ task }) => { Object.assign(tmp, task, { pending: false }); renderTasks(); })
+      mutate(() => backend.addTask(title))
+        .then((task) => { Object.assign(tmp, task, { pending: false }); renderTasks(); })
         .catch(() => {
           state.tasks = state.tasks.filter((x) => x !== tmp);
           renderTasks();
@@ -449,47 +489,19 @@
     return r ? `${r.wet ? Icons.umbrella : Icons.check}${esc(r.text)}` : '';
   }
 
-  // ─── Backgrounds & photos ──────────────────────────────────────────────────
+  // ─── Backgrounds ───────────────────────────────────────────────────────────
 
   function currentBackground() {
-    if (cfg.bg === 'photos') return { photos: state.photosEnabled, art: Backgrounds.forDay(new Date()) };
-    if (cfg.bg !== 'auto' && Backgrounds.byId(cfg.bg)) return { photos: false, art: Backgrounds.byId(cfg.bg) };
-    return { photos: false, art: Backgrounds.forDay(new Date()) };
+    if (cfg.bg !== 'auto' && Backgrounds.byId(cfg.bg)) return Backgrounds.byId(cfg.bg);
+    return Backgrounds.forDay(new Date());
   }
 
   function applyBackground() {
-    const { photos, art } = currentBackground();
-    const key = `${art.id}|${photos}`;
-    if (key === state.bgKey) return;
-    state.bgKey = key;
+    const art = currentBackground();
+    if (art.id === state.bgKey) return;
+    state.bgKey = art.id;
     document.body.dataset.bg = art.id;
     $('bgArt').style.background = art.css;
-    if (photos) {
-      nextPhoto();
-    } else {
-      clearTimeout(photoTimer);
-      document.body.classList.remove('has-photo');
-      for (const id of ['photoA', 'photoB']) { $(id).classList.remove('show'); $(id).style.backgroundImage = ''; }
-    }
-  }
-
-  let photoFront = 'photoA', photoTimer = null;
-  async function nextPhoto() {
-    clearTimeout(photoTimer);
-    photoTimer = setTimeout(nextPhoto, Number(cfg.photoMinutes) * 60000);
-    if (isDemo() || !currentBackground().photos || isNight()) return;
-    try {
-      const { dataUrl } = await api('photo');
-      await new Promise((ok, fail) => { const img = new Image(); img.onload = ok; img.onerror = fail; img.src = dataUrl; });
-      const back = photoFront === 'photoA' ? 'photoB' : 'photoA';
-      const el = $(back), old = $(photoFront);
-      el.style.backgroundImage = `url("${dataUrl}")`;
-      el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-      old.classList.remove('show');
-      setTimeout(() => { if (!old.classList.contains('show')) old.style.backgroundImage = ''; }, 3000);
-      photoFront = back;
-      document.body.classList.add('has-photo');
-    } catch (err) { console.warn('Photo failed', err); }
   }
 
   // ─── Big-screen tour (burn-in protection) ──────────────────────────────────
@@ -614,15 +626,25 @@
     el.className = 'status';
     el.hidden = false;
     if (isDemo()) {
-      el.dataset.go = 'start';
-      el.innerHTML = '<span class="dot"></span>Showing sample data · <u>Set up Skreen →</u>';
+      el.dataset.go = canSignIn() ? 'signin' : 'start';
+      el.innerHTML = canSignIn()
+        ? '<span class="dot"></span>Showing sample data · <u>Sign in with Google →</u>'
+        : '<span class="dot"></span>Showing sample data · <u>Set up Skreen →</u>';
+    } else if (state.syncError === 'auth') {
+      el.classList.add('error');
+      el.dataset.go = 'signin';
+      el.innerHTML = '<span class="dot"></span>Google needs you to sign in again · <u>Sign in</u>';
     } else if (state.syncError) {
       el.classList.add('error');
       el.dataset.go = 'fix';
       el.innerHTML = `<span class="dot"></span>Can’t reach Google right now${state.lastSync ? ` · last updated ${fmtTime(state.lastSync)}` : ''} · <u>Help</u>`;
     } else { el.hidden = true; el.innerHTML = ''; }
   }
-  $('status').addEventListener('click', (e) => openGuide(e.currentTarget.dataset.go));
+  $('status').addEventListener('click', (e) => {
+    const go = e.currentTarget.dataset.go;
+    if (go === 'signin') { startSignIn(); return; }
+    openGuide(go);
+  });
 
   // ─── Toast ─────────────────────────────────────────────────────────────────
 
@@ -634,6 +656,42 @@
     el.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove('show'), 5000);
+  }
+
+  // ─── Google sign-in (Android app) ──────────────────────────────────────────
+
+  async function startSignIn() {
+    if (!canSignIn()) { openGuide('start'); return false; }
+    try {
+      await nativeToken('signIn');
+    } catch (e) {
+      showToast('Sign-in didn’t finish. Tap to try again from Settings.');
+      return false;
+    }
+    Google.forgetCaches();
+    cfg.signedIn = true;
+    cfg.welcomed = true;
+    saveSettings();
+    state.syncError = null;
+    if ($('welcome').open) $('welcome').close();
+    refreshData();
+    return true;
+  }
+
+  function signOut() {
+    try { NATIVE.signOut(); } catch (_) {}
+    Google.forgetCaches();
+    cfg.signedIn = false; cfg.calendarIds = []; cfg.taskListId = '';
+    saveSettings();
+    state.events = []; state.syncError = null;
+    refreshData();
+  }
+
+  const welcome = $('welcome');
+  $('welcomeSignIn').addEventListener('click', () => { startSignIn(); });
+  $('welcomeLater').addEventListener('click', () => { cfg.welcomed = true; saveSettings(); welcome.close(); });
+  function maybeWelcome() {
+    if (canSignIn() && isDemo() && !cfg.welcomed) welcome.showModal();
   }
 
   // ─── Setup guide ───────────────────────────────────────────────────────────
@@ -723,8 +781,7 @@
   function fillBackgroundOptions() {
     $('bgSelect').innerHTML =
       '<option value="auto">Surprise me (changes daily)</option>' +
-      Backgrounds.list.map((b) => `<option value="${b.id}">${esc(b.name)}</option>`).join('') +
-      `<option value="photos">My photos${state.photosEnabled ? '' : ' (needs a Drive folder)'}</option>`;
+      Backgrounds.list.map((b) => `<option value="${b.id}">${esc(b.name)}</option>`).join('');
   }
 
   function openSettings() {
@@ -735,7 +792,37 @@
     $('locResults').innerHTML = '';
     $('testResult').textContent = '';
     settingsSheet.showModal();
+    fillGoogleSection();
   }
+
+  // Android app: show the account, the calendars to choose from, and the to-do list.
+  let calChoices = null, listChoice = null;
+  async function fillGoogleSection() {
+    calChoices = null; listChoice = null;
+    if (!canSignIn()) return;
+    const status = $('acctStatus'), calList = $('calList'), listSel = $('listSelect');
+    $('signInBtn').hidden = usingGoogle();
+    $('signOutBtn').hidden = !usingGoogle();
+    $('calBox').hidden = $('listBox').hidden = !usingGoogle();
+    if (!usingGoogle()) { status.textContent = 'Not signed in. Showing sample data.'; return; }
+    let who = '';
+    try { who = NATIVE.getAccount ? NATIVE.getAccount() : ''; } catch (_) {}
+    status.textContent = who ? `Signed in as ${who}` : 'Signed in';
+    calList.textContent = 'Loading…'; listSel.innerHTML = '';
+    try {
+      const [cals, lists] = await Promise.all([Google.listCalendars(true), Google.listTaskLists()]);
+      const chosen = new Set(Google.chosenCalendars(cals, cfg.calendarIds).map((c) => c.id));
+      calChoices = cals;
+      calList.innerHTML = cals.map((c, i) => `<label class="check"><input type="checkbox" data-i="${i}" ${chosen.has(c.id) ? 'checked' : ''}><i style="background:${esc(c.color)}"></i><span>${esc(c.name)}</span></label>`).join('');
+      const cur = cfg.taskListId || (lists.find((l) => l.title.toLowerCase() === 'household') || {}).id || '';
+      listChoice = lists;
+      listSel.innerHTML = lists.map((l) => `<option value="${esc(l.id)}" ${l.id === cur ? 'selected' : ''}>${esc(l.title)}</option>`).join('');
+    } catch (e) {
+      calList.textContent = 'Couldn’t load your calendars. Check your connection.';
+    }
+  }
+  $('signInBtn').addEventListener('click', async () => { if (await startSignIn()) fillGoogleSection(); });
+  $('signOutBtn').addEventListener('click', () => { signOut(); fillGoogleSection(); });
   $('gearBtn').addEventListener('click', openSettings);
   $('settingsCancel').addEventListener('click', () => settingsSheet.close());
   $('openGuide').addEventListener('click', () => { settingsSheet.close(); openGuide('start'); });
@@ -792,6 +879,12 @@
   form.addEventListener('submit', () => {
     for (const el of form.elements) if (el.name && el.name in cfg) cfg[el.name] = el.value.trim();
     if (draftLoc) Object.assign(cfg, draftLoc);
+    if (calChoices) {
+      cfg.calendarIds = Array.from($('calList').querySelectorAll('input:checked')).map((el) => calChoices[+el.dataset.i].id);
+      if (!cfg.calendarIds.length) cfg.calendarIds = calChoices.filter((c) => c.primary).map((c) => c.id);
+    }
+    if (listChoice && $('listSelect').value) cfg.taskListId = $('listSelect').value;
+    Google.forgetCaches();
     saveSettings();
     state.nightDismissedUntil = 0;
     state.bgKey = '';
@@ -882,6 +975,8 @@
     refreshWeather();
     keepAwake();
     applyBrightness();
+    maybeWelcome();
+    if (!canSignIn()) { $('advanced').open = true; $('advanced').querySelector('summary').textContent = 'Google connection'; }
     setInterval(refreshData, REFRESH_DATA_MS);
     setInterval(refreshWeather, REFRESH_WEATHER_MS);
     if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname !== 'appassets.androidplatform.net') navigator.serviceWorker.register('sw.js').catch(() => {});

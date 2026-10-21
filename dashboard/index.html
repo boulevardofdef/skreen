@@ -15,9 +15,6 @@
 <body data-bg="ink">
   <div id="bg" aria-hidden="true">
     <div class="bg-art" id="bgArt"></div>
-    <div class="bg-photo" id="photoA"></div>
-    <div class="bg-photo" id="photoB"></div>
-    <div class="bg-veil"></div>
     <div class="bg-grain"></div>
   </div>
 
@@ -93,6 +90,17 @@
     </form>
   </dialog>
 
+  <!-- First-run welcome (Android app) -->
+  <dialog class="sheet welcome" id="welcome">
+    <h3>Welcome to Skreen</h3>
+    <p class="lede">Your calendar, your to-do list, the weather and the time, built to be read from across the room.</p>
+    <p>Sign in with Google to show your own calendar and list. Skreen reads your calendars and manages one Google Tasks list. It only talks to Google, and it never copies your data anywhere else.</p>
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="welcomeLater">Look around first</button>
+      <button type="button" class="btn primary" id="welcomeSignIn">Sign in with Google</button>
+    </div>
+  </dialog>
+
   <!-- Settings -->
   <dialog class="sheet settings" id="settingsSheet">
     <form method="dialog" id="settingsForm">
@@ -102,15 +110,34 @@
       </div>
 
       <div class="settings-scroll">
-        <div class="group">Google connection</div>
-        <label class="field">
-          <span>Backend URL <em>from your Apps Script deployment</em></span>
-          <input name="backendUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+        <div class="group native-only">Google account</div>
+        <div class="field native-only">
+          <span id="acctStatus">Not signed in</span>
+          <div class="loc-row">
+            <button type="button" class="btn ghost small" id="signInBtn">Sign in with Google</button>
+            <button type="button" class="btn ghost small" id="signOutBtn" hidden>Sign out</button>
+          </div>
+        </div>
+        <div class="field native-only" id="calBox" hidden>
+          <span>Calendars to show</span>
+          <div class="checks" id="calList"></div>
+        </div>
+        <label class="field native-only" id="listBox" hidden>
+          <span>To-do list</span>
+          <select id="listSelect"></select>
         </label>
-        <label class="field">
-          <span>Secret key</span>
-          <input name="secret" type="text" autocomplete="off" placeholder="The SECRET from Code.gs">
-        </label>
+
+        <details class="adv" id="advanced">
+          <summary>Advanced: connect with a Google script instead <em>(for browsers)</em></summary>
+          <label class="field">
+            <span>Backend URL</span>
+            <input name="backendUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+          </label>
+          <label class="field">
+            <span>Secret key</span>
+            <input name="secret" type="text" autocomplete="off" placeholder="The SECRET from Code.gs">
+          </label>
+        </details>
 
         <div class="group">Weather</div>
         <div class="field">
@@ -135,11 +162,6 @@
         <div class="field-grid">
           <label class="field"><span>Background</span>
             <select name="bg" id="bgSelect"></select></label>
-          <label class="field"><span>Photo changes every</span>
-            <select name="photoMinutes">
-              <option value="2">2 min</option><option value="5">5 min</option>
-              <option value="10">10 min</option><option value="30">30 min</option>
-            </select></label>
         </div>
 
         <div class="group native-only">Brightness <em>this app only</em></div>
@@ -186,6 +208,7 @@
   <div class="toast" id="toast" role="status"></div>
 
   <script src="icons.js"></script>
+  <script src="google.js"></script>
   <script src="backgrounds.js"></script>
   <script src="guide.js"></script>
   <script src="app.js"></script>

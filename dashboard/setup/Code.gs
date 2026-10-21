@@ -2,8 +2,8 @@
  * Skreen — Google Apps Script backend.
  *
  * Runs under your own Google account and hands the wall display a small JSON
- * feed of your calendar, a Google Tasks list, and (optionally) photos from a
- * Google Drive folder. Because it runs as you, there are no OAuth tokens on the
+ * feed of your calendar and a Google Tasks list. Because it runs as you, there
+ * are no OAuth tokens on the
  * tablet that expire overnight.
  *
  * Setup: open the Skreen app → ⚙ Settings → Setup guide.
@@ -27,10 +27,6 @@ const CONFIG = {
 
   // Google Tasks list used as the household to-do list. Created if missing.
   TASK_LIST_NAME: 'Household',
-
-  // Optional: ID of a Google Drive folder full of photos for the background.
-  // It's the last part of the folder's URL: drive.google.com/drive/folders/<ID>
-  PHOTOS_FOLDER_ID: '',
 };
 
 // ─── Web endpoint ────────────────────────────────────────────────────────────
@@ -41,15 +37,13 @@ function doGet(e) {
     if (p.key !== CONFIG.SECRET) return json_({ error: 'unauthorized' });
     switch (p.action) {
       case 'dashboard':
-        return json_({ events: getEvents_(), tasks: getTasks_(), photos: !!CONFIG.PHOTOS_FOLDER_ID });
+        return json_({ events: getEvents_(), tasks: getTasks_() });
       case 'addTask':
         return json_({ task: addTask_(String(p.title || '').trim()) });
       case 'completeTask':
         return json_({ ok: true, result: setTaskDone_(p.id, true) });
       case 'uncompleteTask':
         return json_({ ok: true, result: setTaskDone_(p.id, false) });
-      case 'photo':
-        return json_(getPhoto_());
       default:
         return json_({ ok: true, hello: 'Skreen backend is running.' });
     }
@@ -178,50 +172,8 @@ function setTaskDone_(id, done) {
   return done ? { completed: new Date().toISOString() } : true;
 }
 
-// ─── Photos from a Drive folder ──────────────────────────────────────────────
-
-function photoIds_() {
-  const cache = CacheService.getScriptCache();
-  const cached = cache.get('photoIds');
-  if (cached) return JSON.parse(cached);
-
-  const ids = [];
-  const files = DriveApp.getFolderById(CONFIG.PHOTOS_FOLDER_ID).getFiles();
-  while (files.hasNext() && ids.length < 2000) {
-    const f = files.next();
-    if (/^image\//.test(f.getMimeType())) ids.push(f.getId());
-  }
-  try { cache.put('photoIds', JSON.stringify(ids), 3600); } catch (_) {}
-  return ids;
-}
-
-function getPhoto_() {
-  if (!CONFIG.PHOTOS_FOLDER_ID) return { error: 'no photos folder configured' };
-  const ids = photoIds_();
-  if (!ids.length) return { error: 'folder has no images' };
-  const id = ids[Math.floor(Math.random() * ids.length)];
-  const token = ScriptApp.getOAuthToken();
-
-  // Ask Drive for a screen-sized rendition instead of the full original.
-  const meta = JSON.parse(UrlFetchApp.fetch(
-    'https://www.googleapis.com/drive/v3/files/' + id + '?fields=thumbnailLink',
-    { headers: { Authorization: 'Bearer ' + token } }
-  ).getContentText());
-
-  let blob;
-  if (meta.thumbnailLink) {
-    const url = meta.thumbnailLink.replace(/=s\d+$/, '=s1920');
-    const res = UrlFetchApp.fetch(url, { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
-    if (res.getResponseCode() === 200) blob = res.getBlob();
-  }
-  if (!blob) blob = DriveApp.getFileById(id).getBlob();
-
-  return { id: id, dataUrl: 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes()) };
-}
-
 // Run this once from the editor to grant permissions and check everything works.
 function testSetup() {
   Logger.log('Events: ' + JSON.stringify(getEvents_().slice(0, 5), null, 2));
   Logger.log('Tasks: ' + JSON.stringify(getTasks_(), null, 2));
-  if (CONFIG.PHOTOS_FOLDER_ID) Logger.log('Photos found: ' + photoIds_().length);
 }

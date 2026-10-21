@@ -1,4 +1,4 @@
-/* Skreen setup guide: everything you need, without leaving the app. */
+/* Skreen guide: everything you need, without leaving the app. */
 window.Guide = (() => {
   const sections = [
     {
@@ -6,84 +6,63 @@ window.Guide = (() => {
       html: `
 <h1>Welcome to Skreen</h1>
 <p class="lede">A wall display for the things you glance at all day: the time, the weather, what's on the calendar and what's on the list.</p>
-<h2>How it works</h2>
-<p>Skreen has two parts. This page is the display. A small <b>script that lives in your own Google account</b> hands it your calendar, your to-do list and, if you like, photos. Nothing passes through anyone else's server, and nothing on the tablet expires overnight.</p>
-<p>Until you connect it, you're looking at <b>sample data</b>. Connecting takes about ten minutes and is mostly copy and paste.</p>
-<p><button class="btn primary" data-go="connect">Connect Google →</button><button class="btn ghost" data-go="device">Put it on the tablet</button></p>
+<h2>Getting started</h2>
+<ol>
+  <li><b>Install the Android app</b> on your tablet. <button class="btn ghost small" data-go="device">How →</button></li>
+  <li><b>Sign in with Google.</b> Tap the button, choose your account and allow access. That's all there is to it. <button class="btn ghost small" data-go="signin">What you're allowing →</button></li>
+  <li><b>Pick your city</b> in Settings for the weather, and choose which calendars to show.</li>
+</ol>
+<p>Until you sign in, you're looking at <b>sample data</b>.</p>
 <div class="note">Weather works straight away with no account. You only need to pick your location in Settings.</div>`
     },
     {
-      id: 'connect', title: 'Connect Google',
+      id: 'signin', title: 'Sign in with Google',
       html: `
-<h1>Connect Google</h1>
-<p class="lede">One-time setup. A computer is easier than the tablet for the first three steps.</p>
+<h1>Sign in with Google</h1>
+<p class="lede">One tap, no setup, nothing to copy and paste.</p>
 <ol>
-  <li>Open <b>script.google.com</b>, sign in with the Google account that owns your calendar, and choose <b>New project</b>. Name it <code>Skreen</code>.</li>
-  <li>Copy the script from here, delete everything in the editor, and paste.<br>
-    <button class="btn primary small" data-copy-script>Copy the script</button> <span class="inline-status" data-copy-status></span></li>
-  <li>Near the top, change <code>SECRET</code> to a long random phrase such as <code>purple-toaster-lighthouse-9271</code>. Remember it; you'll enter it in Skreen. To hide some calendars (holidays, sports), list their names in <code>EXCLUDE_CALENDAR_NAMES</code>.</li>
-  <li>In the left sidebar next to <b>Services</b>, click <b>+</b>, choose <b>Google Tasks API</b>, then <b>Add</b>.</li>
-  <li>In the toolbar, pick <code>testSetup</code> from the function menu and click <b>Run</b>. Google asks for permission. You'll see <i>"Google hasn't verified this app"</i>. That's expected, because you wrote it for yourself. Click <b>Advanced</b>, then <b>Go to Skreen (unsafe)</b>, then <b>Allow</b>. The log should list a few of your events and tasks.</li>
-  <li>Click <b>Deploy → New deployment</b>, then the gear icon → <b>Web app</b>. Set <b>Execute as: Me</b> and <b>Who has access: Anyone</b>, then <b>Deploy</b>. Copy the <b>Web app URL</b>; it ends in <code>/exec</code>.</li>
-  <li>In Skreen, tap the faint gear in the bottom-right corner and paste the URL and your secret. Tap <b>Test connection</b>; you should see <b>Connected</b>. Then <b>Save</b>.<br>
-    <button class="btn ghost small" data-open-settings>Open settings</button></li>
+  <li>In the Skreen app, tap <b>Sign in with Google</b> (on the welcome screen, or in Settings).</li>
+  <li>Choose the Google account whose calendar and to-do list you want on the wall.</li>
+  <li>Google shows what Skreen is asking for. Tap <b>Allow</b>.</li>
+  <li>Open <b>Settings</b> (the faint icon in the bottom-right corner). Tick the calendars to show and choose a to-do list.</li>
 </ol>
-<div class="note">"Anyone" sounds scary, but the script only answers requests that include your secret phrase, and it can only reach what you granted in step 5. Pick a long secret and don't share the URL.</div>
-<div class="note warn">Later changes to the script take effect only after <b>Deploy → Manage deployments → ✎ → Version: New version → Deploy</b>. The URL stays the same.</div>`
+<h2>What you're allowing</h2>
+<ul>
+  <li><b>Read your calendars.</b> To show your schedule. Skreen can't change or delete events.</li>
+  <li><b>Manage your tasks.</b> To show your to-do list, add items, and check them off.</li>
+</ul>
+<p>Skreen talks directly to Google from your tablet. Your calendar and tasks aren't sent to us or stored anywhere else.</p>
+<h2>Changing or removing access</h2>
+<ul>
+  <li><b>Switch account:</b> Settings → Sign out, then sign in again.</li>
+  <li><b>Revoke completely:</b> in your Google Account, open <b>Security → Your connections to third-party apps and services</b> and remove Skreen.</li>
+</ul>
+<div class="note">Using a browser instead of the Android app? Browsers connect through a small script in your Google account; see <b>Browser version</b> in the menu.</div>`
     },
     {
       id: 'device', title: 'On the tablet',
       html: `
 <h1>On the tablet</h1>
 <p class="lede">Make it full-screen, always on, and back after a restart.</p>
-<h2>Best: the Skreen Android app</h2>
-<p>A small app that holds this display. It's full-screen, keeps the screen awake, and can <b>dim the screen itself</b> (the best burn-in protection). It loads your live Skreen site, so changes to the site show up on the tablet by themselves, and it keeps working through Wi-Fi drops. It isn't in the Play Store, so you install it directly, which is called sideloading.</p>
+<h2>The Skreen Android app</h2>
+<p>A small app that holds this display. It's full-screen, keeps the screen awake, handles Google sign-in, and can <b>dim the screen itself</b> (the best burn-in protection). It loads your live Skreen site, so changes to the site show up on the tablet by themselves, and it keeps working through Wi-Fi drops.</p>
 <ol>
   <li>On the tablet, open the download in Chrome:<br><a class="btn primary" data-apk href="#" target="_blank" rel="noopener">Download Skreen.apk</a></li>
   <li>Open the downloaded file. Android asks to allow <b>installing unknown apps</b> from Chrome. Allow it, then tap <b>Install</b>.</li>
-  <li>Open <b>Skreen</b>, tap the faint settings icon, paste your backend URL and secret, and pick your city.</li>
+  <li>Open <b>Skreen</b> and sign in with Google.</li>
   <li><i>Optional:</i> press the Home button and choose <b>Skreen → Always</b>. Skreen becomes the tablet's Home screen, so it opens at boot and Home always returns to it.</li>
 </ol>
-<div class="note">You only need to reinstall when the app itself changes (rare). Download the new file and install it over the old one; your settings stay. If the tablet can't reach the site at all (for example, the very first launch while offline), the app shows a built-in copy with sample data and switches to the real thing as soon as it's online.</div>
-<h2>Or: Fully Kiosk Browser</h2>
-<ol>
-  <li>Install <b>Fully Kiosk Browser</b> from the Play Store. The free version is enough.</li>
-  <li>Set the <b>Start URL</b> to this page's address.</li>
-  <li>Turn on <b>Keep Screen On</b> and <b>Launch on Boot</b>. Optionally enable kiosk mode to lock the tablet to this page.</li>
-</ol>
-<h2>Or: Chrome only</h2>
-<ol>
-  <li>Open this page in Chrome, tap <b>⋮ → Add to Home screen</b>, and launch it from that icon for a full-screen view.</li>
-  <li>Set the tablet's screen timeout to <b>Never</b> (or enable <i>Stay awake while charging</i> in Developer options).</li>
-</ol>
-<h2>Use another device</h2>
-<p>Settings live on each device. Typing a long URL on a wall tablet is miserable, so make a link on a computer and send it to the tablet (email it to yourself, for instance). Opening it saves the settings and the secret disappears from the address bar.</p>
-<div class="linkgen">
-  <input id="lgBase" placeholder="Skreen web address (https://you.github.io/skreen/)" autocomplete="off">
-  <input id="lgUrl" placeholder="Backend URL (…/exec)" autocomplete="off">
-  <input id="lgKey" placeholder="Secret key" autocomplete="off">
-  <div class="out" id="lgOut">Fill in both boxes to build your link.</div>
-  <div><button class="btn primary small" data-copy-link>Copy link</button></div>
-</div>
-<div class="note">Anyone with that link can see your calendar and list, so treat it like a password.</div>`
+<div class="note">You only need to reinstall when the app itself changes (rare). If the tablet can't reach the site at all (for example, the very first launch while offline), the app shows a built-in copy with sample data and switches to the real thing as soon as it's online.</div>
+<h2>Without the app</h2>
+<p>Fully Kiosk Browser (Start URL = this page's address, with Keep Screen On) or Chrome's <b>Add to Home screen</b> will display Skreen too, but browsers use the script-based connection; see <b>Browser version</b>.</p>`
     },
     {
-      id: 'look', title: 'Backgrounds & photos',
+      id: 'look', title: 'Backgrounds',
       html: `
-<h1>Backgrounds & photos</h1>
-<p class="lede">Calm, dark backgrounds that change every day, or your own photos.</p>
-<h2>Built-in backgrounds</h2>
+<h1>Backgrounds</h1>
+<p class="lede">Soft, dark colour fields that change every day, so the wall never feels stale and the text stays easy to read.</p>
 <p>Skreen rotates through these, one per day. To pin one, go to <b>Settings → Background</b>.</p>
-<div class="swatches" id="swatches"></div>
-<h2>Your own photos</h2>
-<p>Photos appear as a slow, dimmed, softly blurred background, so the text stays easy to read even if the picture is busy.</p>
-<ol>
-  <li>In Google Drive, create a folder and put your photos in it.</li>
-  <li>Open the folder. The ID is the last part of the address: <code>drive.google.com/drive/folders/<b>THIS-PART</b></code>.</li>
-  <li>In your script, paste it between the quotes of <code>PHOTOS_FOLDER_ID</code>, run <code>testSetup</code> again (Google will ask for Drive permission), then deploy a <b>new version</b>.</li>
-  <li>In Skreen: <b>Settings → Background → My photos</b>.</li>
-</ol>
-<div class="note"><b>About Google Photos:</b> since 2025 Google no longer lets apps browse your Photos library. Download an album and drop it in the Drive folder instead. New pictures show up within about an hour.</div>`
+<div class="swatches" id="swatches"></div>`
     },
     {
       id: 'todo', title: 'The to-do list',
@@ -91,9 +70,9 @@ window.Guide = (() => {
 <h1>The to-do list</h1>
 <p class="lede">Tap to check off. Add from the wall or from your phone.</p>
 <ul>
-  <li><b>It's a Google Tasks list called "Household".</b> Skreen creates it for you. Google Keep has no connection for apps like this one, so Tasks is the closest match.</li>
+  <li><b>It's a Google Tasks list.</b> Choose which one in Settings. A list called "Household" is picked automatically if you have one. Google Keep has no connection for apps like this one, so Tasks is the closest match.</li>
   <li><b>Add from the wall</b> with the big <b>Add to list</b> button. Tap the microphone to dictate, or separate items with commas: <code>eggs, milk, bread</code>.</li>
-  <li><b>Add from your phone</b> in the Google Tasks app, or from the Tasks panel beside Gmail, Calendar and Docs. Choose the <i>Household</i> list. Items appear on the wall within two minutes.</li>
+  <li><b>Add from your phone</b> in the Google Tasks app, or from the Tasks panel beside Gmail, Calendar and Docs. Items appear on the wall within two minutes.</li>
   <li><b>Checked-off items stay for 24 hours</b>, struck through at the bottom of the list, so you can see what got done. Tap one to bring it back. After a day it disappears.</li>
 </ul>`
     },
@@ -113,7 +92,7 @@ window.Guide = (() => {
   <li><b>Big-screen tour.</b> Every few minutes it takes over for about 30 seconds and shows the time, then the weather, the calendar and the to-do list, each as one huge page, and alternates left, centre and right. Nothing sits in the same pixels for long. Change the interval in Settings, or turn it off. Tap the screen to end a tour early.</li>
   <li><b>Gentle layout nudge.</b> The whole layout drifts a few pixels over the day.</li>
   <li><b>Night mode.</b> From 10:30 PM to 6 AM the screen goes black with a dim clock that wanders slowly. On OLED, black pixels are off. Tap to wake the full display for two minutes.</li>
-  <li><b>Moving backgrounds.</b> Background art drifts, and changes daily.</li>
+  <li><b>Moving backgrounds.</b> The background colours drift slowly, and change daily.</li>
 </ul>
 <h2>What you can do</h2>
 <ul>
@@ -123,21 +102,49 @@ window.Guide = (() => {
 </ul>`
     },
     {
+      id: 'advanced', title: 'Browser version',
+      html: `
+<h1>Browser version</h1>
+<p class="lede">Chrome and other browsers can't use Google sign-in the way the Android app does, so they connect through a small script that lives in your own Google account. It takes about ten minutes.</p>
+<ol>
+  <li>Open <b>script.google.com</b>, sign in, and choose <b>New project</b>. Name it <code>Skreen</code>.</li>
+  <li>Copy the script from here, delete everything in the editor, and paste.<br>
+    <button class="btn primary small" data-copy-script>Copy the script</button> <span class="inline-status" data-copy-status></span></li>
+  <li>Near the top, change <code>SECRET</code> to a long random phrase such as <code>purple-toaster-lighthouse-9271</code>. To hide some calendars, list their names in <code>EXCLUDE_CALENDAR_NAMES</code>.</li>
+  <li>In the left sidebar next to <b>Services</b>, click <b>+</b>, choose <b>Google Tasks API</b>, then <b>Add</b>.</li>
+  <li>Pick <code>testSetup</code> from the function menu and click <b>Run</b>. Google asks for permission and warns <i>"Google hasn't verified this app"</i>. That's expected, because you wrote it for yourself. Click <b>Advanced</b>, then <b>Go to Skreen (unsafe)</b>, then <b>Allow</b>.</li>
+  <li>Click <b>Deploy → New deployment</b>, then the gear icon → <b>Web app</b>. Set <b>Execute as: Me</b> and <b>Who has access: Anyone</b>, then <b>Deploy</b>. Copy the <b>Web app URL</b>; it ends in <code>/exec</code>.</li>
+  <li>In Skreen's Settings, paste the URL and your secret, tap <b>Test connection</b>, then <b>Save</b>.<br>
+    <button class="btn ghost small" data-open-settings>Open settings</button></li>
+</ol>
+<div class="note">The script only answers requests that include your secret phrase. Pick a long one and don't share the URL. After changing the script, use <b>Deploy → Manage deployments → ✎ → Version: New version</b>.</div>
+<h2>Set up another browser with a link</h2>
+<p>Settings live on each device. Build a link on a computer and open it once on the other device:</p>
+<div class="linkgen">
+  <input id="lgBase" placeholder="Skreen web address (https://you.github.io/skreen/)" autocomplete="off">
+  <input id="lgUrl" placeholder="Backend URL (…/exec)" autocomplete="off">
+  <input id="lgKey" placeholder="Secret key" autocomplete="off">
+  <div class="out" id="lgOut">Fill in all three boxes to build your link.</div>
+  <div><button class="btn primary small" data-copy-link>Copy link</button></div>
+</div>
+<div class="note">Anyone with that link can see your calendar and list, so treat it like a password. The link configures the browser it's opened in, not the Android app.</div>`
+    },
+    {
       id: 'fix', title: 'Troubleshooting',
       html: `
 <h1>Troubleshooting</h1>
+<h2>"Google needs you to sign in again"</h2>
+<p>Google occasionally asks for permission again, for example after you change your Google password or remove Skreen from your account's connections. Tap the message and sign in; nothing is lost.</p>
 <h2>"Can't reach Google right now"</h2>
-<p>The tablet is offline, or the script returned an error. On a computer, open your backend URL followed by <code>?action=dashboard&amp;key=YOUR_SECRET</code>. It will either show your data or say what's wrong.</p>
-<h2>"Secret key doesn't match"</h2>
-<p>The secret in Skreen must match <code>SECRET</code> in your script exactly. If you changed it, deploy a new version.</p>
-<h2>I changed the script and nothing happened</h2>
-<p>Deploy a <b>new version</b>: Deploy → Manage deployments → ✎ → Version: New version.</p>
+<p>The tablet is offline, or Google is having a moment. Skreen keeps showing what it last had and retries every two minutes.</p>
 <h2>A calendar is missing or one is cluttering the list</h2>
-<p>By default Skreen shows every calendar that's ticked in Google Calendar's left sidebar. Hide some with <code>EXCLUDE_CALENDAR_NAMES</code>, or choose exactly which ones with <code>CALENDAR_IDS</code>.</p>
-<h2>Checked-off items don't show</h2>
-<p>Update your script to the latest version from this guide (<b>Connect Google → Copy the script</b>, keep your own <code>SECRET</code>) and deploy a new version.</p>
+<p>In Settings, tick exactly the calendars you want under <b>Calendars to show</b>.</p>
+<h2>The to-do list is empty or the wrong one</h2>
+<p>Choose the list under <b>To-do list</b> in Settings.</p>
+<h2>Browser version: "Secret key doesn't match"</h2>
+<p>The secret in Skreen must match <code>SECRET</code> in your script exactly. If you changed the script, deploy a new version.</p>
 <h2>The screen looks wrong or stale</h2>
-<p>Skreen reloads itself at 3:30 AM every night. To force it, pull down to refresh or reopen the page.</p>`
+<p>Skreen reloads itself at 3:30 AM every night. To force it, close and reopen the app.</p>`
     },
   ];
   return { sections };

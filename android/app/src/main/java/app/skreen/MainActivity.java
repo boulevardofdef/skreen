@@ -1,9 +1,13 @@
 package app.skreen;
 
 import android.Manifest;
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.IntentSender;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
@@ -25,9 +29,18 @@ import android.webkit.WebViewClient;
 
 import androidx.webkit.WebViewAssetLoader;
 
+import com.google.android.gms.auth.api.identity.AuthorizationRequest;
+import com.google.android.gms.auth.api.identity.AuthorizationResult;
+import com.google.android.gms.auth.api.identity.Identity;
+import com.google.android.gms.common.AccountPicker;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.Scope;
+
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Skreen: a full-screen, always-on shell around the web app in /dashboard.
@@ -42,8 +55,17 @@ public class MainActivity extends Activity {
     private static final String BUNDLED_URL = "https://" + HOST + "/assets/index.html";
     private static final int REQ_LOCATION = 1;
     private static final int REQ_VOICE = 2;
+    private static final int REQ_ACCOUNT = 3;
+    private static final int REQ_AUTH = 4;
+
+    /** What Skreen asks Google for: read the calendars, and manage tasks (to add and check off items). */
+    private static final List<Scope> SCOPES = Arrays.asList(
+            new Scope("https://www.googleapis.com/auth/calendar.readonly"),
+            new Scope("https://www.googleapis.com/auth/tasks"));
 
     private WebView web;
+    private SharedPreferences prefs;
+    private int pendingAuthRequest = 0;
     private String remoteUrl = "";
     private String remoteHost = null;
     private boolean onFallback = false;
@@ -57,6 +79,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        prefs = getSharedPreferences("skreen", MODE_PRIVATE);
         remoteUrl = getString(R.string.start_url).trim();
         if (!remoteUrl.isEmpty()) remoteHost = Uri.parse(remoteUrl).getHost();
 
@@ -180,6 +203,23 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_ACCOUNT) {
+            String name = (resultCode == RESULT_OK && data != null) ? data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME) : null;
+            if (name == null) { deliverToken(pendingAuthRequest, null, "cancelled"); return; }
+            prefs.edit().putString("account", name).apply();
+            authorize(true, pendingAuthRequest);
+            return;
+        }
+        if (requestCode == REQ_AUTH) {
+            if (resultCode != RESULT_OK || data == null) { deliverToken(pendingAuthRequest, null, "cancelled"); return; }
+            try {
+                AuthorizationResult result = Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(data);
+                deliverToken(pendingAuthRequest, result.getAccessToken(), null);
+            } catch (ApiException e) {
+                deliverToken(pendingAuthRequest, null, "auth_failed");
+            }
+            return;
+        }
         if (requestCode != REQ_VOICE) return;
         String text = "";
         if (resultCode == RESULT_OK && data != null) {
@@ -221,6 +261,42 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
+    /**
+     * Gets a short-lived Google access token for the chosen account. With interactive=false it only
+     * succeeds if the user has already granted access; otherwise it shows Google's consent screen.
+     * The answer goes back to the page through window.skreenToken(id, token, error).
+     */
+    private void authorize(final boolean interactive, final int reqId) {
+        String name = prefs.getString("account", null);
+        if (name == null) { deliverToken(reqId, null, "no_account"); return; }
+        AuthorizationRequest request = AuthorizationRequest.builder()
+                .setRequestedScopes(SCOPES)
+                .setAccount(new Account(name, "com.google"))
+                .build();
+        Identity.getAuthorizationClient(this).authorize(request)
+                .addOnSuccessListener(result -> {
+                    if (result.hasResolution()) {
+                        if (!interactive) { deliverToken(reqId, null, "consent_needed"); return; }
+                        pendingAuthRequest = reqId;
+                        try {
+                            startIntentSenderForResult(result.getPendingIntent().getIntentSender(), REQ_AUTH, null, 0, 0, 0);
+                        } catch (IntentSender.SendIntentException e) {
+                            deliverToken(reqId, null, "resolution_failed");
+                        }
+                    } else {
+                        deliverToken(reqId, result.getAccessToken(), null);
+                    }
+                })
+                .addOnFailureListener(e -> deliverToken(reqId, null, String.valueOf(e.getMessage())));
+    }
+
+    private void deliverToken(int reqId, String token, String error) {
+        if (web == null) return;
+        String t = token == null ? "null" : JSONObject.quote(token);
+        String e = error == null ? "null" : JSONObject.quote(error);
+        web.evaluateJavascript("window.skreenToken && window.skreenToken(" + reqId + "," + t + "," + e + ")", null);
+    }
+
     @SuppressWarnings("deprecation")
     private void hideSystemUi() {
         getWindow().getDecorView().setSystemUiVisibility(
@@ -244,6 +320,39 @@ public class MainActivity extends Activity {
                         : Math.max(0.01f, Math.min(1f, level));
                 getWindow().setAttributes(lp);
             });
+        }
+
+        /** Lets the user pick a Google account, then asks Google for permission. Answer: window.skreenToken. */
+        @JavascriptInterface
+        public void signIn(final int reqId) {
+            runOnUiThread(() -> {
+                pendingAuthRequest = reqId;
+                Intent intent = AccountPicker.newChooseAccountIntent(
+                        new AccountPicker.AccountChooserOptions.Builder()
+                                .setAllowableAccountsTypes(Arrays.asList("com.google"))
+                                .build());
+                try {
+                    startActivityForResult(intent, REQ_ACCOUNT);
+                } catch (ActivityNotFoundException e) {
+                    deliverToken(reqId, null, "no_play_services");
+                }
+            });
+        }
+
+        /** A fresh access token for the account that signed in earlier (silent if access was already granted). */
+        @JavascriptInterface
+        public void getToken(final int reqId) {
+            runOnUiThread(() -> authorize(false, reqId));
+        }
+
+        @JavascriptInterface
+        public String getAccount() {
+            return prefs.getString("account", "");
+        }
+
+        @JavascriptInterface
+        public void signOut() {
+            prefs.edit().remove("account").apply();
         }
 
         /** Opens the system's speech recognizer; the result comes back through window.skreenVoice(text). */
