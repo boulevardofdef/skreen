@@ -354,6 +354,15 @@ body.native .field.native-only { display: flex; }
 .welcome .lede { font-size: 1.3rem; line-height: 1.35; color: var(--muted); margin: 0 0 1rem; }
 .welcome p { font-size: 1.05rem; line-height: 1.5; margin: 0.6rem 0; }
 
+/* To-do item details; a bigger target for the check box */
+.task-sheet { width: min(40rem, 92vw); }
+.task-sheet h3 { font-size: 1.9rem; line-height: 1.15; margin: 0 0 0.4rem; overflow-wrap: anywhere; }
+.task-sheet .ev-rows { margin-top: 1rem; }
+.task-sheet .sheet-actions .btn:first-child { margin-right: auto; }
+.task .box { position: relative; }
+.task .box::after { content: ""; position: absolute; inset: -0.8rem; }
+.task:not(.task-empty) { cursor: pointer; }
+
 /* Who is it for? */
 .whos { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .who-chip {

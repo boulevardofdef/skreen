@@ -40,6 +40,8 @@ function doGet(e) {
         return json_({ events: getEvents_(), tasks: getTasks_() });
       case 'addTask':
         return json_({ task: addTask_(String(p.title || '').trim(), String(p.notes || '')) });
+      case 'setNotes':
+        return json_({ ok: true, result: setNotes_(p.id, String(p.notes || '')) });
       case 'completeTask':
         return json_({ ok: true, result: setTaskDone_(p.id, true) });
       case 'uncompleteTask':
@@ -168,6 +170,12 @@ function addTask_(title, notes) {
   if (notes) body.notes = notes.slice(0, 2000);
   const t = Tasks.Tasks.insert(body, taskListId_());
   return { id: t.id, title: t.title, notes: t.notes || '', position: t.position, done: false };
+}
+
+function setNotes_(id, notes) {
+  if (!id) throw new Error('Missing id');
+  Tasks.Tasks.patch({ notes: notes ? notes.slice(0, 2000) : null }, taskListId_(), id);
+  return true;
 }
 
 function setTaskDone_(id, done) {

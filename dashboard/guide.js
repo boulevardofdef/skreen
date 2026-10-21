@@ -73,6 +73,7 @@ window.Guide = (() => {
   <li><b>It's a Google Tasks list.</b> Choose which one in Settings. A list called "Household" is picked automatically if you have one. Google Keep has no connection for apps like this one, so Tasks is the closest match.</li>
   <li><b>Add from the wall</b> with the big <b>Add to list</b> button. Tap the microphone to dictate, or separate items with commas: <code>eggs, milk, bread</code>.</li>
   <li><b>Add from your phone</b> in the Google Tasks app, or from the Tasks panel beside Gmail, Calendar and Docs. Items appear on the wall within two minutes.</li>
+  <li><b>Tap the check box to check an item off. Tap anywhere else on it</b> to open its details: change who it's for, read its notes, or mark it done.</li>
   <li><b>Who is it for?</b> When you add an item on the wall, tap a name under <b>Who?</b> (or <b>+ Someone</b> to add a new one). Leave it on <b>Anyone</b> for a shared job. The names show as colored tags beside the item. Behind the scenes, Skreen writes <code>@Dan</code> on the first line of the task's <b>Details</b> in Google Tasks, so you can also assign a task from your phone: open it in Google Tasks and put <code>@Dan @Mia</code> on the first line of Details. Anything you write below that line is left alone.</li>
   <li><b>Checked-off items stay for 24 hours</b>, struck through at the bottom of the list, so you can see what got done. Tap one to bring it back. After a day it disappears.</li>
 </ul>`

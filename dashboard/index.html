@@ -86,6 +86,25 @@
     <div class="sheet-actions"><button type="button" class="btn primary" id="evClose">Close</button></div>
   </dialog>
 
+  <!-- To-do item details -->
+  <dialog class="sheet task-sheet" id="taskSheet">
+    <h3 id="tkTitle"></h3>
+    <div class="who">
+      <span class="who-label">Who?</span>
+      <div class="who-pills" id="tkPills"></div>
+    </div>
+    <div class="who-new" id="tkNew" hidden>
+      <input id="tkInput" type="text" autocomplete="off" placeholder="Name" maxlength="20">
+      <button type="button" class="btn ghost small" id="tkAdd">Add person</button>
+    </div>
+    <div class="ev-rows" id="tkNotes"></div>
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="tkDone">Mark done</button>
+      <button type="button" class="btn ghost" id="tkCancel">Cancel</button>
+      <button type="button" class="btn primary" id="tkSave">Save</button>
+    </div>
+  </dialog>
+
   <!-- Add item sheet -->
   <dialog class="sheet" id="addSheet">
     <form method="dialog" id="addForm">

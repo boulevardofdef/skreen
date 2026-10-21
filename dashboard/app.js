@@ -131,6 +131,10 @@
       if (usingGoogle()) return Google.addTask(cfg.taskListId, title, notes);
       return (await api('addTask', { title, notes })).task;
     },
+    async setNotes(id, notes) {
+      if (usingGoogle()) return Google.setNotes(cfg.taskListId, id, notes);
+      return api('setNotes', { id, notes });
+    },
     async setDone(id, done) {
       if (usingGoogle()) return Google.setDone(cfg.taskListId, id, done);
       return api(done ? 'completeTask' : 'uncompleteTask', { id });
@@ -489,59 +493,132 @@
     renderTasks();
   }
 
+  // Tap the check box to check an item off; tap anywhere else on it for its details.
+  const taskSheet = $('taskSheet');
+  const tkWho = whoPicker({ pills: $('tkPills'), box: $('tkNew'), input: $('tkInput'), addBtn: $('tkAdd') });
+  let openTaskId = null, taskTimer = null;
+
+  function openTask(t) {
+    openTaskId = t.id;
+    $('tkTitle').textContent = t.title;
+    tkWho.reset(t.who || []);
+    const rest = parseNotes(t.notes || '').rest.trim();
+    $('tkNotes').innerHTML = rest ? `<div class="ev-row"><b>Notes</b><div>${esc(rest)}</div></div>` : '';
+    $('tkDone').textContent = t.done ? 'Restore' : 'Mark done';
+    if (!taskSheet.open) taskSheet.showModal();
+    clearTimeout(taskTimer);
+    taskTimer = setTimeout(() => { if (taskSheet.open) taskSheet.close(); }, 90000);
+  }
+  const openedTask = () => state.tasks.find((x) => x.id === openTaskId);
+
+  function saveWho(t, who) {
+    const prev = { who: t.who, notes: t.notes };
+    const notes = buildNotes(who, parseNotes(t.notes || '').rest);
+    t.who = who; t.notes = notes;
+    renderTasks();
+    if (isDemo()) return persistDemo();
+    mutate(() => backend.setNotes(t.id, notes)).catch(() => {
+      t.who = prev.who; t.notes = prev.notes; renderTasks();
+      showToast('Couldn’t save — check your connection');
+    });
+  }
+
   $('tasks').addEventListener('click', (e) => {
     const li = e.target.closest('.task[data-id]');
     const t = li && state.tasks.find((x) => x.id === li.dataset.id);
     if (!t) return;
+    if (e.target.closest('.box')) { if (t.done) restoreTask(t); else completeTask(t); return; }
+    if (t.pending) { showToast('Still saving that one…'); return; }
+    openTask(t);
+  });
+  $('tkSave').addEventListener('click', () => {
+    tkWho.commit();
+    const t = openedTask();
+    if (t) {
+      const now = tkWho.names(), before = (t.who || []).map(nameKey).sort().join('|');
+      if (now.map(nameKey).sort().join('|') !== before) saveWho(t, now);
+    }
+    taskSheet.close();
+  });
+  $('tkCancel').addEventListener('click', () => taskSheet.close());
+  $('tkDone').addEventListener('click', () => {
+    const t = openedTask();
+    taskSheet.close();
+    if (!t) return;
     if (t.done) restoreTask(t); else completeTask(t);
   });
+  taskSheet.addEventListener('click', (e) => { if (e.target === taskSheet) taskSheet.close(); });
+  taskSheet.addEventListener('close', () => { clearTimeout(taskTimer); openTaskId = null; });
 
   // Add sheet
   const addSheet = $('addSheet');
-  let selectedWho = new Set(), whoEdit = false;
-  function renderWhoPills() {
-    $('whoPills').innerHTML =
-      `<button type="button" class="who-pill${selectedWho.size ? '' : ' on'}" data-anyone="1">Anyone</button>` +
-      rosterNames().map((n) => `<button type="button" class="who-pill${selectedWho.has(nameKey(n)) ? ' on' : ''}" data-who="${esc(n)}" style="--p:${personColor(n)}"><i></i>${esc(n)}${whoEdit ? '<b>×</b>' : ''}</button>`).join('') +
-      '<button type="button" class="who-pill ghost" data-act="new">+ Someone</button>' +
-      (rosterNames().length ? `<button type="button" class="who-pill ghost" data-act="edit">${whoEdit ? 'Done' : 'Edit'}</button>` : '');
+  // The "Who?" picker, used by both the Add dialog and the item details dialog.
+  function whoPicker({ pills, box, input, addBtn }) {
+    let selected = new Map();   // key → display name
+    let edit = false;
+    const picker = {
+      reset(names = []) {
+        selected = new Map(names.map((n) => [nameKey(n), n]));
+        edit = false; box.hidden = true; input.value = '';
+        picker.render();
+      },
+      names: () => Array.from(selected.values()).sort((a, b) => nameKey(a).localeCompare(nameKey(b))),
+      render() {
+        const known = new Map(rosterNames().map((n) => [nameKey(n), n]));
+        selected.forEach((n, k) => { if (!known.has(k)) known.set(k, n); });   // someone on the task but not in this device's list
+        const all = Array.from(known.values()).sort((a, b) => nameKey(a).localeCompare(nameKey(b)));
+        pills.innerHTML =
+          `<button type="button" class="who-pill${selected.size ? '' : ' on'}" data-anyone="1">Anyone</button>` +
+          all.map((n) => `<button type="button" class="who-pill${selected.has(nameKey(n)) ? ' on' : ''}" data-who="${esc(n)}" style="--p:${personColor(n)}"><i></i>${esc(n)}${edit ? '<b>×</b>' : ''}</button>`).join('') +
+          '<button type="button" class="who-pill ghost" data-act="new">+ Someone</button>' +
+          (all.length ? `<button type="button" class="who-pill ghost" data-act="edit">${edit ? 'Done' : 'Edit'}</button>` : '');
+      },
+      // Take whatever name is typed in the box (even if "Add person" wasn't tapped). True if there was one.
+      commit() {
+        const name = input.value.replace(/[@\s]+/g, ' ').trim();
+        if (!name) return false;
+        const shown = displayName(name);
+        rememberPeople([shown]);
+        selected.set(nameKey(name), shown);
+        input.value = ''; box.hidden = true;
+        picker.render();
+        return true;
+      },
+    };
+    pills.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.anyone) selected.clear();
+      else if (b.dataset.act === 'new') { box.hidden = false; input.focus(); return; }
+      else if (b.dataset.act === 'edit') edit = !edit;
+      else if (b.dataset.who) {
+        const k = nameKey(b.dataset.who);
+        if (edit) { cfg.people = (cfg.people || []).filter((n) => nameKey(n) !== k); selected.delete(k); saveSettings(); }
+        else if (selected.has(k)) selected.delete(k); else selected.set(k, b.dataset.who);
+      }
+      picker.render();
+    });
+    addBtn.addEventListener('click', () => picker.commit());
+    // Some keyboards don't report "Enter" as a normal key, so also catch the key code.
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); picker.commit(); } });
+    return picker;
   }
-  $('whoPills').addEventListener('click', (e) => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    if (b.dataset.anyone) { selectedWho.clear(); }
-    else if (b.dataset.act === 'new') { $('whoNew').hidden = false; $('whoInput').focus(); return; }
-    else if (b.dataset.act === 'edit') { whoEdit = !whoEdit; }
-    else if (b.dataset.who) {
-      const k = nameKey(b.dataset.who);
-      if (whoEdit) { cfg.people = (cfg.people || []).filter((n) => nameKey(n) !== k); selectedWho.delete(k); saveSettings(); }
-      else if (selectedWho.has(k)) selectedWho.delete(k); else selectedWho.add(k);
-    }
-    renderWhoPills();
-  });
-  function addPerson() {
-    const name = $('whoInput').value.replace(/[@\s]+/g, ' ').trim();
-    if (!name) return;
-    rememberPeople([displayName(name)]);
-    selectedWho.add(nameKey(name));
-    $('whoInput').value = ''; $('whoNew').hidden = true;
-    renderWhoPills();
-  }
-  $('whoAdd').addEventListener('click', addPerson);
-  $('whoInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addPerson(); } });
+  const addWho = whoPicker({ pills: $('whoPills'), box: $('whoNew'), input: $('whoInput'), addBtn: $('whoAdd') });
 
   $('addBtn').addEventListener('click', () => {
     $('addInput').value = '';
-    selectedWho = new Set(); whoEdit = false; $('whoNew').hidden = true;
-    renderWhoPills();
+    addWho.reset();
     addSheet.showModal();
     setTimeout(() => $('addInput').focus(), 50);
   });
   $('addCancel').addEventListener('click', () => addSheet.close());
   $('addForm').addEventListener('submit', (e) => {
+    // The keyboard's Enter key inside the "new person" box submits this form: treat it as "add person".
+    if (document.activeElement === $('whoInput')) { e.preventDefault(); addWho.commit(); return; }
+    addWho.commit();                       // a name typed but not confirmed still counts
     const v = $('addInput').value.trim();
     if (!v) { e.preventDefault(); return; }
-    addTasks(v, rosterNames().filter((n) => selectedWho.has(nameKey(n))));
+    addTasks(v, addWho.names());
   });
   addSheet.addEventListener('click', (e) => { if (e.target === addSheet) addSheet.close(); });
 

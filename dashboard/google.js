@@ -118,6 +118,12 @@ window.Google = (() => {
     return { id: t.id, title: t.title, notes: t.notes || '', position: t.position, done: false };
   }
 
+  async function setNotes(chosenId, id, notes) {
+    const listId = await resolveList(chosenId);
+    await call(`${TASKS}/lists/${encodeURIComponent(listId)}/tasks/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ notes: notes || null }) });
+    return true;
+  }
+
   async function setDone(chosenId, id, done) {
     const listId = await resolveList(chosenId);
     const body = done ? { status: 'completed' } : { status: 'needsAction', completed: null };
@@ -127,5 +133,5 @@ window.Google = (() => {
 
   const forgetCaches = () => { calCache = { at: 0, items: null }; listCache = null; };
 
-  return { init, AuthError, listCalendars, listTaskLists, events, tasks, addTask, setDone, forgetCaches, chosenCalendars };
+  return { init, AuthError, listCalendars, listTaskLists, events, tasks, addTask, setDone, setNotes, forgetCaches, chosenCalendars };
 })();
