@@ -148,7 +148,7 @@ window.Guide = (() => {
 <h2>Browser version: "Secret key doesn't match"</h2>
 <p>The secret in Skreen must match <code>SECRET</code> in your script exactly. If you changed the script, deploy a new version.</p>
 <h2>The screen looks wrong or stale</h2>
-<p>Skreen reloads itself at 3:30 AM every night. To force it, close and reopen the app.</p>`
+<p>Skreen checks for a newer version of itself every half hour and reloads once nobody is using it (no pop-up open, nothing touched for two minutes). It also reloads at 3:30 AM every night. To force it right now, close and reopen the app.</p>`
     },
   ];
   return { sections };

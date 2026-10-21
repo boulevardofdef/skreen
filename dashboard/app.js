@@ -215,6 +215,7 @@
       updateNight(now);
       nudgeLayout(now);
       applyBrightness(now);
+      maybeSelfReload();
       maybeStartTour(now);
       // Fresh start every night: picks up app updates and keeps memory tidy.
       if (now.getHours() === 3 && now.getMinutes() === 30) location.reload();
@@ -1381,6 +1382,31 @@
     }
   });
 
+  // ─── Keeping the wall up to date ───────────────────────────────────────────
+  // Each deploy stamps this page's script address with a version. Every half hour Skreen asks the
+  // site which version is current and, if a newer one exists, reloads itself once nobody is using it.
+
+  const loadedStamp = ((document.querySelector('script[src*="app.js"]') || { getAttribute: () => '' }).getAttribute('src').match(/[?&]v=([^&]+)/) || [])[1];
+  const SITE_CHECK_MS = 30 * 60000, QUIET_MS = 2 * 60000;
+  let newerSite = false, lastTouch = 0;
+  ['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, () => { lastTouch = Date.now(); }, true));
+
+  async function checkSiteVersion() {
+    if (!loadedStamp || loadedStamp === 'dev') return;          // a local or bundled copy: nothing to compare
+    try {
+      const res = await fetch(`index.html?_=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const m = (await res.text()).match(/app\.js\?v=([A-Za-z0-9]+)/);
+      if (m && m[1] !== loadedStamp) newerSite = true;
+    } catch (_) { /* offline: try again later */ }
+  }
+  function quietEnough() {
+    const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    return !dialogOpen() && !tour.on && !refresh.on && !state.mutating && !typing &&
+      !$('toast').classList.contains('show') && Date.now() - lastTouch > QUIET_MS;
+  }
+  function maybeSelfReload() { if (newerSite && quietEnough()) location.reload(); }
+
   // Android back button: close whatever is open, never leave the app.
   window.skreenBack = () => {
     if (refresh.on) { stopRefresh(); return true; }
@@ -1413,6 +1439,7 @@
     keepAwake();
     applyBrightness();
     maybeWelcome();
+    setTimeout(checkSiteVersion, 60000); setInterval(checkSiteVersion, SITE_CHECK_MS);
     if (canUpdate()) { setTimeout(backgroundUpdateCheck, 20000); setInterval(backgroundUpdateCheck, UPDATE_CHECK_MS); }
     if (!canSignIn()) { $('advanced').open = true; $('advanced').querySelector('summary').textContent = 'Google connection'; }
     setInterval(refreshData, REFRESH_DATA_MS);

@@ -16,6 +16,7 @@ A wall display for an always-on Android tablet: **Google Calendar**, a **househo
 - **Typefaces.** Five to choose from in Settings (Bricolage, Fraunces, Archivo, Space Grotesk, Big Shoulders), self-hosted and previewed live.
 - **Backgrounds.** Nine soft, dark colour-gradient backgrounds with gentle contrast, one per day, or pin your favourite. No lines or patterns, so text always reads cleanly.
 - **Big-screen tour.** Every 5 minutes (adjustable) it spends ~30 seconds on **BIG time → BIG weather → BIG calendar → BIG to-do**, alternating left/centre/right. Tap to end it early.
+- **Self-updating.** Every deploy stamps the page with a version; Skreen checks every 30 minutes and quietly reloads itself when a newer one exists and nobody is using it (it also reloads nightly at 3:30 AM).
 - **Burn-in care.** The tour, a slow few-pixel layout drift, a night mode (black screen, dim wandering clock, next event) and moving backgrounds keep any pixel from staying lit.
 - **Google sign-in.** In the Android app: tap *Sign in with Google*, pick your calendars and to-do list. Skreen talks to Google directly from the tablet; there is no server of ours and nothing is stored elsewhere.
 - **Setup guide built in.** Tap the gear → **Setup guide**. It covers sign-in, installing on the tablet, burn-in and troubleshooting, with no GitHub required.
