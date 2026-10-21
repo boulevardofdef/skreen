@@ -81,6 +81,7 @@
     mutating: 0, lastMutation: 0,
     nightDismissedUntil: 0,
     bgKey: '',
+    update: null, updating: null,
   };
 
   // ─── Backend ───────────────────────────────────────────────────────────────
@@ -629,24 +630,35 @@
     const el = $('status');
     el.className = 'status';
     el.hidden = false;
-    if (isDemo()) {
+    // Most urgent first: a running update, then sign-in/connection trouble, then an available
+    // update, then the "sample data" nudge.
+    if (state.updating) {
+      const u = state.updating;
+      el.dataset.go = 'none';
+      el.innerHTML = `<span class="dot"></span>${u.ready ? 'Update downloaded. Confirm the install on screen' : `Downloading update${u.pct ? ` · ${u.pct}%` : '…'}`}`;
+    } else if (!isDemo() && state.syncError === 'auth') {
+      el.classList.add('error');
+      el.dataset.go = 'signin';
+      el.innerHTML = '<span class="dot"></span>Google needs you to sign in again · <u>Sign in</u>';
+    } else if (!isDemo() && state.syncError) {
+      el.classList.add('error');
+      el.dataset.go = 'fix';
+      el.innerHTML = `<span class="dot"></span>Can’t reach Google right now${state.lastSync ? ` · last updated ${fmtTime(state.lastSync)}` : ''} · <u>Help</u>`;
+    } else if (state.update) {
+      el.dataset.go = 'update';
+      el.innerHTML = `<span class="dot"></span>Skreen ${esc(state.update.name)} is available · <u>Install update</u>`;
+    } else if (isDemo()) {
       el.dataset.go = canSignIn() ? 'signin' : 'start';
       el.innerHTML = canSignIn()
         ? '<span class="dot"></span>Showing sample data · <u>Sign in with Google →</u>'
         : '<span class="dot"></span>Showing sample data · <u>Set up Skreen →</u>';
-    } else if (state.syncError === 'auth') {
-      el.classList.add('error');
-      el.dataset.go = 'signin';
-      el.innerHTML = '<span class="dot"></span>Google needs you to sign in again · <u>Sign in</u>';
-    } else if (state.syncError) {
-      el.classList.add('error');
-      el.dataset.go = 'fix';
-      el.innerHTML = `<span class="dot"></span>Can’t reach Google right now${state.lastSync ? ` · last updated ${fmtTime(state.lastSync)}` : ''} · <u>Help</u>`;
     } else { el.hidden = true; el.innerHTML = ''; }
   }
   $('status').addEventListener('click', (e) => {
     const go = e.currentTarget.dataset.go;
     if (go === 'signin') { startSignIn(); return; }
+    if (go === 'update') { startUpdate(); return; }
+    if (go === 'none') return;
     openGuide(go);
   });
 
@@ -661,6 +673,83 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove('show'), 5000);
   }
+
+  // ─── App updates (Android app, sideloaded) ─────────────────────────────────
+  // Sideloaded apps don't update themselves, so Skreen checks its own GitHub release.
+
+  const UPDATE_CHECK_MS = 6 * 3600 * 1000;
+  const canUpdate = () => !!(NATIVE && NATIVE.getVersion && NATIVE.installUpdate);
+
+  function releaseRepo() {
+    const m = /^([^.]+)\.github\.io$/.exec(location.hostname), repo = location.pathname.split('/')[1];
+    return m && repo ? { owner: m[1], repo } : null;
+  }
+
+  // Returns {state: 'update' | 'current' | 'unknown', ...}; also updates the banner.
+  async function checkForUpdate() {
+    if (!canUpdate()) return { state: 'unknown' };
+    const r = releaseRepo();
+    if (!r) return { state: 'unknown' };
+    const res = await fetch(`https://api.github.com/repos/${r.owner}/${r.repo}/releases/latest`, { headers: { Accept: 'application/vnd.github+json' } });
+    if (!res.ok) throw new Error('GitHub returned ' + res.status);
+    const rel = await res.json();
+    const asset = (rel.assets || []).find((a) => /\.apk$/i.test(a.name));
+    const build = Number(((rel.body || '').match(/skreen-build:\s*(\d+)/i) || [])[1] || 0);
+    const installed = Number(NATIVE.getVersion());
+    if (asset && build > installed) {
+      const notes = (rel.body || '').split('\n').map((l) => l.trim()).find((l) => l && !/^skreen-build/i.test(l) && !/^sideload/i.test(l)) || '';
+      state.update = { build, name: (rel.name || '').replace(/^Skreen\s*/i, '') || String(build), notes, url: asset.browser_download_url, digest: (asset.digest || '').replace(/^sha256:/i, '') };
+    } else {
+      state.update = null;
+    }
+    renderStatus();
+    return state.update ? { state: 'update', update: state.update } : { state: 'current' };
+  }
+  const backgroundUpdateCheck = () => checkForUpdate().catch(() => {});
+
+  function startUpdate() {
+    if (!state.update || state.updating) return;
+    state.updating = { pct: 0 };
+    renderStatus();
+    try { NATIVE.installUpdate(state.update.url, state.update.digest); }
+    catch (_) { window.skreenUpdate('error', 'bridge'); }
+  }
+
+  // Progress from the native side.
+  window.skreenUpdate = (kind, value) => {
+    if (kind === 'progress') { state.updating = { pct: Number(value) || 0 }; }
+    else if (kind === 'ready') { state.updating = { pct: 100, ready: true }; setTimeout(() => { state.updating = null; renderStatus(); }, 20000); }
+    else if (kind === 'permission') {
+      state.updating = null;
+      showToast('Allow Skreen to install updates, then come back and tap Install update again');
+    } else if (kind === 'error') {
+      state.updating = null;
+      showToast('Couldn’t download the update here', 'Open in browser', () => { try { NATIVE.openExternal(state.update ? state.update.url : ''); } catch (_) {} });
+    }
+    renderStatus();
+    refreshAppSection();
+  };
+
+  function refreshAppSection() {
+    if (!canUpdate()) return;
+    let name = '';
+    try { name = NATIVE.getVersionName ? NATIVE.getVersionName() : ''; } catch (_) {}
+    $('appVersion').textContent = `Skreen app ${name || 'build ' + NATIVE.getVersion()}`;
+    $('installUpdate').hidden = !state.update;
+    $('installUpdate').disabled = !!state.updating;
+    if (state.update) $('updateResult').textContent = `${state.update.name} is available${state.update.notes ? ': ' + state.update.notes : ''}`;
+  }
+  $('checkUpdate').addEventListener('click', async () => {
+    const out = $('updateResult');
+    out.textContent = 'Checking…';
+    try {
+      const r = await checkForUpdate();
+      out.textContent = r.state === 'update' ? `${r.update.name} is available${r.update.notes ? ': ' + r.update.notes : ''}`
+        : r.state === 'current' ? 'You’re up to date.' : 'Couldn’t tell which version is newest.';
+    } catch (e) { out.textContent = 'Couldn’t reach GitHub. Check your connection.'; }
+    refreshAppSection();
+  });
+  $('installUpdate').addEventListener('click', () => { startUpdate(); settingsSheet.close(); });
 
   // ─── Google sign-in (Android app) ──────────────────────────────────────────
 
@@ -871,6 +960,7 @@
     $('testResult').textContent = '';
     settingsSheet.showModal();
     fillGoogleSection();
+    refreshAppSection();
   }
 
   // Android app: show the account, the calendars to choose from, and the to-do list.
@@ -1062,6 +1152,7 @@
     keepAwake();
     applyBrightness();
     maybeWelcome();
+    if (canUpdate()) { setTimeout(backgroundUpdateCheck, 20000); setInterval(backgroundUpdateCheck, UPDATE_CHECK_MS); }
     if (!canSignIn()) { $('advanced').open = true; $('advanced').querySelector('summary').textContent = 'Google connection'; }
     setInterval(refreshData, REFRESH_DATA_MS);
     setInterval(refreshWeather, REFRESH_WEATHER_MS);

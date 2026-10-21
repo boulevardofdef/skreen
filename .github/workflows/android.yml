@@ -59,13 +59,20 @@ jobs:
           git tag -f latest
           git push -f origin latest
 
+      - name: What's new (first line of the commit message)
+        id: notes
+        run: echo "subject=$(git log -1 --pretty=%s | tr -d '"`$\\')" >> "$GITHUB_OUTPUT"
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: Skreen (latest build)
+          name: Skreen 1.0.${{ github.run_number }}
           body: |
-            Sideload this onto your Android tablet. Built from commit ${{ github.sha }}.
-            Download **Skreen.apk**, open it, and allow "install unknown apps" when asked.
+            ${{ steps.notes.outputs.subject }}
+
+            Sideload this onto your Android tablet: download **Skreen.apk**, open it, and allow "install unknown apps" when asked. Built from commit ${{ github.sha }}.
+
+            skreen-build: ${{ github.run_number }}
           files: Skreen.apk
           make_latest: true

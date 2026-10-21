@@ -8,6 +8,7 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.ColorDrawable;
 import android.location.Address;
@@ -17,6 +18,7 @@ import android.net.Network;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.speech.RecognizerIntent;
 import android.view.View;
 import android.view.WindowManager;
@@ -31,6 +33,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
@@ -47,6 +50,12 @@ import com.google.android.gms.common.api.Scope;
 
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -318,6 +327,73 @@ public class MainActivity extends Activity {
                 .addOnFailureListener(e -> deliverToken(reqId, null, String.valueOf(e.getMessage())));
     }
 
+    private void notifyUpdate(String kind, String value) {
+        final String js = "window.skreenUpdate && window.skreenUpdate(" + JSONObject.quote(kind) + ","
+                + JSONObject.quote(value == null ? "" : value) + ")";
+        runOnUiThread(() -> { if (web != null) web.evaluateJavascript(js, null); });
+    }
+
+    /**
+     * Downloads the new APK from our GitHub release, checks it, and hands it to Android's installer
+     * (which asks the user to confirm and only accepts an APK signed with the same key as this app).
+     */
+    private void downloadAndInstall(final String url, final String sha256) {
+        if (url == null || !url.startsWith("https://github.com/")) { notifyUpdate("error", "bad_url"); return; }
+        if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
+            runOnUiThread(() -> startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:" + getPackageName()))));
+            notifyUpdate("permission", null);
+            return;
+        }
+        new Thread(() -> {
+            try {
+                File dir = new File(getCacheDir(), "updates");
+                //noinspection ResultOfMethodCallIgnored
+                dir.mkdirs();
+                File out = new File(dir, "Skreen.apk");
+
+                HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                c.setConnectTimeout(15000);
+                c.setReadTimeout(30000);
+                c.setInstanceFollowRedirects(true);
+                int total = c.getContentLength();
+                MessageDigest md = MessageDigest.getInstance("SHA-256");
+                try (InputStream in = c.getInputStream(); FileOutputStream fo = new FileOutputStream(out)) {
+                    byte[] buf = new byte[16384];
+                    int n, last = -1;
+                    long got = 0;
+                    while ((n = in.read(buf)) > 0) {
+                        fo.write(buf, 0, n);
+                        md.update(buf, 0, n);
+                        got += n;
+                        if (total > 0) {
+                            int pct = (int) (got * 100 / total);
+                            if (pct != last) { last = pct; notifyUpdate("progress", String.valueOf(pct)); }
+                        }
+                    }
+                }
+                if (sha256 != null && !sha256.isEmpty()) {
+                    StringBuilder hex = new StringBuilder();
+                    for (byte b : md.digest()) hex.append(String.format(Locale.US, "%02x", b));
+                    if (!hex.toString().equalsIgnoreCase(sha256)) {
+                        //noinspection ResultOfMethodCallIgnored
+                        out.delete();
+                        notifyUpdate("error", "checksum");
+                        return;
+                    }
+                }
+                Uri uri = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".files", out);
+                final Intent install = new Intent(Intent.ACTION_VIEW)
+                        .setDataAndType(uri, "application/vnd.android.package-archive")
+                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                notifyUpdate("ready", null);
+                runOnUiThread(() -> startActivity(install));
+            } catch (Exception e) {
+                notifyUpdate("error", String.valueOf(e.getMessage()));
+            }
+        }).start();
+    }
+
     private void deliverToken(int reqId, String token, String error) {
         if (web == null) return;
         String t = token == null ? "null" : JSONObject.quote(token);
@@ -394,6 +470,43 @@ public class MainActivity extends Activity {
                     if (web != null) web.evaluateJavascript("window.skreenPlace && window.skreenPlace(" + reqId + "," + out + ")", null);
                 });
             }).start();
+        }
+
+        /** The installed build number (matches the number in the GitHub release). */
+        @JavascriptInterface
+        public int getVersion() {
+            try {
+                PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+                return Build.VERSION.SDK_INT >= 28 ? (int) pi.getLongVersionCode() : pi.versionCode;
+            } catch (Exception e) {
+                return 0;
+            }
+        }
+
+        @JavascriptInterface
+        public String getVersionName() {
+            try {
+                return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            } catch (Exception e) {
+                return "";
+            }
+        }
+
+        /** Download and install a new APK from our GitHub release. Progress comes back via window.skreenUpdate. */
+        @JavascriptInterface
+        public void installUpdate(String url, String sha256) {
+            downloadAndInstall(url, sha256);
+        }
+
+        /** Opens a web address in the browser (used as a fallback for updates). */
+        @JavascriptInterface
+        public void openExternal(final String url) {
+            if (url == null || !url.startsWith("https://")) return;
+            runOnUiThread(() -> {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                } catch (ActivityNotFoundException ignored) { }
+            });
         }
 
         @JavascriptInterface

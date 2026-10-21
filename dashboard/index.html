@@ -181,6 +181,16 @@
             <select name="nightBrightness"><option value="1">1%</option><option value="3">3%</option><option value="10">10%</option><option value="25">25%</option></select></label>
         </div>
 
+        <div class="group native-only">App</div>
+        <div class="field native-only">
+          <span id="appVersion">Version</span>
+          <div class="loc-row">
+            <button type="button" class="btn ghost small" id="checkUpdate">Check for updates</button>
+            <button type="button" class="btn primary small" id="installUpdate" hidden>Install update</button>
+          </div>
+          <div class="test-result" id="updateResult"></div>
+        </div>
+
         <div class="group">Screen care</div>
         <div class="field-grid">
           <label class="field"><span>Big-screen tour</span>
