@@ -52,7 +52,7 @@ window.Guide = (() => {
   <li>Open <b>Skreen</b> and sign in with Google.</li>
   <li><i>Optional:</i> press the Home button and choose <b>Skreen → Always</b>. Skreen becomes the tablet's Home screen, so it opens at boot and Home always returns to it.</li>
 </ol>
-<div class="note">You only need to reinstall when the app itself changes (rare). If the tablet can't reach the site at all (for example, the very first launch while offline), the app shows a built-in copy with sample data and switches to the real thing as soon as it's online.</div>
+<div class="note">Most changes reach the tablet by themselves, because the app loads your Skreen site. When the app itself has a new version, Skreen tells you: an <b>Install update</b> notice appears at the bottom of the screen (you can also check under <b>Settings → App</b>). Tap it and Android asks you to confirm; the first time, it also asks you to allow Skreen to install apps. Your settings stay through updates. If the tablet can't reach the site at all (for example, the very first launch while offline), the app shows a built-in copy with sample data and switches to the real thing as soon as it's online.</div>
 <h2>Without the app</h2>
 <p>Fully Kiosk Browser (Start URL = this page's address, with Keep Screen On) or Chrome's <b>Add to Home screen</b> will display Skreen too, but browsers use the script-based connection; see <b>Browser version</b>.</p>`
     },

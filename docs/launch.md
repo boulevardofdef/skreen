@@ -41,6 +41,7 @@ Calendar and Tasks are "sensitive" scopes, so Google reviews the app before remo
 - Fill in the **Data safety** form: location (approximate, optional), calendar and tasks data accessed but not collected or shared off-device, no ads, no analytics.
 - Play prefers apps that are more than a website in a frame. Skreen's native sign-in, brightness control and kiosk behavior help; the store listing should lead with those.
 - Decide whether the app loads the live site (instant updates) or bundles it (changes go through store review). Remote-loaded content is allowed for a WebView app, but it must not change what the app does in ways your listing doesn't describe.
+- **Remove self-update from the Play build.** The in-app updater (`REQUEST_INSTALL_PACKAGES`, `downloadAndInstall` in `MainActivity.java`, and the update UI in `app.js`) is for sideloaded APKs only. Play policy doesn't allow apps to install updates outside Play, and the store updates the app for you. Strip the permission and the updater before building the bundle (or gate it behind a build flavor).
 - **Amazon Fire tablets** have no Google Play Services, so native Google sign-in won't work there.
 
 ## 4. Freemium and weather

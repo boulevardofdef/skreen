@@ -55,7 +55,7 @@ Everything is explained **inside the app** (⚙ → Setup guide).
 
 **`https://github.com/<you>/<repo>/releases/latest/download/Skreen.apk`**
 
-Open that on the tablet in Chrome, allow *install unknown apps* when asked, and install. Updates install over the old version and keep your settings (every build is signed with the same key in `android/skreen-sideload.jks`, which is deliberately public: it's for personal sideloading, not the Play Store). Fully Kiosk Browser or Chrome's *Add to Home screen* still work if you'd rather not sideload.
+Open that on the tablet in Chrome, allow *install unknown apps* when asked, and install. After the first install the app **checks for updates itself**: when a newer build exists, an *Install update* notice appears on screen (or check under *Settings → App*); one tap downloads it, verifies its checksum and hands it to Android's installer. Updates install over the old version and keep your settings (every build is signed with the same key in `android/skreen-sideload.jks`, which is deliberately public: it's for personal sideloading, not the Play Store). Fully Kiosk Browser or Chrome's *Add to Home screen* still work if you'd rather not sideload.
 
 ## Files
 
