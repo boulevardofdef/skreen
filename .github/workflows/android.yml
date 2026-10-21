@@ -1,13 +1,15 @@
 name: Build Android app
 
-# Builds Skreen.apk from /android (which bundles /dashboard) and publishes it
+# Builds Skreen.apk from /android (which loads the live Pages site and bundles
+# /dashboard as an offline fallback) and publishes it
 # to the "latest" release, so https://github.com/<you>/<repo>/releases/latest/download/Skreen.apk
 # always points at the newest build.
 
 on:
   push:
     branches: [main]
-    paths: ['android/**', 'dashboard/**', '.github/workflows/android.yml']
+    # The app loads the live site, so dashboard/ changes don't need a new APK.
+    paths: ['android/**', '.github/workflows/android.yml']
   workflow_dispatch:
 
 permissions:
@@ -31,6 +33,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+
+      - name: Point the app at this repo's GitHub Pages site
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          repo="${GITHUB_REPOSITORY#*/}"
+          echo "SKREEN_START_URL=https://${owner}.github.io/${repo}/" >> "$GITHUB_ENV"
 
       - name: Build release APK
         working-directory: android

@@ -50,9 +50,9 @@ Everything is explained **inside the app** (⚙ → Setup guide), including a on
 
 ## The Android app
 
-`android/` is a small native shell around the dashboard: full-screen, screen always on, layout bundled so it still appears without internet, and it can **dim the screen itself** (day and night levels in Settings), which is the best burn-in protection there is. It also uses the system speech recognizer for the microphone button, and can optionally be set as the tablet's Home app so it starts at boot.
+`android/` is a small native shell around the dashboard: full-screen, screen always on, and it can **dim the screen itself** (day and night levels in Settings), which is the best burn-in protection there is. It also uses the system speech recognizer for the microphone button, and can optionally be set as the tablet's Home app so it starts at boot.
 
-GitHub builds it automatically (`.github/workflows/android.yml`) and keeps the newest build at:
+**It loads your live GitHub Pages site**, so edits to `dashboard/` reach the tablet as soon as Pages deploys, with no reinstall (the site's service worker keeps it running through Wi-Fi drops, and a copy bundled in the APK is a last-resort fallback). You only reinstall when `android/` changes. GitHub builds the APK automatically (`.github/workflows/android.yml`) and keeps the newest build at:
 
 **`https://github.com/<you>/<repo>/releases/latest/download/Skreen.apk`**
 

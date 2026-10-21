@@ -37,14 +37,14 @@ window.Guide = (() => {
 <h1>On the tablet</h1>
 <p class="lede">Make it full-screen, always on, and back after a restart.</p>
 <h2>Best: the Skreen Android app</h2>
-<p>A small app that holds this display, built automatically from the same GitHub repository. It's full-screen, keeps the screen awake, still shows its layout with no internet, and can <b>dim the screen itself</b> (the best burn-in protection). It isn't in the Play Store, so you install it directly, which is called sideloading.</p>
+<p>A small app that holds this display. It's full-screen, keeps the screen awake, and can <b>dim the screen itself</b> (the best burn-in protection). It loads your live Skreen site, so changes to the site show up on the tablet by themselves, and it keeps working through Wi-Fi drops. It isn't in the Play Store, so you install it directly, which is called sideloading.</p>
 <ol>
   <li>On the tablet, open the download in Chrome:<br><a class="btn primary" data-apk href="#" target="_blank" rel="noopener">Download Skreen.apk</a></li>
   <li>Open the downloaded file. Android asks to allow <b>installing unknown apps</b> from Chrome. Allow it, then tap <b>Install</b>.</li>
   <li>Open <b>Skreen</b>, tap the faint settings icon, paste your backend URL and secret, and pick your city.</li>
   <li><i>Optional:</i> press the Home button and choose <b>Skreen → Always</b>. Skreen becomes the tablet's Home screen, so it opens at boot and Home always returns to it.</li>
 </ol>
-<div class="note">To update, download and install the new file over the old one. Your settings stay. A new version is built every time the project changes.</div>
+<div class="note">You only need to reinstall when the app itself changes (rare). Download the new file and install it over the old one; your settings stay. If the tablet can't reach the site at all (for example, the very first launch while offline), the app shows a built-in copy with sample data and switches to the real thing as soon as it's online.</div>
 <h2>Or: Fully Kiosk Browser</h2>
 <ol>
   <li>Install <b>Fully Kiosk Browser</b> from the Play Store. The free version is enough.</li>

@@ -3,6 +3,9 @@ plugins {
 }
 
 def runNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+// The live site the app loads (CI sets this to this repo's GitHub Pages address).
+// If empty, the app runs from the copy of /dashboard bundled inside it.
+def startUrl = System.getenv('SKREEN_START_URL') ?: ''
 
 android {
     namespace 'app.skreen'
@@ -14,6 +17,7 @@ android {
         targetSdk 34
         versionCode runNumber
         versionName "1.0.${runNumber}"
+        resValue 'string', 'start_url', startUrl
     }
 
     // A fixed key checked into the repo, so every build is signed the same way and

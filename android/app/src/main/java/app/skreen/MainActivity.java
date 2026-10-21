@@ -5,6 +5,8 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
 import android.net.Uri;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
@@ -14,6 +16,7 @@ import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -28,16 +31,24 @@ import java.util.ArrayList;
 
 /**
  * Skreen: a full-screen, always-on shell around the web app in /dashboard.
- * The web files are bundled in the APK and served from a private https origin,
- * so the layout works offline and settings persist like any web app's.
+ *
+ * It loads the live site (so updates appear without reinstalling). The site's
+ * service worker keeps it working through Wi-Fi drops. A copy of the site is also
+ * bundled in the APK as a last resort, for example a first launch while offline;
+ * the app goes back to the live site as soon as the network returns.
  */
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
-    private static final String START_URL = "https://" + HOST + "/assets/index.html";
+    private static final String BUNDLED_URL = "https://" + HOST + "/assets/index.html";
     private static final int REQ_LOCATION = 1;
     private static final int REQ_VOICE = 2;
 
     private WebView web;
+    private String remoteUrl = "";
+    private String remoteHost = null;
+    private boolean onFallback = false;
+    private ConnectivityManager connectivity;
+    private ConnectivityManager.NetworkCallback networkCallback;
     private GeolocationPermissions.Callback pendingGeoCallback;
     private String pendingGeoOrigin;
 
@@ -45,6 +56,9 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        remoteUrl = getString(R.string.start_url).trim();
+        if (!remoteUrl.isEmpty()) remoteHost = Uri.parse(remoteUrl).getHost();
 
         final WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
                 .setDomain(HOST)
@@ -77,12 +91,22 @@ public class MainActivity extends Activity {
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                if (isTrusted(request.getUrl())) return false;
                 Uri uri = request.getUrl();
-                if (HOST.equals(uri.getHost())) return false;
                 try {
                     startActivity(new Intent(Intent.ACTION_VIEW, uri));
                 } catch (ActivityNotFoundException ignored) { }
                 return true;
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (request.isForMainFrame()) fallBack(request.getUrl());
+            }
+
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse response) {
+                if (request.isForMainFrame() && response.getStatusCode() >= 400) fallBack(request.getUrl());
             }
 
             @Override
@@ -106,7 +130,40 @@ public class MainActivity extends Activity {
             }
         });
 
-        web.loadUrl(START_URL);
+        web.loadUrl(remoteUrl.isEmpty() ? BUNDLED_URL : remoteUrl);
+        watchNetwork();
+    }
+
+    /** Only our own pages may run with the native bridge; everything else opens in the browser. */
+    private boolean isTrusted(Uri uri) {
+        String host = uri.getHost();
+        return HOST.equals(host) || (remoteHost != null && remoteHost.equals(host));
+    }
+
+    /** The live site couldn't be reached: show the bundled copy until the network is back. */
+    private void fallBack(Uri failed) {
+        if (onFallback || remoteHost == null || !remoteHost.equals(failed.getHost())) return;
+        onFallback = true;
+        web.loadUrl(BUNDLED_URL);
+    }
+
+    private void watchNetwork() {
+        if (remoteHost == null) return;
+        connectivity = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(Network network) {
+                runOnUiThread(() -> {
+                    if (onFallback && web != null) {
+                        onFallback = false;
+                        web.loadUrl(remoteUrl);
+                    }
+                });
+            }
+        };
+        try {
+            connectivity.registerDefaultNetworkCallback(networkCallback);
+        } catch (RuntimeException ignored) { }
     }
 
     @Override
@@ -152,6 +209,11 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (connectivity != null && networkCallback != null) {
+            try {
+                connectivity.unregisterNetworkCallback(networkCallback);
+            } catch (RuntimeException ignored) { }
+        }
         if (web != null) {
             web.destroy();
             web = null;
