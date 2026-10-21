@@ -1,12 +1,12 @@
 /**
- * Kitchen Dashboard — Google Apps Script backend.
+ * Skreen — Google Apps Script backend.
  *
  * Runs under your own Google account and hands the wall display a small JSON
  * feed of your calendar, a Google Tasks list, and (optionally) photos from a
  * Google Drive folder. Because it runs as you, there are no OAuth tokens on the
  * tablet that expire overnight.
  *
- * Setup: see README.md → "Step 1: The Google backend".
+ * Setup: open the Skreen app → ⚙ Settings → Setup guide.
  */
 
 // ─── Settings ────────────────────────────────────────────────────────────────
@@ -45,13 +45,13 @@ function doGet(e) {
       case 'addTask':
         return json_({ task: addTask_(String(p.title || '').trim()) });
       case 'completeTask':
-        return json_({ ok: setTaskDone_(p.id, true) });
+        return json_({ ok: true, result: setTaskDone_(p.id, true) });
       case 'uncompleteTask':
-        return json_({ ok: setTaskDone_(p.id, false) });
+        return json_({ ok: true, result: setTaskDone_(p.id, false) });
       case 'photo':
         return json_(getPhoto_());
       default:
-        return json_({ ok: true, hello: 'Kitchen Dashboard backend is running.' });
+        return json_({ ok: true, hello: 'Skreen backend is running.' });
     }
   } catch (err) {
     return json_({ error: String(err && err.message || err) });
@@ -111,7 +111,7 @@ function getEvents_() {
   return out;
 }
 
-// ─── Tasks (requires the "Google Tasks API" service — see README) ────────────
+// ─── Tasks (requires the "Google Tasks API" service — see the Setup guide) ───
 
 function taskListId_() {
   const cache = CacheService.getScriptCache();
@@ -135,29 +135,47 @@ function taskListId_() {
 
 function getTasks_() {
   const listId = taskListId_();
-  const items = [];
+  const out = [];
+
+  // Open items, in the order they appear in Google Tasks.
   let pageToken;
   do {
     const res = Tasks.Tasks.list(listId, { showCompleted: false, showHidden: false, maxResults: 100, pageToken: pageToken });
     (res.items || []).forEach((t) => {
-      if (t.title && !t.parent) items.push({ id: t.id, title: t.title, due: t.due || null, position: t.position });
+      if (t.title && !t.parent) out.push({ id: t.id, title: t.title, position: t.position, done: false });
     });
     pageToken = res.nextPageToken;
   } while (pageToken);
-  items.sort((a, b) => (a.position < b.position ? -1 : 1));
-  return items;
+  out.sort((a, b) => (a.position < b.position ? -1 : 1));
+
+  // Items checked off in the last 24 hours stay on the wall (struck through), then drop off.
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const done = [];
+  pageToken = undefined;
+  do {
+    const res = Tasks.Tasks.list(listId, { showCompleted: true, showHidden: true, completedMin: since, maxResults: 100, pageToken: pageToken });
+    (res.items || []).forEach((t) => {
+      if (t.title && !t.parent && t.status === 'completed' && t.completed) {
+        done.push({ id: t.id, title: t.title, done: true, completed: t.completed });
+      }
+    });
+    pageToken = res.nextPageToken;
+  } while (pageToken);
+  done.sort((a, b) => (a.completed < b.completed ? 1 : -1)); // newest first
+
+  return out.concat(done);
 }
 
 function addTask_(title) {
   if (!title) throw new Error('Empty title');
   const t = Tasks.Tasks.insert({ title: title.slice(0, 500) }, taskListId_());
-  return { id: t.id, title: t.title, due: null, position: t.position };
+  return { id: t.id, title: t.title, position: t.position, done: false };
 }
 
 function setTaskDone_(id, done) {
   if (!id) throw new Error('Missing id');
   Tasks.Tasks.patch(done ? { status: 'completed' } : { status: 'needsAction', completed: null }, taskListId_(), id);
-  return true;
+  return done ? { completed: new Date().toISOString() } : true;
 }
 
 // ─── Photos from a Drive folder ──────────────────────────────────────────────

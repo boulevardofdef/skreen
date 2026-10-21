@@ -1,57 +1,73 @@
-/* Kitchen Dashboard — wall display for calendar, to-dos, weather and photos. */
+/* Skreen — wall display for calendar, to-dos, weather and backgrounds. */
 (() => {
   'use strict';
 
   // ─── Settings (stored on this device) ──────────────────────────────────────
 
   const DEFAULTS = {
-    backendUrl: '',
-    secret: '',
-    lat: null,
-    lon: null,
-    place: '',
-    units: 'fahrenheit',
-    clock: '12',
-    nightEnabled: '1',
-    nightStart: '22:30',
-    nightEnd: '06:00',
-    photoMinutes: '5',
+    backendUrl: '', secret: '',
+    lat: null, lon: null, place: '',
+    units: 'fahrenheit', clock: '12',
+    bg: 'auto', photoMinutes: '5',
+    showcaseMinutes: '5', pixelShift: '1',
+    nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
   };
-  const STORE_KEY = 'kitchen-dashboard-settings';
+  const STORE_KEY = 'skreen-settings';
+  const LEGACY_KEY = 'kitchen-dashboard-settings';
 
   function loadSettings() {
     try {
-      return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(STORE_KEY) || '{}') };
-    } catch (_) {
-      return { ...DEFAULTS };
-    }
+      const raw = localStorage.getItem(STORE_KEY) || localStorage.getItem(LEGACY_KEY) || '{}';
+      return { ...DEFAULTS, ...JSON.parse(raw) };
+    } catch (_) { return { ...DEFAULTS }; }
   }
-  function saveSettings() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch (_) {}
-  }
+  function saveSettings() { try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch (_) {} }
 
   let cfg = loadSettings();
   const isDemo = () => !cfg.backendUrl;
 
+  // A link like  …/?backend=URL&key=SECRET  configures a device without typing.
+  (function importLink() {
+    try {
+      const u = new URL(location.href);
+      const b = u.searchParams.get('backend'), k = u.searchParams.get('key');
+      if (!b && !k) return;
+      if (b) cfg.backendUrl = b;
+      if (k) cfg.secret = k;
+      saveSettings();
+      u.searchParams.delete('backend'); u.searchParams.delete('key');
+      history.replaceState(null, '', u.pathname + u.search + u.hash);
+    } catch (_) {}
+  })();
+
   const REFRESH_DATA_MS = 2 * 60 * 1000;
   const REFRESH_WEATHER_MS = 15 * 60 * 1000;
   const AGENDA_DAYS = 7;
+  const DAY_MS = 86400000;
+  const DONE_KEEP_MS = DAY_MS;          // checked-off items stay for 24 hours
+  const TOUR_VIEW_MS = 7500;            // 4 views ≈ 30 seconds
 
   const $ = (id) => document.getElementById(id);
+  const clockHtml = (hm) => hm.replace(':', '<span class="colon">:</span>');
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // Static icons
+  $('addIcon').innerHTML = Icons.plus;
+  $('gearBtn').innerHTML = Icons.gear;
+  $('micBtn').innerHTML = Icons.mic;
+  $('locGps').innerHTML = Icons.pin;
+  $('guideArrow').innerHTML = Icons.arrow;
+  $('guideClose').innerHTML = Icons.close;
 
   // ─── State ─────────────────────────────────────────────────────────────────
 
   const state = {
-    events: [],
-    tasks: [],
-    weather: null,
-    lastSync: null,
-    syncError: null,
+    events: [], tasks: [], weather: null,
+    lastSync: null, syncError: null,
     photosEnabled: false,
-    mutating: 0,
-    lastMutation: 0,
+    mutating: 0, lastMutation: 0,
     nightDismissedUntil: 0,
+    bgKey: '',
   };
 
   // ─── Backend ───────────────────────────────────────────────────────────────
@@ -74,10 +90,7 @@
       state.events = demoEvents();
       state.tasks = demoTasks.load();
       state.lastSync = new Date();
-      renderAgenda();
-      renderTasks();
-      renderStatus();
-      updateNight();
+      renderAll();
       return;
     }
     try {
@@ -85,37 +98,33 @@
       state.events = data.events || [];
       // Don't clobber the list while a tap is still being saved.
       if (!state.mutating && Date.now() - state.lastMutation > 4000) state.tasks = data.tasks || [];
-      const hadPhotos = state.photosEnabled;
       state.photosEnabled = !!data.photos;
       state.lastSync = new Date();
       state.syncError = null;
-      renderAgenda();
-      renderTasks();
-      updateNight();
-      if (state.photosEnabled && !hadPhotos) nextPhoto();
     } catch (err) {
       state.syncError = err.message || String(err);
       console.warn('Sync failed', err);
     }
+    renderAll();
+  }
+
+  function renderAll() {
+    renderAgenda();
+    renderTasks();
     renderStatus();
+    applyBackground();
+    updateNight();
   }
 
   // ─── Time helpers ──────────────────────────────────────────────────────────
 
-  const DAY = 86400000;
   const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
-  const parseDate = (s) => {
-    const [y, m, d] = s.split('-').map(Number);
-    return new Date(y, m - 1, d);
-  };
+  const parseDate = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 
   function timeParts(d) {
-    if (cfg.clock === '24') {
-      return { hm: d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0'), ap: '' };
-    }
-    const h = d.getHours() % 12 || 12;
-    return { hm: h + ':' + d.getMinutes().toString().padStart(2, '0'), ap: d.getHours() < 12 ? 'AM' : 'PM' };
+    if (cfg.clock === '24') return { hm: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), ap: '' };
+    return { hm: (d.getHours() % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0'), ap: d.getHours() < 12 ? 'AM' : 'PM' };
   }
   function fmtTime(d, { small = false } = {}) {
     const { hm, ap } = timeParts(d);
@@ -123,6 +132,7 @@
     return small ? `${hm}<small>${ap}</small>` : `${hm} ${ap}`;
   }
   const fmtDate = (d, opts) => d.toLocaleDateString(undefined, opts);
+  const shortHour = (d) => (cfg.clock === '24' ? timeParts(d).hm : `${d.getHours() % 12 || 12} ${d.getHours() < 12 ? 'AM' : 'PM'}`);
 
   function relMinutes(mins) {
     if (mins < 1) return 'Starting now';
@@ -137,40 +147,35 @@
   function tick() {
     const now = new Date();
     const { hm, ap } = timeParts(now);
-    $('time').textContent = hm;
+    $('time').innerHTML = clockHtml(hm);
     $('ampm').textContent = ap;
-    $('date').textContent = fmtDate(now, { weekday: 'long', month: 'long', day: 'numeric' });
+    $('date').textContent = fmtDate(now, { weekday: 'short', month: 'long', day: 'numeric' });
 
     if (now.getMinutes() !== lastMinute) {
       lastMinute = now.getMinutes();
-      setPeriod(now);
       renderAgenda();
+      renderTasks();           // retires checked-off items after 24 hours
+      applyBackground();       // new day → new background
       updateNight(now);
+      nudgeLayout(now);
+      maybeStartTour(now);
       // Fresh start every night: picks up app updates and keeps memory tidy.
       if (now.getHours() === 3 && now.getMinutes() === 30) location.reload();
     }
     setTimeout(tick, 1000 - now.getMilliseconds() + 5);
   }
 
-  function setPeriod(now) {
-    const h = now.getHours() + now.getMinutes() / 60;
-    const w = state.weather && state.weather.daily;
-    const sunrise = w ? hourOf(w.sunrise[0]) : 6.5;
-    const sunset = w ? hourOf(w.sunset[0]) : 18.5;
-    let p = 'night';
-    if (h >= sunrise - 1 && h < sunrise + 1.5) p = 'dawn';
-    else if (h >= sunrise + 1.5 && h < sunset - 1) p = 'day';
-    else if (h >= sunset - 1 && h < sunset + 1) p = 'dusk';
-    document.body.dataset.period = p;
+  // Slide the whole layout a few pixels, slowly, so no edge stays on the same pixels.
+  function nudgeLayout(now) {
+    const dash = $('dash');
+    if (cfg.pixelShift !== '1') { dash.style.transform = ''; return; }
+    const m = Math.floor(now.getTime() / 60000);
+    dash.style.transform = `translate(${Math.round(Math.sin(m / 11) * 7)}px, ${Math.round(Math.cos(m / 13) * 5)}px)`;
   }
-  const hourOf = (iso) => { const d = new Date(iso); return d.getHours() + d.getMinutes() / 60; };
 
   // ─── Agenda ────────────────────────────────────────────────────────────────
 
-  function normalizeEvent(e) {
-    if (e.allDay) return { ...e, s: parseDate(e.start), e: parseDate(e.end) };
-    return { ...e, s: new Date(e.start), e: new Date(e.end) };
-  }
+  const normalizeEvent = (e) => (e.allDay ? { ...e, s: parseDate(e.start), e: parseDate(e.end) } : { ...e, s: new Date(e.start), e: new Date(e.end) });
 
   function renderAgenda() {
     const el = $('agenda');
@@ -178,37 +183,30 @@
     const today = startOfDay(now);
     const events = state.events.map(normalizeEvent);
     let html = '';
-    let shownDays = 0;
 
     for (let i = 0; i < AGENDA_DAYS; i++) {
-      const dayStart = addDays(today, i);
-      const dayEnd = addDays(today, i + 1);
+      const dayStart = addDays(today, i), dayEnd = addDays(today, i + 1);
       const inDay = events.filter((ev) => ev.s < dayEnd && ev.e > dayStart);
       const allDay = inDay.filter((ev) => ev.allDay);
       let timed = inDay.filter((ev) => !ev.allDay).sort((a, b) => a.s - b.s);
       const endedToday = i === 0 ? timed.filter((ev) => ev.e <= now).length : 0;
       if (i === 0) timed = timed.filter((ev) => ev.e > now);
-
       if (i > 0 && !allDay.length && !timed.length) continue;
-      shownDays++;
 
       const name = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : fmtDate(dayStart, { weekday: 'long' });
-      const sub = fmtDate(dayStart, i < 2 ? { weekday: 'short', month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric' });
+      const sub = fmtDate(dayStart, { month: 'short', day: 'numeric' });
 
       html += `<div class="day${i >= 2 ? ' later' : ''}">`;
-      html += `<div class="day-head"><span class="name">${name}</span><span class="sub">${esc(sub)}</span></div>`;
+      html += `<div class="day-head"><span class="name">${name}</span><span>${esc(sub)}</span></div>`;
       if (allDay.length) {
-        html += '<div class="allday">' + allDay.map((ev) =>
-          `<span class="pill" style="--c:${esc(ev.color || '#8ab4f8')}">${esc(ev.title)}</span>`).join('') + '</div>';
+        html += '<div class="allday">' + allDay.map((ev) => `<span class="pill" style="--c:${esc(ev.color || '#e8c887')}">${esc(ev.title)}</span>`).join('') + '</div>';
       }
       if (i === 0 && !timed.length) {
-        html += `<div class="empty"><span class="msr">${endedToday ? 'done_all' : 'wb_sunny'}</span>${
-          endedToday ? 'That’s everything for today' : 'Nothing scheduled today'}</div>`;
+        html += `<div class="empty">${endedToday ? Icons.check : Icons.sunny}${endedToday ? 'That’s everything for today' : 'Nothing scheduled today'}</div>`;
       }
       html += timed.map((ev) => eventCard(ev, now, dayStart, dayEnd)).join('');
       html += '</div>';
     }
-    if (shownDays === 1 && events.length === 0 && !isDemo() && !state.lastSync) html = '';
     el.innerHTML = html;
   }
 
@@ -220,92 +218,89 @@
     let start, end;
     if (ev.s < dayStart && ev.e > dayEnd) { start = 'All day'; end = ''; }
     else if (ev.s < dayStart) { start = 'Until'; end = fmtTime(ev.e); }
-    else {
-      start = fmtTime(ev.s, { small: true });
-      end = ev.e <= dayEnd ? fmtTime(ev.e) : 'Overnight';
-    }
+    else { start = fmtTime(ev.s, { small: true }); end = ev.e <= dayEnd ? fmtTime(ev.e) : 'Overnight'; }
 
-    let chip = '';
-    if (running) chip = '<span class="chip">Now</span>';
-    else if (soon) chip = `<span class="chip">${relMinutes(minsAway)}</span>`;
+    const chip = running ? '<span class="chip">Now</span>' : soon ? `<span class="chip">${relMinutes(minsAway)}</span>` : '';
+    const meta = ev.location ? `${Icons.pin}${esc(ev.location.split('\n')[0])}` : ev.calendar ? esc(ev.calendar) : '';
+    const progress = running ? `<div class="progress" style="width:${Math.min(100, ((now - ev.s) / (ev.e - ev.s)) * 100).toFixed(1)}%"></div>` : '';
 
-    const meta = [];
-    if (ev.location) meta.push(`<span class="msr">location_on</span>${esc(ev.location.split('\n')[0])}`);
-    else if (ev.calendar) meta.push(esc(ev.calendar));
-
-    const progress = running
-      ? `<div class="progress" style="width:${Math.min(100, ((now - ev.s) / (ev.e - ev.s)) * 100).toFixed(1)}%"></div>`
-      : '';
-
-    return `<div class="event${running ? ' now' : soon ? ' soon' : ''}" style="--c:${esc(ev.color || '#8ab4f8')}">
+    return `<div class="event${running ? ' now' : ''}" style="--c:${esc(ev.color || '#e8c887')}">
       <div class="when"><div class="start">${start}</div>${end ? `<div class="end">${end}</div>` : ''}</div>
-      <div><div class="title">${esc(ev.title)}${chip}</div>${meta.length ? `<div class="meta">${meta.join(' · ')}</div>` : ''}</div>
-      ${progress}
+      <div><div class="title">${esc(ev.title)}${chip}</div>${meta ? `<div class="meta">${meta}</div>` : ''}</div>${progress}
     </div>`;
   }
 
   // ─── To-do list ────────────────────────────────────────────────────────────
 
+  const byPosition = (a, b) => ((a.position || '') < (b.position || '') ? -1 : (a.position || '') > (b.position || '') ? 1 : 0);
+  const completedMs = (t) => Date.parse(t.completed) || 0;
+
+  // Open items in list order; checked-off items from the last 24 hours, newest first.
+  function taskGroups() {
+    const now = Date.now();
+    return {
+      open: state.tasks.filter((t) => !t.done).sort(byPosition),
+      done: state.tasks.filter((t) => t.done && now - completedMs(t) < DONE_KEEP_MS).sort((a, b) => completedMs(b) - completedMs(a)),
+    };
+  }
+  function ago(ms) {
+    const m = Math.max(1, Math.round((Date.now() - ms) / 60000));
+    return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h`;
+  }
+
   function renderTasks() {
-    const list = $('tasks');
-    const open = state.tasks.filter((t) => !t.done);
+    const { open, done } = taskGroups();
     $('taskCount').textContent = open.length || '';
-    if (!state.tasks.length) {
-      list.innerHTML = `<li class="task task-empty"><div><span class="msr">task_alt</span>All caught up</div></li>`;
-      return;
-    }
-    list.innerHTML = state.tasks.map((t) => `
-      <li class="task${t.done ? ' done' : ''}${t.pending ? ' pending' : ''}" data-id="${esc(t.id)}">
-        <span class="box"><span class="msr">check</span></span>
-        <span class="label">${esc(t.title)}</span>
+    let html = '';
+    if (!open.length) html += `<li class="task task-empty">${Icons.check}All caught up</li>`;
+    html += open.map((t) => `
+      <li class="task${t.pending ? ' pending' : ''}" data-id="${esc(t.id)}">
+        <span class="box">${Icons.check}</span><span class="label">${esc(t.title)}</span>
       </li>`).join('');
+    if (done.length) {
+      html += '<li class="task-rule">Done · last 24h</li>';
+      html += done.map((t) => `
+        <li class="task done" data-id="${esc(t.id)}">
+          <span class="box">${Icons.check}</span><span class="label">${esc(t.title)}</span><span class="ago">${ago(completedMs(t))}</span>
+        </li>`).join('');
+    }
+    $('tasks').innerHTML = html;
   }
 
   async function mutate(fn) {
     state.mutating++;
-    try { return await fn(); }
-    finally { state.mutating--; state.lastMutation = Date.now(); }
+    try { return await fn(); } finally { state.mutating--; state.lastMutation = Date.now(); }
+  }
+  const persistDemo = () => demoTasks.save(state.tasks);
+
+  function completeTask(t) {
+    if (t.done || t.pending) return;
+    t.done = true;
+    t.completed = new Date().toISOString();
+    renderTasks();
+    showToast(`Done: ${t.title}`, 'Undo', () => restoreTask(t));
+    if (isDemo()) return persistDemo();
+    mutate(() => api('completeTask', { id: t.id })).catch(() => {
+      t.done = false; t.completed = null; renderTasks();
+      showToast('Couldn’t save — check your connection');
+    });
   }
 
-  function completeTask(id) {
-    const t = state.tasks.find((x) => x.id === id);
-    if (!t || t.done || t.pending) return;
-    t.done = true;
-    t._index = state.tasks.indexOf(t);
+  function restoreTask(t) {
+    if (!t.done) return;
+    t.done = false;
+    t.completed = null;
     renderTasks();
-
-    setTimeout(() => {
-      if (!t.done) return; // undone in the meantime
-      const li = $('tasks').querySelector(`[data-id="${CSS.escape(id)}"]`);
-      if (li) li.classList.add('leaving');
-      setTimeout(() => {
-        if (!t.done) return;
-        state.tasks = state.tasks.filter((x) => x !== t);
-        renderTasks();
-      }, 500);
-    }, 1100);
-
-    showToast(`Done: ${t.title}`, 'Undo', () => {
-      t.done = false;
-      if (!state.tasks.includes(t)) state.tasks.splice(Math.min(t._index ?? 0, state.tasks.length), 0, t);
-      renderTasks();
-      if (isDemo()) return demoTasks.save(state.tasks);
-      mutate(() => api('uncompleteTask', { id })).catch(() => showToast('Couldn’t undo — check your connection'));
-    });
-
-    if (isDemo()) return demoTasks.save(state.tasks.filter((x) => x !== t));
-    mutate(() => api('completeTask', { id })).catch(() => {
-      t.done = false;
-      if (!state.tasks.includes(t)) state.tasks.splice(t._index, 0, t);
-      renderTasks();
-      showToast('Couldn’t save — check your connection');
+    if (isDemo()) return persistDemo();
+    mutate(() => api('uncompleteTask', { id: t.id })).catch(() => {
+      showToast('Couldn’t undo — check your connection');
     });
   }
 
   function addTasks(text) {
     const titles = text.split(/[,\n]/).map((s) => s.trim()).filter(Boolean);
     titles.reverse().forEach((title) => {
-      const tmp = { id: 'tmp-' + Math.random().toString(36).slice(2), title, pending: !isDemo() };
+      const tmp = { id: 'tmp-' + Math.random().toString(36).slice(2), title, done: false, pending: !isDemo() };
       state.tasks.unshift(tmp);
       if (isDemo()) return;
       mutate(() => api('addTask', { title }))
@@ -316,13 +311,15 @@
           showToast(`Couldn’t add “${title}” — check your connection`);
         });
     });
-    if (isDemo()) demoTasks.save(state.tasks);
+    if (isDemo()) persistDemo();
     renderTasks();
   }
 
   $('tasks').addEventListener('click', (e) => {
     const li = e.target.closest('.task[data-id]');
-    if (li) completeTask(li.dataset.id);
+    const t = li && state.tasks.find((x) => x.id === li.dataset.id);
+    if (!t) return;
+    if (t.done) restoreTask(t); else completeTask(t);
   });
 
   // Add sheet
@@ -363,33 +360,6 @@
 
   // ─── Weather (Open-Meteo, no key needed) ───────────────────────────────────
 
-  const WX = {
-    0: ['Clear', 'sunny', 'clear_night'],
-    1: ['Mostly clear', 'sunny', 'clear_night'],
-    2: ['Partly cloudy', 'partly_cloudy_day', 'partly_cloudy_night'],
-    3: ['Cloudy', 'cloud'],
-    45: ['Fog', 'foggy'], 48: ['Freezing fog', 'foggy'],
-    51: ['Light drizzle', 'rainy_light'], 53: ['Drizzle', 'rainy_light'], 55: ['Heavy drizzle', 'rainy'],
-    56: ['Freezing drizzle', 'weather_mix'], 57: ['Freezing drizzle', 'weather_mix'],
-    61: ['Light rain', 'rainy_light'], 63: ['Rain', 'rainy'], 65: ['Heavy rain', 'rainy_heavy'],
-    66: ['Freezing rain', 'weather_mix'], 67: ['Freezing rain', 'weather_mix'],
-    71: ['Light snow', 'weather_snowy'], 73: ['Snow', 'weather_snowy'], 75: ['Heavy snow', 'snowing_heavy'], 77: ['Snow grains', 'weather_snowy'],
-    80: ['Showers', 'rainy_light'], 81: ['Showers', 'rainy'], 82: ['Heavy showers', 'rainy_heavy'],
-    85: ['Snow showers', 'weather_snowy'], 86: ['Snow showers', 'snowing_heavy'],
-    95: ['Thunderstorms', 'thunderstorm'], 96: ['Thunderstorms', 'thunderstorm'], 99: ['Thunderstorms', 'thunderstorm'],
-  };
-  const ICON_COLOR = {
-    sunny: 'var(--yellow)', clear_night: '#c6cbf5',
-    partly_cloudy_day: 'var(--yellow)', partly_cloudy_night: '#c6cbf5',
-    cloud: '#dadce0', foggy: '#bdc1c6',
-    rainy_light: 'var(--blue)', rainy: 'var(--blue)', rainy_heavy: 'var(--blue)',
-    weather_mix: '#a8d1ff', weather_snowy: '#ffffff', snowing_heavy: '#ffffff', thunderstorm: 'var(--orange)',
-  };
-  const wxInfo = (code, isDay = true) => {
-    const w = WX[code] || ['—', 'cloud'];
-    const icon = !isDay && w[2] ? w[2] : w[1];
-    return { label: w[0], icon, color: ICON_COLOR[icon] || 'var(--text)' };
-  };
   const isWet = (code) => code >= 51;
 
   async function refreshWeather() {
@@ -410,112 +380,175 @@
       if (!res.ok) throw new Error('HTTP ' + res.status);
       state.weather = await res.json();
       renderWeather();
-      setPeriod(new Date());
-    } catch (err) {
-      console.warn('Weather failed', err);
-    }
+    } catch (err) { console.warn('Weather failed', err); }
   }
 
   function renderWeather() {
     const w = state.weather;
     if (!w) return;
-    const c = w.current, d = w.daily;
-    const now = wxInfo(c.weather_code, c.is_day);
-    const icon = $('wxIcon');
-    icon.textContent = now.icon;
-    icon.style.color = now.color;
+    const c = w.current, d = w.daily, h = w.hourly;
+    const now = Icons.weather(c.weather_code, c.is_day);
+    $('wxPlace').textContent = cfg.place || '';
+    $('wxIcon').innerHTML = now.svg;
     $('wxTemp').textContent = Math.round(c.temperature_2m) + '°';
     $('wxCond').textContent = now.label;
-    $('wxSub').innerHTML =
-      `H ${Math.round(d.temperature_2m_max[0])}° · L ${Math.round(d.temperature_2m_min[0])}°<br>` +
-      `Feels like ${Math.round(c.apparent_temperature)}°`;
-
-    // Next six hours.
-    const h = w.hourly;
-    const i0 = h.time.findIndex((t) => new Date(t).getTime() > Date.now());
-    $('wxHours').innerHTML = i0 < 0 ? '' : h.time.slice(i0, i0 + 6).map((t, j) => {
-      const i = i0 + j, at = new Date(t);
-      const info = wxInfo(h.weather_code[i], h.is_day ? h.is_day[i] : 1);
-      const pop = h.precipitation_probability[i];
-      return `<div class="wx-hour">
-        <span class="h">${esc(shortHour(at))}</span>
-        <span class="msr" style="color:${info.color}">${info.icon}</span>
-        <span class="t">${Math.round(h.temperature_2m[i])}°</span>
-        <span class="pop">${pop >= 30 ? pop + '%' : ''}</span>
-      </div>`;
-    }).join('');
-
+    $('wxSub').innerHTML = `H ${Math.round(d.temperature_2m_max[0])}° · L ${Math.round(d.temperature_2m_min[0])}°<br>Feels ${Math.round(c.apparent_temperature)}°`;
     $('wxSummary').innerHTML = weatherSummary(w);
 
+    const i0 = h.time.findIndex((t) => new Date(t).getTime() > Date.now());
+    $('wxHours').innerHTML = i0 < 0 ? '' : h.time.slice(i0, i0 + 6).map((t, j) => {
+      const i = i0 + j, info = Icons.weather(h.weather_code[i], h.is_day ? h.is_day[i] : 1), pop = h.precipitation_probability[i];
+      return `<div class="wx-hour"><span class="h">${esc(shortHour(new Date(t)))}</span>${info.svg}<span class="t">${Math.round(h.temperature_2m[i])}°</span><span class="pop">${pop >= 30 ? pop + '%' : ''}</span></div>`;
+    }).join('');
+
     $('wxDays').innerHTML = d.time.slice(1, 6).map((t, i) => {
-      const k = i + 1;
-      const info = wxInfo(d.weather_code[k]);
-      const pop = d.precipitation_probability_max[k];
-      return `<div class="wx-day">
-        <span class="d">${esc(fmtDate(parseDate(t), { weekday: 'short' }))}</span>
-        <span class="msr" style="color:${info.color}">${info.icon}</span>
+      const k = i + 1, info = Icons.weather(d.weather_code[k]), pop = d.precipitation_probability_max[k];
+      return `<div class="wx-day"><span class="d">${esc(fmtDate(parseDate(t), { weekday: 'short' }))}</span>${info.svg}
         <span><span class="hi">${Math.round(d.temperature_2m_max[k])}°</span><span class="lo">${Math.round(d.temperature_2m_min[k])}°</span></span>
-        <span class="pop">${pop >= 30 ? pop + '%' : ''}</span>
-      </div>`;
+        <span class="pop">${pop >= 30 ? pop + '%' : ''}</span></div>`;
     }).join('');
   }
 
-  const shortHour = (d) => (cfg.clock === '24' ? timeParts(d).hm : `${d.getHours() % 12 || 12} ${d.getHours() < 12 ? 'AM' : 'PM'}`);
-
-  // A plain-English line about rain in the next 12 hours.
-  function weatherSummary(w) {
-    const h = w.hourly;
-    const nowMs = Date.now();
-    let i0 = h.time.findIndex((t) => new Date(t).getTime() > nowMs - 3600000);
-    if (i0 < 0) return '';
+  // Plain-English rain outlook for the next 12 hours; returns {icon, text}.
+  function rainOutlook(w) {
+    const h = w.hourly, nowMs = Date.now();
+    const i0 = h.time.findIndex((t) => new Date(t).getTime() > nowMs - 3600000);
+    if (i0 < 0) return null;
     const hours = [];
-    for (let i = i0; i < Math.min(i0 + 12, h.time.length); i++) {
-      hours.push({ t: new Date(h.time[i]), pop: h.precipitation_probability[i] ?? 0, code: h.weather_code[i] });
-    }
+    for (let i = i0; i < Math.min(i0 + 12, h.time.length); i++) hours.push({ t: new Date(h.time[i]), pop: h.precipitation_probability[i] ?? 0, code: h.weather_code[i] });
     const wet = (x) => isWet(x.code) || x.pop >= 55;
     const kind = (code) => (code >= 95 ? 'Storms' : (code >= 71 && code <= 77) || code === 85 || code === 86 ? 'Snow' : 'Rain');
-    const at = shortHour;
 
     if (isWet({ code: w.current.weather_code, pop: 0 })) {
-      const stop = hours.findIndex((x) => !wet(x));
-      const k = kind(w.current.weather_code);
-      return stop > 0
-        ? `<span class="msr">rainy</span>${k} easing around ${at(hours[stop].t)}`
-        : `<span class="msr">rainy</span>${k} continuing for a while — grab an umbrella`;
+      const stop = hours.findIndex((x) => !wet(x)), k = kind(w.current.weather_code);
+      return { wet: true, text: stop > 0 ? `${k} easing around ${shortHour(hours[stop].t)}` : `${k} continuing for a while` };
     }
     const first = hours.find(wet);
-    if (first) {
-      return `<span class="msr">rainy</span>${kind(first.code)} likely around ${at(first.t)} (${first.pop}%)`;
-    }
-    const end = new Date(nowMs).getHours() >= 15 ? 'tonight' : 'today';
-    return `<span class="msr" style="color:var(--green)">check_circle</span>No rain expected ${end}`;
+    if (first) return { wet: true, text: `${kind(first.code)} likely around ${shortHour(first.t)} (${first.pop}%)` };
+    return { wet: false, text: `No rain expected ${new Date(nowMs).getHours() >= 15 ? 'tonight' : 'today'}` };
+  }
+  function weatherSummary(w) {
+    const r = rainOutlook(w);
+    return r ? `${r.wet ? Icons.umbrella : Icons.check}${esc(r.text)}` : '';
   }
 
-  // ─── Photos ────────────────────────────────────────────────────────────────
+  // ─── Backgrounds & photos ──────────────────────────────────────────────────
 
-  let photoFront = 'photoA';
-  let photoTimer = null;
+  function currentBackground() {
+    if (cfg.bg === 'photos') return { photos: state.photosEnabled, art: Backgrounds.forDay(new Date()) };
+    if (cfg.bg !== 'auto' && Backgrounds.byId(cfg.bg)) return { photos: false, art: Backgrounds.byId(cfg.bg) };
+    return { photos: false, art: Backgrounds.forDay(new Date()) };
+  }
+
+  function applyBackground() {
+    const { photos, art } = currentBackground();
+    const key = `${art.id}|${photos}`;
+    if (key === state.bgKey) return;
+    state.bgKey = key;
+    document.body.dataset.bg = art.id;
+    $('bgArt').style.background = art.css;
+    if (photos) {
+      nextPhoto();
+    } else {
+      clearTimeout(photoTimer);
+      document.body.classList.remove('has-photo');
+      for (const id of ['photoA', 'photoB']) { $(id).classList.remove('show'); $(id).style.backgroundImage = ''; }
+    }
+  }
+
+  let photoFront = 'photoA', photoTimer = null;
   async function nextPhoto() {
     clearTimeout(photoTimer);
     photoTimer = setTimeout(nextPhoto, Number(cfg.photoMinutes) * 60000);
-    if (isDemo() || !state.photosEnabled || isNight()) return;
+    if (isDemo() || !currentBackground().photos || isNight()) return;
     try {
       const { dataUrl } = await api('photo');
       await new Promise((ok, fail) => { const img = new Image(); img.onload = ok; img.onerror = fail; img.src = dataUrl; });
       const back = photoFront === 'photoA' ? 'photoB' : 'photoA';
-      const el = $(back);
+      const el = $(back), old = $(photoFront);
       el.style.backgroundImage = `url("${dataUrl}")`;
-      el.classList.remove('show');
-      void el.offsetWidth; // restart the slow zoom
-      el.classList.add('show');
-      $(photoFront).classList.remove('show');
-      const old = $(photoFront);
+      el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+      old.classList.remove('show');
       setTimeout(() => { if (!old.classList.contains('show')) old.style.backgroundImage = ''; }, 3000);
       photoFront = back;
       document.body.classList.add('has-photo');
-    } catch (err) {
-      console.warn('Photo failed', err);
+    } catch (err) { console.warn('Photo failed', err); }
+  }
+
+  // ─── Big-screen tour (burn-in protection) ──────────────────────────────────
+
+  const TOUR = ['time', 'weather', 'agenda', 'todo'];
+  const tour = { on: false, i: 0, cycle: 0, timer: null, last: Date.now() };
+
+  function maybeStartTour(now = new Date()) {
+    const mins = Number(cfg.showcaseMinutes);
+    if (!mins || tour.on || isNight(now) || dialogOpen()) return;
+    if (now.getTime() - tour.last >= mins * 60000) startTour();
+  }
+  const dialogOpen = () => !!document.querySelector('dialog[open]') || !$('guide').hidden;
+
+  function startTour() {
+    tour.on = true; tour.i = 0; tour.cycle++;
+    const box = $('showcase');
+    box.hidden = false;
+    const bar = $('showBar');
+    bar.style.transition = 'none'; bar.style.width = '0';
+    void bar.offsetWidth;
+    bar.style.transition = `width ${TOUR.length * TOUR_VIEW_MS}ms linear`; bar.style.width = '100%';
+    showTourView();
+  }
+
+  function showTourView() {
+    const body = $('showBody'), prev = body.firstElementChild;
+    if (prev) { prev.classList.add('out'); setTimeout(() => prev.remove(), 600); }
+    const name = TOUR[tour.i];
+    const v = document.createElement('div');
+    v.className = `sv sv-${name} p${(tour.cycle + tour.i) % 3}`;
+    v.innerHTML = tourHtml(name);
+    body.appendChild(v);
+    tour.timer = setTimeout(() => { tour.i++; if (tour.i >= TOUR.length) endTour(); else showTourView(); }, TOUR_VIEW_MS);
+  }
+
+  function endTour() {
+    clearTimeout(tour.timer);
+    tour.on = false; tour.last = Date.now();
+    $('showcase').hidden = true;
+    $('showBody').innerHTML = '';
+  }
+  $('showcase').addEventListener('click', endTour);
+
+  function tourHtml(name) {
+    const now = new Date();
+    if (name === 'time') {
+      const { hm, ap } = timeParts(now);
+      return `<div class="kicker">Time</div><div class="big">${clockHtml(hm)}${ap ? `<small>${ap}</small>` : ''}</div><div class="bigdate">${esc(fmtDate(now, { weekday: 'long', month: 'long', day: 'numeric' }))}</div>`;
     }
+    if (name === 'weather') {
+      const w = state.weather;
+      if (!w) return '<div class="kicker">Weather</div><div class="cond">Loading…</div>';
+      const c = w.current, d = w.daily, info = Icons.weather(c.weather_code, c.is_day), r = rainOutlook(w);
+      return `${info.svg}<div class="col2"><div class="kicker">Weather · ${esc(cfg.place || '')}</div>
+        <div class="bigtemp">${Math.round(c.temperature_2m)}°</div><div class="cond">${esc(info.label)}</div>
+        <div class="hl">H ${Math.round(d.temperature_2m_max[0])}° · L ${Math.round(d.temperature_2m_min[0])}° · Feels ${Math.round(c.apparent_temperature)}°</div>
+        ${r ? `<div class="rain">${r.wet ? Icons.umbrella : Icons.check}${esc(r.text)}</div>` : ''}</div>`;
+    }
+    if (name === 'agenda') {
+      const events = state.events.map(normalizeEvent).filter((e) => e.e > now).sort((a, b) => (a.allDay === b.allDay ? a.s - b.s : a.allDay ? -1 : 1));
+      const today = startOfDay(now), tomorrow = addDays(today, 1), after = addDays(today, 2);
+      const soon = events.filter((e) => e.s < after).slice(0, 4);
+      let rows = soon.map((e) => {
+        const running = !e.allDay && e.s <= now;
+        const when = e.allDay ? 'All day' : fmtTime(e.s, { small: true });
+        const day = e.s >= tomorrow && !e.allDay ? 'Tomorrow · ' : '';
+        return `<div class="row${running ? ' now' : ''}"><div class="rt">${when}</div><div class="rn">${esc(e.title)}<small>${esc(day)}${esc(e.location ? e.location.split('\n')[0] : e.calendar || '')}</small></div></div>`;
+      }).join('');
+      if (!rows) rows = '<div class="empty-big">Nothing on the calendar</div>';
+      return `<div class="kicker">Next up</div><div class="sv-list">${rows}</div>`;
+    }
+    const { open } = taskGroups();
+    const rows = open.slice(0, 6).map((t) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(t.title)}</div></div>`).join('')
+      || '<div class="empty-big">All caught up</div>';
+    return `<div class="kicker">To-do · ${open.length}</div><div class="sv-list">${rows}${open.length > 6 ? `<div class="more">+ ${open.length - 6} more</div>` : ''}</div>`;
   }
 
   // ─── Night mode ────────────────────────────────────────────────────────────
@@ -523,41 +556,32 @@
   const minutesOf = (hhmm) => { const [h, m] = (hhmm || '0:0').split(':').map(Number); return h * 60 + m; };
   function isNight(now = new Date()) {
     if (cfg.nightEnabled !== '1') return false;
-    const m = now.getHours() * 60 + now.getMinutes();
-    const s = minutesOf(cfg.nightStart), e = minutesOf(cfg.nightEnd);
+    const m = now.getHours() * 60 + now.getMinutes(), s = minutesOf(cfg.nightStart), e = minutesOf(cfg.nightEnd);
     return s <= e ? m >= s && m < e : m >= s || m < e;
   }
 
   function updateNight(now = new Date()) {
     const night = $('night');
     const on = isNight(now) && Date.now() > state.nightDismissedUntil;
-    if (night.hidden === !on) {
-      if (on) renderNight(now);
-      return;
-    }
+    if (on && tour.on) endTour();
+    if (night.hidden === !on) { if (on) renderNight(now); return; }
     night.hidden = !on;
     if (on) renderNight(now);
   }
 
   function renderNight(now) {
     const { hm, ap } = timeParts(now);
-    $('nightTime').innerHTML = `${hm}${ap ? `<span class="ampm">${ap}</span>` : ''}`;
+    $('nightTime').innerHTML = `${clockHtml(hm)}${ap ? `<span class="ampm">${ap}</span>` : ''}`;
     $('nightDate').textContent = fmtDate(now, { weekday: 'long', month: 'long', day: 'numeric' });
-
-    const upcoming = state.events.map(normalizeEvent)
-      .filter((ev) => !ev.allDay && ev.s > now)
-      .sort((a, b) => a.s - b.s)[0];
+    const upcoming = state.events.map(normalizeEvent).filter((ev) => !ev.allDay && ev.s > now).sort((a, b) => a.s - b.s)[0];
     if (upcoming) {
       const sameDay = startOfDay(upcoming.s).getTime() === startOfDay(now).getTime();
       const tomorrow = startOfDay(upcoming.s).getTime() === addDays(startOfDay(now), 1).getTime();
       const day = sameDay ? '' : tomorrow ? 'Tomorrow ' : fmtDate(upcoming.s, { weekday: 'long' }) + ' ';
       $('nightNext').innerHTML = `Next: <b>${esc(upcoming.title)}</b> · ${day}${fmtTime(upcoming.s)}`;
-    } else {
-      $('nightNext').textContent = '';
-    }
+    } else $('nightNext').textContent = '';
     // Drift a little so nothing sits in the same spot all night.
-    const dx = (Math.sin(now.getMinutes() / 9) * 3).toFixed(2), dy = (Math.cos(now.getMinutes() / 7) * 3).toFixed(2);
-    $('nightInner').style.transform = `translate(${dx}rem, ${dy}rem)`;
+    $('nightInner').style.transform = `translate(${(Math.sin(now.getMinutes() / 9) * 4).toFixed(2)}rem, ${(Math.cos(now.getMinutes() / 7) * 4).toFixed(2)}rem)`;
   }
 
   $('night').addEventListener('click', () => {
@@ -571,16 +595,17 @@
   function renderStatus() {
     const el = $('status');
     el.className = 'status';
+    el.hidden = false;
     if (isDemo()) {
-      el.innerHTML = '<span class="dot"></span>Showing sample data — tap the gear to connect your Google account';
+      el.dataset.go = 'start';
+      el.innerHTML = '<span class="dot"></span>Showing sample data · <u>Set up Skreen →</u>';
     } else if (state.syncError) {
       el.classList.add('error');
-      const when = state.lastSync ? ` · last updated ${fmtTime(state.lastSync)}` : '';
-      el.innerHTML = `<span class="dot"></span>Can’t reach Google right now${when}`;
-    } else {
-      el.innerHTML = '';
-    }
+      el.dataset.go = 'fix';
+      el.innerHTML = `<span class="dot"></span>Can’t reach Google right now${state.lastSync ? ` · last updated ${fmtTime(state.lastSync)}` : ''} · <u>Help</u>`;
+    } else { el.hidden = true; el.innerHTML = ''; }
   }
+  $('status').addEventListener('click', (e) => openGuide(e.currentTarget.dataset.go));
 
   // ─── Toast ─────────────────────────────────────────────────────────────────
 
@@ -588,21 +613,97 @@
   function showToast(msg, actionLabel, onAction) {
     const el = $('toast');
     el.innerHTML = `<span>${esc(msg)}</span>${actionLabel ? `<button type="button">${esc(actionLabel)}</button>` : ''}`;
-    if (actionLabel) {
-      el.querySelector('button').onclick = () => { el.classList.remove('show'); onAction(); };
-    }
+    if (actionLabel) el.querySelector('button').onclick = () => { el.classList.remove('show'); onAction(); };
     el.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove('show'), 5000);
   }
 
+  // ─── Setup guide ───────────────────────────────────────────────────────────
+
+  const guide = $('guide');
+  let guideId = 'start';
+
+  function openGuide(id = 'start') {
+    guideId = Guide.sections.some((s) => s.id === id) ? id : 'start';
+    guide.hidden = false;
+    if (tour.on) endTour();
+    renderGuide();
+  }
+  function closeGuide() { guide.hidden = true; }
+
+  function renderGuide() {
+    const sec = Guide.sections.find((s) => s.id === guideId);
+    $('guideNav').innerHTML = `<div class="brand">skreen<i>.</i></div><div class="tag">Setup guide</div>` +
+      Guide.sections.map((s, i) => `<button type="button" data-go="${s.id}" class="${s.id === guideId ? 'on' : ''}"><span class="n">${String(i + 1).padStart(2, '0')}</span>${esc(s.title)}</button>`).join('');
+    const body = $('guideBody');
+    body.innerHTML = sec.html;
+    body.scrollTop = 0;
+
+    const sw = body.querySelector('#swatches');
+    if (sw) sw.innerHTML = Backgrounds.list.map((b) => `<div class="sw" style="background:${b.css.replace(/"/g, '&quot;')}"><span>${esc(b.name)}</span></div>`).join('');
+
+    const url = body.querySelector('#lgUrl'), key = body.querySelector('#lgKey');
+    if (url) {
+      url.value = cfg.backendUrl; key.value = cfg.secret;
+      const build = () => {
+        const u = url.value.trim(), k = key.value.trim();
+        body.querySelector('#lgOut').textContent = u && k
+          ? `${location.origin}${location.pathname}?backend=${encodeURIComponent(u)}&key=${encodeURIComponent(k)}`
+          : 'Fill in both boxes to build your link.';
+      };
+      url.oninput = key.oninput = build; build();
+    }
+  }
+
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (_) {}
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) {}
+    ta.remove();
+    return ok;
+  }
+
+  guide.addEventListener('click', async (e) => {
+    const go = e.target.closest('[data-go]');
+    if (go) { guideId = go.dataset.go; renderGuide(); return; }
+    if (e.target.closest('[data-open-settings]')) { closeGuide(); openSettings(); return; }
+    const status = guide.querySelector('[data-copy-status]');
+    if (e.target.closest('[data-copy-script]')) {
+      try {
+        const res = await fetch('setup/Code.gs', { cache: 'no-cache' });
+        if (!res.ok) throw new Error();
+        const ok = await copyText(await res.text());
+        status.textContent = ok ? 'Copied. Now paste it into the Apps Script editor.' : 'Couldn’t copy automatically — open setup/Code.gs and copy it by hand.';
+      } catch (_) { status.textContent = 'Couldn’t load the script. Check your connection.'; }
+    }
+    if (e.target.closest('[data-copy-link]')) {
+      const t = guide.querySelector('#lgOut').textContent;
+      if (!/^https?:/.test(t)) return;
+      const ok = await copyText(t);
+      e.target.closest('button').textContent = ok ? 'Copied' : 'Copy failed';
+      setTimeout(() => { const b = guide.querySelector('[data-copy-link]'); if (b) b.textContent = 'Copy link'; }, 2000);
+    }
+  });
+  $('guideClose').addEventListener('click', closeGuide);
+
   // ─── Settings sheet ────────────────────────────────────────────────────────
 
-  const settingsSheet = $('settingsSheet');
-  const form = $('settingsForm');
+  const settingsSheet = $('settingsSheet'), form = $('settingsForm');
   let draftLoc = null;
 
+  function fillBackgroundOptions() {
+    $('bgSelect').innerHTML =
+      '<option value="auto">Surprise me (changes daily)</option>' +
+      Backgrounds.list.map((b) => `<option value="${b.id}">${esc(b.name)}</option>`).join('') +
+      `<option value="photos">My photos${state.photosEnabled ? '' : ' (needs a Drive folder)'}</option>`;
+  }
+
   function openSettings() {
+    fillBackgroundOptions();
     for (const el of form.elements) if (el.name && el.name in cfg) el.value = cfg[el.name] ?? '';
     draftLoc = cfg.lat != null ? { lat: cfg.lat, lon: cfg.lon, place: cfg.place } : null;
     $('locCurrent').textContent = draftLoc ? `✓ ${draftLoc.place}` : 'No location set';
@@ -612,6 +713,7 @@
   }
   $('gearBtn').addEventListener('click', openSettings);
   $('settingsCancel').addEventListener('click', () => settingsSheet.close());
+  $('openGuide').addEventListener('click', () => { settingsSheet.close(); openGuide('start'); });
 
   function setDraftLoc(loc) {
     draftLoc = loc;
@@ -624,21 +726,17 @@
     if (!q) return;
     $('locResults').textContent = 'Searching…';
     try {
-      const u = `https://geocoding-api.open-meteo.com/v1/search?count=6&language=en&name=${encodeURIComponent(q)}`;
-      const { results = [] } = await (await fetch(u)).json();
+      const { results = [] } = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=6&language=en&name=${encodeURIComponent(q)}`)).json();
       if (!results.length) { $('locResults').textContent = 'No matches.'; return; }
       $('locResults').innerHTML = '';
       results.forEach((r) => {
         const place = [r.name, r.admin1, r.country_code].filter(Boolean).join(', ');
         const b = document.createElement('button');
-        b.type = 'button';
-        b.textContent = place;
+        b.type = 'button'; b.textContent = place;
         b.onclick = () => setDraftLoc({ lat: r.latitude, lon: r.longitude, place });
         $('locResults').appendChild(b);
       });
-    } catch (_) {
-      $('locResults').textContent = 'Search failed.';
-    }
+    } catch (_) { $('locResults').textContent = 'Search failed.'; }
   });
   $('locSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('locFind').click(); } });
 
@@ -653,21 +751,17 @@
   });
 
   $('settingsTest').addEventListener('click', async () => {
-    const out = $('testResult');
-    const url = form.elements.backendUrl.value.trim();
+    const out = $('testResult'), url = form.elements.backendUrl.value.trim();
     if (!url) { out.textContent = 'Enter the backend URL first.'; return; }
     out.textContent = 'Testing…';
     const saved = { ...cfg };
-    cfg.backendUrl = url;
-    cfg.secret = form.elements.secret.value.trim();
+    cfg.backendUrl = url; cfg.secret = form.elements.secret.value.trim();
     try {
       const d = await api('dashboard');
-      out.textContent = `✓ Connected — ${d.events.length} events, ${d.tasks.length} to-dos`;
+      out.textContent = `✓ Connected — ${d.events.length} events, ${d.tasks.filter((t) => !t.done).length} to-dos`;
     } catch (err) {
       out.textContent = `✗ ${err.message === 'unauthorized' ? 'Secret key doesn’t match' : err.message}`;
-    } finally {
-      cfg = saved;
-    }
+    } finally { cfg = saved; }
   });
 
   form.addEventListener('submit', () => {
@@ -675,9 +769,10 @@
     if (draftLoc) Object.assign(cfg, draftLoc);
     saveSettings();
     state.nightDismissedUntil = 0;
-    state.photosEnabled = false;
-    document.body.classList.remove('has-photo');
+    state.bgKey = '';
+    tour.last = Date.now();
     lastMinute = -1;
+    nudgeLayout(new Date());
     refreshData();
     refreshWeather();
   });
@@ -690,7 +785,7 @@
     const ymd = (day) => { const d = addDays(t, day); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
     const now = new Date();
     const soon = new Date(Math.ceil((now.getTime() + 30 * 60000) / 900000) * 900000);
-    const C = { family: '#33b679', mom: '#7986cb', dad: '#039be5', kids: '#f4511e', home: '#f6bf26' };
+    const C = { family: '#5fbf8f', mom: '#9aa5ff', dad: '#4fb3ff', kids: '#ff7a59', home: '#f2c94c' };
     return [
       { title: 'Recycling pickup', allDay: true, start: ymd(0), end: ymd(1), color: C.home },
       { title: 'School drop-off', start: at(0, 8, 0), end: at(0, 8, 30), color: C.kids, calendar: 'Kids' },
@@ -707,21 +802,24 @@
   }
 
   const demoTasks = {
-    key: 'kitchen-dashboard-demo-tasks',
-    initial: ['Paper towels', 'Oat milk', 'Call HVAC about the filter', 'Return library books', 'Replace smoke detector battery', 'Book haircuts'],
+    key: 'skreen-demo-tasks',
+    initial() {
+      const ago = (h) => new Date(Date.now() - h * 3600000).toISOString();
+      return [
+        ...['Paper towels', 'Oat milk', 'Call HVAC about the filter', 'Return library books', 'Replace smoke detector battery', 'Book haircuts']
+          .map((title, i) => ({ id: 'demo-' + i, title, done: false, position: String(i).padStart(5, '0') })),
+        { id: 'demo-d1', title: 'Take out the recycling', done: true, completed: ago(2) },
+        { id: 'demo-d2', title: 'Order dog food', done: true, completed: ago(19) },
+      ];
+    },
     load() {
-      try {
-        const saved = JSON.parse(localStorage.getItem(this.key));
-        if (Array.isArray(saved)) return saved;
-      } catch (_) {}
-      return this.initial.map((title, i) => ({ id: 'demo-' + i, title }));
+      try { const saved = JSON.parse(localStorage.getItem(this.key)); if (Array.isArray(saved)) return saved; } catch (_) {}
+      return this.initial();
     },
-    save(tasks) {
-      try { localStorage.setItem(this.key, JSON.stringify(tasks.map(({ id, title }) => ({ id, title })))); } catch (_) {}
-    },
+    save(tasks) { try { localStorage.setItem(this.key, JSON.stringify(tasks.filter((t) => !t.pending))); } catch (_) {} },
   };
 
-  // ─── Keep the screen awake ─────────────────────────────────────────────────
+  // ─── Keep the screen awake & offline support ───────────────────────────────
 
   async function keepAwake() {
     try { if ('wakeLock' in navigator && document.visibilityState === 'visible') await navigator.wakeLock.request('screen'); } catch (_) {}
@@ -750,7 +848,7 @@
     keepAwake();
     setInterval(refreshData, REFRESH_DATA_MS);
     setInterval(refreshWeather, REFRESH_WEATHER_MS);
-    photoTimer = setTimeout(nextPhoto, 3000);
+    if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 
   boot();
