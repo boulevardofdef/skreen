@@ -94,6 +94,8 @@ window.Guide = (() => {
   <li><b>Night mode.</b> From 10:30 PM to 6 AM the screen goes black with a dim clock that wanders slowly. On OLED, black pixels are off. Tap to wake the full display for two minutes.</li>
   <li><b>Moving backgrounds.</b> The background colours drift slowly, and change daily.</li>
 </ul>
+<h2>If you see a faint ghost image</h2>
+<p>A faint outline of something that used to be on the screen (a home screen, an old app) is usually <b>temporary image retention</b>. Showing the screen varied content clears it, and Skreen's tour and night mode help. For a stubborn one, open <b>Settings → Screen care → Refresh screen</b>: it washes the whole screen slowly through white, black, red, green and blue for five minutes. Tap anywhere to stop. On an OLED panel, long-standing ghosts can be permanent burn-in, which no software can undo.</p>
 <h2>What you can do</h2>
 <ul>
   <li><b>Lower the brightness.</b> This is the single biggest help, and a wall display doesn't need to be bright. In the Android app, set it under Settings → Brightness (daytime and night levels). In a browser, set it in the tablet's own settings, since a web page can't.</li>

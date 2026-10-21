@@ -227,10 +227,11 @@
 
   // Slide the whole layout a few pixels, slowly, so no edge stays on the same pixels.
   function nudgeLayout(now) {
-    const dash = $('dash');
-    if (cfg.pixelShift !== '1') { dash.style.transform = ''; return; }
+    const targets = [$('dash'), $('gearBtn'), $('status')];
+    if (cfg.pixelShift !== '1') { targets.forEach((el) => { el.style.transform = ''; }); return; }
     const m = Math.floor(now.getTime() / 60000);
-    dash.style.transform = `translate(${Math.round(Math.sin(m / 11) * 7)}px, ${Math.round(Math.cos(m / 13) * 5)}px)`;
+    const t = `translate(${Math.round(Math.sin(m / 11) * 7)}px, ${Math.round(Math.cos(m / 13) * 5)}px)`;
+    targets.forEach((el) => { el.style.transform = t; });
   }
 
   // ─── Agenda ────────────────────────────────────────────────────────────────
@@ -516,7 +517,7 @@
 
   function maybeStartTour(now = new Date()) {
     const mins = Number(cfg.showcaseMinutes);
-    if (!mins || tour.on || isNight(now) || dialogOpen()) return;
+    if (!mins || tour.on || refresh.on || isNight(now) || dialogOpen()) return;
     if (now.getTime() - tour.last >= mins * 60000) startTour();
   }
   const dialogOpen = () => !!document.querySelector('dialog[open]') || !$('guide').hidden;
@@ -866,6 +867,36 @@
   });
   $('guideClose').addEventListener('click', closeGuide);
 
+  // ─── Screen refresh ────────────────────────────────────────────────────────
+  // Slowly washes the whole screen through white, red, green, blue and black. Showing every
+  // pixel a range of colours for a few minutes helps clear temporary "ghost" images.
+
+  const REFRESH_COLORS = ['#ffffff', '#000000', '#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000'];
+  const refresh = { on: false, timer: null, i: 0, started: 0 };
+  function startRefresh() {
+    if (refresh.on) return;
+    refresh.on = true; refresh.i = 0; refresh.started = Date.now();
+    if (tour.on) endTour();
+    settingsSheet.close();
+    const el = $('refresh');
+    el.hidden = false;
+    const step = () => {
+      el.style.backgroundColor = REFRESH_COLORS[refresh.i % REFRESH_COLORS.length];
+      refresh.i++;
+      if (Date.now() - refresh.started > 5 * 60000) { stopRefresh(); return; }
+      refresh.timer = setTimeout(step, 6000);
+    };
+    step();
+  }
+  function stopRefresh() {
+    clearTimeout(refresh.timer);
+    refresh.on = false;
+    $('refresh').hidden = true;
+    tour.last = Date.now();
+  }
+  $('refresh').addEventListener('click', stopRefresh);
+  $('refreshBtn').addEventListener('click', startRefresh);
+
   // ─── Place names ───────────────────────────────────────────────────────────
   // "Current location" is not much use on a wall; say where it actually is.
 
@@ -1123,6 +1154,7 @@
 
   // Android back button: close whatever is open, never leave the app.
   window.skreenBack = () => {
+    if (refresh.on) { stopRefresh(); return true; }
     if (tour.on) { endTour(); return true; }
     if (!guide.hidden) { closeGuide(); return true; }
     const open = document.querySelector('dialog[open]');

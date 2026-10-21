@@ -255,7 +255,7 @@ button { cursor: pointer; }
 /* ─── Chrome ─────────────────────────────────────────────────────────────── */
 
 .status {
-  position: fixed; left: 2.2rem; bottom: 0.55rem; z-index: 2;
+  position: fixed; left: 5rem; bottom: 0.55rem; z-index: 2;
   display: flex; align-items: center; gap: 0.55rem; padding: 0.3rem 0.6rem 0.3rem 0; border: 0; background: none;
   font: 500 0.82rem/1 var(--mono); color: var(--muted); letter-spacing: 0.02em;
 }
@@ -265,10 +265,11 @@ button { cursor: pointer; }
 .status u { color: var(--ink); text-underline-offset: 0.25em; }
 
 .gear {
-  position: fixed; right: 0.3rem; bottom: 0.2rem; z-index: 2; width: 2.8rem; height: 2.8rem;
-  border: 0; background: none; color: var(--faint); opacity: 0.55; display: grid; place-items: center; font-size: 1.35rem;
+  position: fixed; left: 2.2rem; bottom: 0.2rem; z-index: 2; width: 2rem; height: 2rem;
+  border: 1px solid rgba(243, 238, 227, 0.4); background: rgba(0, 0, 0, 0.6); color: rgba(243, 238, 227, 0.9);
+  display: grid; place-items: center; font-size: 1.15rem;
 }
-.gear:active { opacity: 1; }
+.gear:active { background: var(--ink); color: var(--bg); }
 
 .toast {
   position: fixed; left: 50%; bottom: 1.8rem; z-index: 60; transform: translate(-50%, 220%); visibility: hidden;
@@ -436,6 +437,11 @@ body.native .field.native-only { display: flex; }
 .show-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 0.6vh; background: rgba(243, 238, 227, 0.1); }
 .show-bar i { display: block; height: 100%; width: 0; background: var(--accent); }
 
+/* ─── Screen refresh (clears faint ghost images) ─────────────────────────── */
+
+.refresh { position: fixed; inset: 0; z-index: 80; background: #000; transition: background-color 2.5s linear; }
+.refresh[hidden] { display: none; }
+
 /* ─── Night mode ─────────────────────────────────────────────────────────── */
 
 .night { position: fixed; inset: 0; z-index: 40; background: #000; display: grid; place-items: center; animation: fadein 1.5s ease; }
@@ -456,7 +462,8 @@ body.native .field.native-only { display: flex; }
   .hero { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 2.4rem; padding: 0 0 1.6rem; }
   .weather { flex: 1; max-width: 34rem; }
   .col:nth-of-type(2) { border-left: 0; padding-left: 0; }
-  .status { left: 1.8rem; }
+  .status { left: 4.6rem; }
+  .gear { left: 1.8rem; }
   .guide { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .guide-nav { flex-direction: row; flex-wrap: wrap; padding: 1rem 1.4rem; border-right: 0; border-bottom: 1px solid var(--rule); }
   .guide-nav .brand, .guide-nav .tag { display: none; }
