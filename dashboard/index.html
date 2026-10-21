@@ -94,6 +94,14 @@
         <input id="addInput" type="text" autocomplete="off" enterkeyhint="done" placeholder="e.g. Paper towels" maxlength="300">
         <button type="button" class="mic" id="micBtn" aria-label="Speak"></button>
       </div>
+      <div class="who">
+        <span class="who-label">Who?</span>
+        <div class="who-pills" id="whoPills"></div>
+      </div>
+      <div class="who-new" id="whoNew" hidden>
+        <input id="whoInput" type="text" autocomplete="off" placeholder="Name" maxlength="20">
+        <button type="button" class="btn ghost small" id="whoAdd">Add person</button>
+      </div>
       <p class="hint">Separate with commas to add several at once.</p>
       <div class="sheet-actions">
         <button type="button" class="btn ghost" id="addCancel">Cancel</button>

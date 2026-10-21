@@ -39,7 +39,7 @@ function doGet(e) {
       case 'dashboard':
         return json_({ events: getEvents_(), tasks: getTasks_() });
       case 'addTask':
-        return json_({ task: addTask_(String(p.title || '').trim()) });
+        return json_({ task: addTask_(String(p.title || '').trim(), String(p.notes || '')) });
       case 'completeTask':
         return json_({ ok: true, result: setTaskDone_(p.id, true) });
       case 'uncompleteTask':
@@ -138,7 +138,7 @@ function getTasks_() {
   do {
     const res = Tasks.Tasks.list(listId, { showCompleted: false, showHidden: false, maxResults: 100, pageToken: pageToken });
     (res.items || []).forEach((t) => {
-      if (t.title && !t.parent) out.push({ id: t.id, title: t.title, position: t.position, done: false });
+      if (t.title && !t.parent) out.push({ id: t.id, title: t.title, notes: t.notes || '', position: t.position, done: false });
     });
     pageToken = res.nextPageToken;
   } while (pageToken);
@@ -152,7 +152,7 @@ function getTasks_() {
     const res = Tasks.Tasks.list(listId, { showCompleted: true, showHidden: true, completedMin: since, maxResults: 100, pageToken: pageToken });
     (res.items || []).forEach((t) => {
       if (t.title && !t.parent && t.status === 'completed' && t.completed) {
-        done.push({ id: t.id, title: t.title, done: true, completed: t.completed });
+        done.push({ id: t.id, title: t.title, notes: t.notes || '', done: true, completed: t.completed });
       }
     });
     pageToken = res.nextPageToken;
@@ -162,10 +162,12 @@ function getTasks_() {
   return out.concat(done);
 }
 
-function addTask_(title) {
+function addTask_(title, notes) {
   if (!title) throw new Error('Empty title');
-  const t = Tasks.Tasks.insert({ title: title.slice(0, 500) }, taskListId_());
-  return { id: t.id, title: t.title, position: t.position, done: false };
+  const body = { title: title.slice(0, 500) };
+  if (notes) body.notes = notes.slice(0, 2000);
+  const t = Tasks.Tasks.insert(body, taskListId_());
+  return { id: t.id, title: t.title, notes: t.notes || '', position: t.position, done: false };
 }
 
 function setTaskDone_(id, done) {

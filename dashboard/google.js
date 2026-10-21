@@ -101,19 +101,21 @@ window.Google = (() => {
     const base = `${TASKS}/lists/${encodeURIComponent(listId)}/tasks`;
     const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const [open, done] = await Promise.all([
-      call(`${base}?showCompleted=false&showHidden=false&maxResults=100&fields=items(id,title,position,parent,status)`),
-      call(`${base}?showCompleted=true&showHidden=true&completedMin=${encodeURIComponent(since)}&maxResults=100&fields=items(id,title,parent,status,completed)`),
+      call(`${base}?showCompleted=false&showHidden=false&maxResults=100&fields=items(id,title,notes,position,parent,status)`),
+      call(`${base}?showCompleted=true&showHidden=true&completedMin=${encodeURIComponent(since)}&maxResults=100&fields=items(id,title,notes,parent,status,completed)`),
     ]);
     const out = [];
-    for (const t of (open.items || [])) if (t.title && !t.parent && t.status !== 'completed') out.push({ id: t.id, title: t.title, position: t.position, done: false });
-    for (const t of (done.items || [])) if (t.title && !t.parent && t.status === 'completed' && t.completed) out.push({ id: t.id, title: t.title, done: true, completed: t.completed });
+    for (const t of (open.items || [])) if (t.title && !t.parent && t.status !== 'completed') out.push({ id: t.id, title: t.title, notes: t.notes || '', position: t.position, done: false });
+    for (const t of (done.items || [])) if (t.title && !t.parent && t.status === 'completed' && t.completed) out.push({ id: t.id, title: t.title, notes: t.notes || '', done: true, completed: t.completed });
     return out;
   }
 
-  async function addTask(chosenId, title) {
+  async function addTask(chosenId, title, notes = '') {
     const listId = await resolveList(chosenId);
-    const t = await call(`${TASKS}/lists/${encodeURIComponent(listId)}/tasks`, { method: 'POST', body: JSON.stringify({ title: title.slice(0, 500) }) });
-    return { id: t.id, title: t.title, position: t.position, done: false };
+    const body = { title: title.slice(0, 500) };
+    if (notes) body.notes = notes;
+    const t = await call(`${TASKS}/lists/${encodeURIComponent(listId)}/tasks`, { method: 'POST', body: JSON.stringify(body) });
+    return { id: t.id, title: t.title, notes: t.notes || '', position: t.position, done: false };
   }
 
   async function setDone(chosenId, id, done) {

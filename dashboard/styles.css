@@ -232,7 +232,8 @@ button { cursor: pointer; }
   border: 3px solid var(--ink); transition: background 0.2s;
 }
 .task .box .ico { font-size: 1.3rem; color: var(--bg); opacity: 0; }
-.task .label { min-width: 0; overflow-wrap: anywhere; flex: 1; }
+.task .body { min-width: 0; flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 0.45rem; }
+.task .label { min-width: 0; overflow-wrap: anywhere; }
 .task .ago { flex: none; font: 500 0.8rem/1 var(--mono); color: var(--faint); letter-spacing: 0.06em; }
 .task.done { color: var(--faint); font-weight: 500; }
 .task.done .box { background: var(--faint); border-color: var(--faint); }
@@ -352,6 +353,32 @@ body.native .field.native-only { display: flex; }
 .welcome h3 { font-size: 2.2rem; margin-bottom: 0.6rem; }
 .welcome .lede { font-size: 1.3rem; line-height: 1.35; color: var(--muted); margin: 0 0 1rem; }
 .welcome p { font-size: 1.05rem; line-height: 1.5; margin: 0.6rem 0; }
+
+/* Who is it for? */
+.whos { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.who-chip {
+  max-width: 7.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 0.3rem 0.55rem; background: var(--p); color: #140d08;
+  font: 700 0.74rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.who-chip.more { background: var(--wash); color: var(--muted); }
+.task.done .who-chip { opacity: 0.4; }
+.who { display: flex; align-items: flex-start; gap: 1rem; margin-top: 1rem; }
+.who-label { flex: none; padding-top: 0.55rem; font: 600 0.8rem/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.who-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.who-pill {
+  display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.95rem; border: 1px solid var(--rule); background: none;
+  font: 600 0.95rem/1 var(--mono);
+}
+.who-pill i { width: 0.65rem; height: 0.65rem; background: var(--p, var(--faint)); }
+.who-pill.on { background: var(--p, var(--ink)); border-color: var(--p, var(--ink)); color: #140d08; }
+.who-pill.on i { background: #140d08; }
+.who-pill:not([data-who]).on { --p: var(--ink); color: var(--bg); }
+.who-pill.ghost { border-style: dashed; color: var(--muted); font-weight: 500; }
+.who-pill b { font-weight: 700; margin-left: 0.1rem; }
+.who-new { display: flex; gap: 0.6rem; margin-top: 0.8rem; }
+.who-new input { flex: 1; }
+.sv-who { margin-left: 1.4vw; font: 600 0.34em/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); vertical-align: 0.4em; }
 
 /* Event details */
 .event-sheet { width: min(40rem, 92vw); position: relative; padding-top: 2.4rem; }

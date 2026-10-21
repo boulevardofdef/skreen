@@ -12,7 +12,7 @@
     showcaseMinutes: '5', pixelShift: '1',
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
     dayBrightness: 'system', nightBrightness: '3',
-    signedIn: false, calendarIds: [], taskListId: '', welcomed: false,
+    signedIn: false, calendarIds: [], taskListId: '', welcomed: false, people: [],
   };
   const STORE_KEY = 'skreen-settings';
   const LEGACY_KEY = 'kitchen-dashboard-settings';
@@ -126,9 +126,10 @@
       const d = await api('dashboard');
       return { events: d.events || [], tasks: d.tasks || [] };
     },
-    async addTask(title) {
-      if (usingGoogle()) return Google.addTask(cfg.taskListId, title);
-      return (await api('addTask', { title })).task;
+    async addTask(title, who = []) {
+      const notes = buildNotes(who);
+      if (usingGoogle()) return Google.addTask(cfg.taskListId, title, notes);
+      return (await api('addTask', { title, notes })).task;
     },
     async setDone(id, done) {
       if (usingGoogle()) return Google.setDone(cfg.taskListId, id, done);
@@ -139,7 +140,7 @@
   async function refreshData() {
     if (isDemo()) {
       state.events = demoEvents();
-      state.tasks = demoTasks.load();
+      state.tasks = decorateTasks(demoTasks.load());
       state.lastSync = new Date();
       renderAll();
       return;
@@ -148,7 +149,7 @@
       const data = await backend.dashboard();
       state.events = data.events;
       // Don't clobber the list while a tap is still being saved.
-      if (!state.mutating && Date.now() - state.lastMutation > 4000) state.tasks = data.tasks;
+      if (!state.mutating && Date.now() - state.lastMutation > 4000) state.tasks = decorateTasks(data.tasks);
       state.lastSync = new Date();
       state.syncError = null;
     } catch (err) {
@@ -353,6 +354,56 @@
   eventSheet.addEventListener('click', (e) => { if (e.target === eventSheet) eventSheet.close(); });
   eventSheet.addEventListener('close', () => clearTimeout(eventTimer));
 
+  // ─── Who is it for? ────────────────────────────────────────────────────────
+  // A task's notes can start with a line of @names ("@Dan @Steve"); anything below it is left alone.
+  // The names live in Google Tasks itself, so the list is the single source of truth. This device only
+  // remembers the names it has seen, to offer them in the Add dialog. Colours come from the name.
+
+  const PEOPLE_COLORS = ['#ff7a59', '#f2c94c', '#5fbf8f', '#4fb3ff', '#9aa5ff', '#e58bd0', '#7fd6d1', '#c8e06a'];
+  const nameKey = (n) => String(n).trim().toLowerCase();
+  const personColor = (n) => {
+    let h = 0;
+    for (const ch of nameKey(n)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return PEOPLE_COLORS[h % PEOPLE_COLORS.length];
+  };
+  const TAG_LINE = /^(?:@[^\s@]+\s*)+$/;
+
+  function parseNotes(notes) {
+    const text = notes || '';
+    const nl = text.indexOf('\n');
+    const first = (nl < 0 ? text : text.slice(0, nl)).trim();
+    if (first && TAG_LINE.test(first)) {
+      return { who: first.match(/@[^\s@]+/g).map((t) => t.slice(1).replace(/_/g, ' ')), rest: nl < 0 ? '' : text.slice(nl + 1) };
+    }
+    return { who: [], rest: text };
+  }
+  const buildNotes = (who, rest = '') => [who.map((n) => '@' + n.trim().replace(/\s+/g, '_')).join(' '), rest].filter(Boolean).join('\n');
+
+  const displayName = (raw) => {
+    const known = (cfg.people || []).find((n) => nameKey(n) === nameKey(raw));
+    return known || (raw.charAt(0).toUpperCase() + raw.slice(1));
+  };
+  function rememberPeople(names) {
+    const have = new Set((cfg.people || []).map(nameKey));
+    let changed = false;
+    names.forEach((n) => { if (n && !have.has(nameKey(n))) { cfg.people = [...(cfg.people || []), n].slice(-12); have.add(nameKey(n)); changed = true; } });
+    if (changed) saveSettings();
+  }
+  function decorateTasks(list) {
+    list.forEach((t) => {
+      if (typeof t.notes === 'string') {
+        const seen = [];
+        t.who = parseNotes(t.notes).who.filter((n) => !seen.includes(nameKey(n)) && seen.push(nameKey(n))).map(displayName);
+      } else if (!Array.isArray(t.who)) t.who = [];
+    });
+    rememberPeople(list.flatMap((t) => t.who));
+    return list;
+  }
+  const rosterNames = () => (cfg.people || []).slice().sort((a, b) => nameKey(a).localeCompare(nameKey(b)));
+  const chipsHtml = (who) => (who && who.length
+    ? `<span class="whos">${who.slice(0, 3).map((n) => `<span class="who-chip" style="--p:${personColor(n)}">${esc(n)}</span>`).join('')}${who.length > 3 ? `<span class="who-chip more">+${who.length - 3}</span>` : ''}</span>`
+    : '');
+
   // ─── To-do list ────────────────────────────────────────────────────────────
 
   const byPosition = (a, b) => ((a.position || '') < (b.position || '') ? -1 : (a.position || '') > (b.position || '') ? 1 : 0);
@@ -378,13 +429,13 @@
     if (!open.length) html += `<li class="task task-empty">${Icons.check}All caught up</li>`;
     html += open.map((t) => `
       <li class="task${t.pending ? ' pending' : ''}" data-id="${esc(t.id)}">
-        <span class="box">${Icons.check}</span><span class="label">${esc(t.title)}</span>
+        <span class="box">${Icons.check}</span><span class="body"><span class="label">${esc(t.title)}</span>${chipsHtml(t.who)}</span>
       </li>`).join('');
     if (done.length) {
       html += '<li class="task-rule">Done · last 24h</li>';
       html += done.map((t) => `
         <li class="task done" data-id="${esc(t.id)}">
-          <span class="box">${Icons.check}</span><span class="label">${esc(t.title)}</span><span class="ago">${ago(completedMs(t))}</span>
+          <span class="box">${Icons.check}</span><span class="body"><span class="label">${esc(t.title)}</span>${chipsHtml(t.who)}</span><span class="ago">${ago(completedMs(t))}</span>
         </li>`).join('');
     }
     $('tasks').innerHTML = html;
@@ -420,14 +471,14 @@
     });
   }
 
-  function addTasks(text) {
+  function addTasks(text, who = []) {
     const titles = text.split(/[,\n]/).map((s) => s.trim()).filter(Boolean);
     titles.reverse().forEach((title) => {
-      const tmp = { id: 'tmp-' + Math.random().toString(36).slice(2), title, done: false, pending: !isDemo() };
+      const tmp = { id: 'tmp-' + Math.random().toString(36).slice(2), title, who, done: false, pending: !isDemo() };
       state.tasks.unshift(tmp);
       if (isDemo()) return;
-      mutate(() => backend.addTask(title))
-        .then((task) => { Object.assign(tmp, task, { pending: false }); renderTasks(); })
+      mutate(() => backend.addTask(title, who))
+        .then((task) => { Object.assign(tmp, task, { pending: false, who }); renderTasks(); })
         .catch(() => {
           state.tasks = state.tasks.filter((x) => x !== tmp);
           renderTasks();
@@ -447,8 +498,42 @@
 
   // Add sheet
   const addSheet = $('addSheet');
+  let selectedWho = new Set(), whoEdit = false;
+  function renderWhoPills() {
+    $('whoPills').innerHTML =
+      `<button type="button" class="who-pill${selectedWho.size ? '' : ' on'}" data-anyone="1">Anyone</button>` +
+      rosterNames().map((n) => `<button type="button" class="who-pill${selectedWho.has(nameKey(n)) ? ' on' : ''}" data-who="${esc(n)}" style="--p:${personColor(n)}"><i></i>${esc(n)}${whoEdit ? '<b>×</b>' : ''}</button>`).join('') +
+      '<button type="button" class="who-pill ghost" data-act="new">+ Someone</button>' +
+      (rosterNames().length ? `<button type="button" class="who-pill ghost" data-act="edit">${whoEdit ? 'Done' : 'Edit'}</button>` : '');
+  }
+  $('whoPills').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.anyone) { selectedWho.clear(); }
+    else if (b.dataset.act === 'new') { $('whoNew').hidden = false; $('whoInput').focus(); return; }
+    else if (b.dataset.act === 'edit') { whoEdit = !whoEdit; }
+    else if (b.dataset.who) {
+      const k = nameKey(b.dataset.who);
+      if (whoEdit) { cfg.people = (cfg.people || []).filter((n) => nameKey(n) !== k); selectedWho.delete(k); saveSettings(); }
+      else if (selectedWho.has(k)) selectedWho.delete(k); else selectedWho.add(k);
+    }
+    renderWhoPills();
+  });
+  function addPerson() {
+    const name = $('whoInput').value.replace(/[@\s]+/g, ' ').trim();
+    if (!name) return;
+    rememberPeople([displayName(name)]);
+    selectedWho.add(nameKey(name));
+    $('whoInput').value = ''; $('whoNew').hidden = true;
+    renderWhoPills();
+  }
+  $('whoAdd').addEventListener('click', addPerson);
+  $('whoInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addPerson(); } });
+
   $('addBtn').addEventListener('click', () => {
     $('addInput').value = '';
+    selectedWho = new Set(); whoEdit = false; $('whoNew').hidden = true;
+    renderWhoPills();
     addSheet.showModal();
     setTimeout(() => $('addInput').focus(), 50);
   });
@@ -456,7 +541,7 @@
   $('addForm').addEventListener('submit', (e) => {
     const v = $('addInput').value.trim();
     if (!v) { e.preventDefault(); return; }
-    addTasks(v);
+    addTasks(v, rosterNames().filter((n) => selectedWho.has(nameKey(n))));
   });
   addSheet.addEventListener('click', (e) => { if (e.target === addSheet) addSheet.close(); });
 
@@ -643,7 +728,7 @@
       return `<div class="kicker">Next up</div><div class="sv-list">${rows}</div>`;
     }
     const { open } = taskGroups();
-    const rows = open.slice(0, 6).map((t) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(t.title)}</div></div>`).join('')
+    const rows = open.slice(0, 6).map((t) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(t.title)}${t.who && t.who.length ? `<span class="sv-who">${t.who.map(esc).join(' · ')}</span>` : ''}</div></div>`).join('')
       || '<div class="empty-big">All caught up</div>';
     return `<div class="kicker">To-do · ${open.length}</div><div class="sv-list">${rows}${open.length > 6 ? `<div class="more">+ ${open.length - 6} more</div>` : ''}</div>`;
   }
@@ -1194,7 +1279,7 @@
       const ago = (h) => new Date(Date.now() - h * 3600000).toISOString();
       return [
         ...['Paper towels', 'Oat milk', 'Call HVAC about the filter', 'Return library books', 'Replace smoke detector battery', 'Book haircuts']
-          .map((title, i) => ({ id: 'demo-' + i, title, done: false, position: String(i).padStart(5, '0') })),
+          .map((title, i) => ({ id: 'demo-' + i, title, done: false, position: String(i).padStart(5, '0'), who: [[], ['Dan'], ['Mia'], [], ['Dan', 'Mia'], []][i] })),
         { id: 'demo-d1', title: 'Take out the recycling', done: true, completed: ago(2) },
         { id: 'demo-d2', title: 'Order dog food', done: true, completed: ago(19) },
       ];
