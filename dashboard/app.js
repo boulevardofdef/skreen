@@ -740,7 +740,8 @@
   // ─── App updates (Android app, sideloaded) ─────────────────────────────────
   // Sideloaded apps don't update themselves, so Skreen checks its own GitHub release.
 
-  const UPDATE_CHECK_MS = 6 * 3600 * 1000;
+  const UPDATE_CHECK_MS = 3600 * 1000;       // hourly, and also when the screen wakes after a gap
+  let lastUpdateCheck = 0;
   const canUpdate = () => !!(NATIVE && NATIVE.getVersion && NATIVE.installUpdate);
 
   function releaseRepo() {
@@ -768,7 +769,7 @@
     renderStatus();
     return state.update ? { state: 'update', update: state.update } : { state: 'current' };
   }
-  const backgroundUpdateCheck = () => checkForUpdate().catch(() => {});
+  const backgroundUpdateCheck = () => { lastUpdateCheck = Date.now(); return checkForUpdate().catch(() => {}); };
 
   function startUpdate() {
     if (!state.update || state.updating) return;
@@ -1211,7 +1212,10 @@
     try { if ('wakeLock' in navigator && document.visibilityState === 'visible') await navigator.wakeLock.request('screen'); } catch (_) {}
   }
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') { keepAwake(); refreshData(); refreshWeather(); }
+    if (document.visibilityState === 'visible') {
+      keepAwake(); refreshData(); refreshWeather();
+      if (canUpdate() && Date.now() - lastUpdateCheck > 15 * 60000) backgroundUpdateCheck();
+    }
   });
 
   // Android back button: close whatever is open, never leave the app.
