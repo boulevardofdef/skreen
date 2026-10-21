@@ -13,6 +13,7 @@ A wall display for an always-on Android tablet: **Google Calendar**, a **househo
 - **Schedule.** What's left today, then the next few days. The event in progress is a solid orange block with a progress bar; one starting within the hour gets a countdown. All-day events become tags, declined events are hidden.
 - **To-do list.** Tap to check off. **Checked items stay on screen, struck through, for 24 hours**, then vanish; tap one to bring it back. Add items with the big button, by voice, or from your phone via Google Tasks.
 - **Weather.** Now, the next 6 hours, 5 days, and a plain-English rain outlook. Open-Meteo, no key.
+- **Typefaces.** Five to choose from in Settings (Bricolage, Fraunces, Archivo, Space Grotesk, Big Shoulders), self-hosted and previewed live.
 - **Backgrounds.** Nine soft, dark colour-gradient backgrounds with gentle contrast, one per day, or pin your favourite. No lines or patterns, so text always reads cleanly.
 - **Big-screen tour.** Every 5 minutes (adjustable) it spends ~30 seconds on **BIG time → BIG weather → BIG calendar → BIG to-do**, alternating left/centre/right. Tap to end it early.
 - **Burn-in care.** The tour, a slow few-pixel layout drift, a night mode (black screen, dim wandering clock, next event) and moving backgrounds keep any pixel from staying lit.
@@ -65,7 +66,7 @@ Open that on the tablet in Chrome, allow *install unknown apps* when asked, and 
 | `dashboard/setup/Code.gs`, `appsscript.json` | Optional Apps Script backend for plain browsers |
 | `dashboard/privacy.html` | Privacy policy (needed for Google verification) |
 | `docs/launch.md` | Google Cloud setup, verification and store checklist |
-| `dashboard/fonts/` | Bricolage Grotesque and Geist Mono (SIL OFL) |
+| `dashboard/fonts/` | Bricolage Grotesque, Fraunces, Archivo, Space Grotesk, Big Shoulders and Geist Mono (all SIL OFL) |
 | `dashboard/sw.js`, `manifest.webmanifest`, `icon.svg` | Offline fallback and installability |
 | `android/` | The Android app (bundles `dashboard/`) |
 | `.github/workflows/pages.yml` | Publishes `dashboard/` to GitHub Pages |

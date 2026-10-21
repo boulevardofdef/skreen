@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0e0d0b">
+  <meta name="color-scheme" content="dark">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Skreen</title>
@@ -162,6 +163,14 @@
         <div class="field-grid">
           <label class="field"><span>Background</span>
             <select name="bg" id="bgSelect"></select></label>
+          <label class="field"><span>Typeface</span>
+            <select name="font" id="fontSelect">
+              <option value="bricolage">Classic · Bricolage</option>
+              <option value="fraunces">Editorial · Fraunces</option>
+              <option value="archivo">Modern · Archivo</option>
+              <option value="space">Technical · Space Grotesk</option>
+              <option value="shoulders">Poster · Big Shoulders</option>
+            </select></label>
         </div>
 
         <div class="group native-only">Brightness <em>this app only</em></div>
@@ -184,8 +193,8 @@
             <select name="pixelShift"><option value="1">On</option><option value="0">Off</option></select></label>
           <label class="field"><span>Night mode</span>
             <select name="nightEnabled"><option value="1">On</option><option value="0">Off</option></select></label>
-          <label class="field"><span>Night from</span><input name="nightStart" type="time"></label>
-          <label class="field"><span>until</span><input name="nightEnd" type="time"></label>
+          <label class="field"><span>Night from</span><select name="nightStart" class="timesel"></select></label>
+          <label class="field"><span>until</span><select name="nightEnd" class="timesel"></select></label>
         </div>
       </div>
 

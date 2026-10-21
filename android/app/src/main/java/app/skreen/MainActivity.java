@@ -9,9 +9,13 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.ColorDrawable;
+import android.location.Address;
+import android.location.Geocoder;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.view.View;
@@ -27,6 +31,11 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.webkit.WebViewAssetLoader;
 
 import com.google.android.gms.auth.api.identity.AuthorizationRequest;
@@ -41,6 +50,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Skreen: a full-screen, always-on shell around the web app in /dashboard.
@@ -79,6 +89,18 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        // Cover every pixel: an opaque window, drawing edge to edge (including behind camera
+        // cutouts and the hidden system bars), so nothing from the launcher can show around the edges.
+        getWindow().setBackgroundDrawable(new ColorDrawable(0xFF0E0D0B));
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        if (Build.VERSION.SDK_INT >= 28) {
+            WindowManager.LayoutParams lp = getWindow().getAttributes();
+            lp.layoutInDisplayCutoutMode = Build.VERSION.SDK_INT >= 30
+                    ? WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                    : WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            getWindow().setAttributes(lp);
+        }
+
         prefs = getSharedPreferences("skreen", MODE_PRIVATE);
         remoteUrl = getString(R.string.start_url).trim();
         if (!remoteUrl.isEmpty()) remoteHost = Uri.parse(remoteUrl).getHost();
@@ -94,6 +116,12 @@ public class MainActivity extends Activity {
         web.setLongClickable(false);
         web.setHapticFeedbackEnabled(false);
         setContentView(web);
+        // Edge-to-edge windows don't resize for the keyboard by themselves; make room for it.
+        ViewCompat.setOnApplyWindowInsetsListener(web, (v, insets) -> {
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            v.setPadding(0, 0, 0, ime.bottom);
+            return insets;
+        });
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -297,15 +325,10 @@ public class MainActivity extends Activity {
         web.evaluateJavascript("window.skreenToken && window.skreenToken(" + reqId + "," + t + "," + e + ")", null);
     }
 
-    @SuppressWarnings("deprecation")
     private void hideSystemUi() {
-        getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                        | View.SYSTEM_UI_FLAG_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        controller.hide(WindowInsetsCompat.Type.systemBars());
     }
 
     /** What the web app can ask the device to do. */
@@ -343,6 +366,34 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void getToken(final int reqId) {
             runOnUiThread(() -> authorize(false, reqId));
+        }
+
+        /** Turns coordinates into a place name using the device's geocoder. Answer: window.skreenPlace(id, {city, region, country} | null). */
+        @JavascriptInterface
+        public void reverseGeocode(final int reqId, final double lat, final double lon) {
+            new Thread(() -> {
+                String json = "null";
+                try {
+                    if (Geocoder.isPresent()) {
+                        List<Address> found = new Geocoder(MainActivity.this, Locale.getDefault()).getFromLocation(lat, lon, 1);
+                        if (found != null && !found.isEmpty()) {
+                            Address a = found.get(0);
+                            String city = a.getLocality();
+                            if (city == null) city = a.getSubAdminArea();
+                            if (city == null) city = a.getSubLocality();
+                            JSONObject o = new JSONObject();
+                            o.put("city", city == null ? JSONObject.NULL : city);
+                            o.put("region", a.getAdminArea() == null ? JSONObject.NULL : a.getAdminArea());
+                            o.put("country", a.getCountryCode() == null ? JSONObject.NULL : a.getCountryCode());
+                            json = o.toString();
+                        }
+                    }
+                } catch (Exception ignored) { }
+                final String out = json;
+                runOnUiThread(() -> {
+                    if (web != null) web.evaluateJavascript("window.skreenPlace && window.skreenPlace(" + reqId + "," + out + ")", null);
+                });
+            }).start();
         }
 
         @JavascriptInterface

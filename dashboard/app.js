@@ -8,7 +8,7 @@
     backendUrl: '', secret: '',
     lat: null, lon: null, place: '',
     units: 'fahrenheit', clock: '12',
-    bg: 'auto',
+    bg: 'auto', font: 'bricolage',
     showcaseMinutes: '5', pixelShift: '1',
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
     dayBrightness: 'system', nightBrightness: '3',
@@ -60,6 +60,10 @@
   const $ = (id) => document.getElementById(id);
   const clockHtml = (hm) => hm.replace(':', '<span class="colon">:</span>');
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const FONTS = ['bricolage', 'fraunces', 'archivo', 'space', 'shoulders'];
+  const applyFont = (f) => { document.body.dataset.font = FONTS.includes(f) ? f : 'bricolage'; };
+  applyFont(cfg.font);
 
   // Static icons
   $('addIcon').innerHTML = Icons.plus;
@@ -773,6 +777,62 @@
   });
   $('guideClose').addEventListener('click', closeGuide);
 
+  // ─── Place names ───────────────────────────────────────────────────────────
+  // "Current location" is not much use on a wall; say where it actually is.
+
+  const US_STATES = {
+    'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA', 'Colorado': 'CO', 'Connecticut': 'CT',
+    'Delaware': 'DE', 'District of Columbia': 'DC', 'Florida': 'FL', 'Georgia': 'GA', 'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL',
+    'Indiana': 'IN', 'Iowa': 'IA', 'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+    'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS', 'Missouri': 'MO', 'Montana': 'MT',
+    'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY',
+    'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH', 'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA',
+    'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT',
+    'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY',
+  };
+  function formatPlace({ city, region, country } = {}) {
+    if (!city && !region) return null;
+    if (!city) return region;
+    if (country === 'US' && US_STATES[region]) return `${city}, ${US_STATES[region]}`;
+    return region && region !== city ? `${city}, ${region}` : city;
+  }
+
+  const pendingPlaces = new Map();
+  let placeSeq = 0;
+  window.skreenPlace = (id, info) => {
+    const done = pendingPlaces.get(id);
+    if (done) { pendingPlaces.delete(id); done(info); }
+  };
+
+  // Android: the device's own geocoder. Anywhere else: a free reverse-geocoding service.
+  async function placeName(lat, lon) {
+    if (NATIVE && NATIVE.reverseGeocode) {
+      const info = await new Promise((resolve) => {
+        const id = ++placeSeq;
+        pendingPlaces.set(id, resolve);
+        try { NATIVE.reverseGeocode(id, lat, lon); } catch (_) { pendingPlaces.delete(id); resolve(null); }
+        setTimeout(() => { if (pendingPlaces.has(id)) { pendingPlaces.delete(id); resolve(null); } }, 8000);
+      });
+      const name = formatPlace(info || {});
+      if (name) return name;
+    }
+    try {
+      const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+      const j = await res.json();
+      return formatPlace({ city: j.city || j.locality, region: j.principalSubdivision, country: j.countryCode });
+    } catch (_) { return null; }
+  }
+
+  // Replace the generic label with the real place name once we have it.
+  async function nameCurrentLocation() {
+    if (cfg.place !== 'Current location' || cfg.lat == null) return;
+    const name = await placeName(cfg.lat, cfg.lon);
+    if (!name || cfg.place !== 'Current location') return;
+    cfg.place = name;
+    saveSettings();
+    $('wxPlace').textContent = name;
+  }
+
   // ─── Settings sheet ────────────────────────────────────────────────────────
 
   const settingsSheet = $('settingsSheet'), form = $('settingsForm');
@@ -784,8 +844,26 @@
       Backgrounds.list.map((b) => `<option value="${b.id}">${esc(b.name)}</option>`).join('');
   }
 
+  // Night-mode times as plain dropdowns (15-minute steps). The system time picker is cramped
+  // and can't be styled, so Skreen uses its own.
+  function fillTimeOptions() {
+    for (const sel of settingsSheet.querySelectorAll('select.timesel')) {
+      const cur = cfg[sel.name];
+      const slots = [];
+      for (let m = 0; m < 24 * 60; m += 15) slots.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
+      if (cur && !slots.includes(cur)) { slots.push(cur); slots.sort(); }
+      sel.innerHTML = slots.map((v) => {
+        const [h, m] = v.split(':').map(Number);
+        return `<option value="${v}">${esc(fmtTime(new Date(2000, 0, 1, h, m)))}</option>`;
+      }).join('');
+    }
+  }
+  $('fontSelect').addEventListener('change', (e) => applyFont(e.target.value));   // live preview
+  settingsSheet.addEventListener('close', () => applyFont(cfg.font));              // Cancel puts it back
+
   function openSettings() {
     fillBackgroundOptions();
+    fillTimeOptions();
     for (const el of form.elements) if (el.name && el.name in cfg) el.value = cfg[el.name] ?? '';
     draftLoc = cfg.lat != null ? { lat: cfg.lat, lon: cfg.lon, place: cfg.place } : null;
     $('locCurrent').textContent = draftLoc ? `✓ ${draftLoc.place}` : 'No location set';
@@ -856,7 +934,13 @@
     if (!navigator.geolocation) return;
     $('locCurrent').textContent = 'Finding you…';
     navigator.geolocation.getCurrentPosition(
-      (p) => setDraftLoc({ lat: +p.coords.latitude.toFixed(3), lon: +p.coords.longitude.toFixed(3), place: 'Current location' }),
+      async (p) => {
+        const lat = +p.coords.latitude.toFixed(3), lon = +p.coords.longitude.toFixed(3);
+        setDraftLoc({ lat, lon, place: 'Current location' });
+        $('locCurrent').textContent = '✓ Finding the place name…';
+        const name = await placeName(lat, lon);
+        if (name && draftLoc && draftLoc.lat === lat) setDraftLoc({ lat, lon, place: name });
+      },
       () => { $('locCurrent').textContent = 'Couldn’t get your location — try searching instead.'; },
       { timeout: 15000 }
     );
@@ -967,12 +1051,14 @@
           Object.assign(cfg, { lat: +p.coords.latitude.toFixed(3), lon: +p.coords.longitude.toFixed(3), place: 'Current location' });
           saveSettings();
           refreshWeather();
+          nameCurrentLocation();
         }, () => {}, { timeout: 15000 });
       }
     }
     tick();
     refreshData();
     refreshWeather();
+    nameCurrentLocation();     // also fixes up a location saved earlier as "Current location"
     keepAwake();
     applyBrightness();
     maybeWelcome();
