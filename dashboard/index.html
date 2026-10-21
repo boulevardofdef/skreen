@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0b0d12">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Kitchen Dashboard</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,300..700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300..700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=block">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-period="day">
+  <div id="bg" aria-hidden="true">
+    <div class="bg-glow"></div>
+    <div class="bg-photo" id="photoA"></div>
+    <div class="bg-photo" id="photoB"></div>
+    <div class="bg-scrim"></div>
+  </div>
+
+  <main class="dash">
+    <!-- Time & weather -->
+    <section class="hero">
+      <div class="clock-block">
+        <div class="clock"><span id="time">--:--</span><span id="ampm" class="ampm"></span></div>
+        <div class="date" id="date"></div>
+      </div>
+
+      <div class="weather" id="weather">
+        <div class="wx-now">
+          <span class="msr wx-icon" id="wxIcon">partly_cloudy_day</span>
+          <div class="wx-temp" id="wxTemp">--°</div>
+          <div class="wx-desc">
+            <div class="wx-cond" id="wxCond">Loading weather…</div>
+            <div class="wx-sub" id="wxSub"></div>
+          </div>
+        </div>
+        <div class="wx-hours" id="wxHours"></div>
+        <div class="wx-summary" id="wxSummary"></div>
+        <div class="wx-days" id="wxDays"></div>
+      </div>
+    </section>
+
+    <!-- Calendar -->
+    <section class="panel agenda">
+      <header class="panel-head">
+        <span class="msr head-icon" style="color: var(--blue)">event</span>
+        <h2>Schedule</h2>
+      </header>
+      <div class="scroll" id="agenda"></div>
+    </section>
+
+    <!-- To-do -->
+    <section class="panel todo">
+      <header class="panel-head">
+        <span class="msr head-icon" style="color: var(--green)">checklist</span>
+        <h2>To-do</h2>
+        <span class="count" id="taskCount"></span>
+      </header>
+      <ul class="scroll tasks" id="tasks"></ul>
+      <button class="add-btn" id="addBtn" type="button">
+        <span class="msr">add</span> Add to list
+      </button>
+    </section>
+  </main>
+
+  <div class="status" id="status"></div>
+  <button class="gear" id="gearBtn" type="button" aria-label="Settings"><span class="msr">settings</span></button>
+
+  <!-- Night mode -->
+  <div class="night" id="night" hidden>
+    <div class="night-inner" id="nightInner">
+      <div class="night-time" id="nightTime"></div>
+      <div class="night-date" id="nightDate"></div>
+      <div class="night-next" id="nightNext"></div>
+    </div>
+  </div>
+
+  <!-- Add item sheet -->
+  <dialog class="sheet" id="addSheet">
+    <form method="dialog" id="addForm">
+      <h3>Add to the list</h3>
+      <div class="add-row">
+        <input id="addInput" type="text" autocomplete="off" enterkeyhint="done" placeholder="e.g. Paper towels" maxlength="300">
+        <button type="button" class="mic" id="micBtn" aria-label="Speak"><span class="msr">mic</span></button>
+      </div>
+      <p class="hint">Tip: separate with commas to add several at once.</p>
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" id="addCancel">Cancel</button>
+        <button type="submit" class="btn primary" id="addSubmit">Add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Settings -->
+  <dialog class="sheet settings" id="settingsSheet">
+    <form method="dialog" id="settingsForm">
+      <h3>Settings</h3>
+
+      <label class="field">
+        <span>Backend URL <em>(your Apps Script web app)</em></span>
+        <input name="backendUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+      </label>
+      <label class="field">
+        <span>Secret key</span>
+        <input name="secret" type="text" autocomplete="off" placeholder="The SECRET from Code.gs">
+      </label>
+
+      <div class="field">
+        <span>Weather location</span>
+        <div class="loc-row">
+          <input id="locSearch" type="text" placeholder="City or ZIP code" autocomplete="off">
+          <button type="button" class="btn ghost small" id="locFind">Search</button>
+          <button type="button" class="btn ghost small" id="locGps"><span class="msr">my_location</span></button>
+        </div>
+        <div class="loc-current" id="locCurrent"></div>
+        <div class="loc-results" id="locResults"></div>
+      </div>
+
+      <div class="field-grid">
+        <label class="field">
+          <span>Temperature</span>
+          <select name="units"><option value="fahrenheit">°F</option><option value="celsius">°C</option></select>
+        </label>
+        <label class="field">
+          <span>Clock</span>
+          <select name="clock"><option value="12">12-hour</option><option value="24">24-hour</option></select>
+        </label>
+        <label class="field">
+          <span>Night mode from</span>
+          <input name="nightStart" type="time">
+        </label>
+        <label class="field">
+          <span>until</span>
+          <input name="nightEnd" type="time">
+        </label>
+        <label class="field">
+          <span>Change photo every</span>
+          <select name="photoMinutes">
+            <option value="2">2 min</option><option value="5">5 min</option>
+            <option value="10">10 min</option><option value="30">30 min</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Night mode</span>
+          <select name="nightEnabled"><option value="1">On</option><option value="0">Off</option></select>
+        </label>
+      </div>
+
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" id="settingsTest">Test connection</button>
+        <span class="test-result" id="testResult"></span>
+        <button type="button" class="btn ghost" id="settingsCancel">Cancel</button>
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
