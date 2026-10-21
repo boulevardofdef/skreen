@@ -46,7 +46,17 @@ Everything is explained **inside the app** (⚙ → Setup guide), including a on
 
 1. **Backend.** At [script.google.com](https://script.google.com) create a project, paste [`dashboard/setup/Code.gs`](dashboard/setup/Code.gs), set `SECRET`, add the **Google Tasks API** service, run `testSetup`, then **Deploy → Web app** (Execute as *Me*, access *Anyone*).
 2. **Host the page.** This repo publishes `dashboard/` with GitHub Pages: **Settings → Pages → Source: GitHub Actions** (the repo must be public on the free plan). Any static host works.
-3. **Tablet.** Open the page, tap the gear, paste the backend URL and secret, pick your city. For full-screen, always-on use, install **Fully Kiosk Browser**. To skip typing on the tablet, build a one-time link in the guide (**On the tablet → Use another device**).
+3. **Tablet.** Install the Android app (below), open it, tap the gear, paste the backend URL and secret, and pick your city. To skip typing on the tablet, build a one-time link in the guide (**On the tablet → Use another device**).
+
+## The Android app
+
+`android/` is a small native shell around the dashboard: full-screen, screen always on, layout bundled so it still appears without internet, and it can **dim the screen itself** (day and night levels in Settings), which is the best burn-in protection there is. It also uses the system speech recognizer for the microphone button, and can optionally be set as the tablet's Home app so it starts at boot.
+
+GitHub builds it automatically (`.github/workflows/android.yml`) and keeps the newest build at:
+
+**`https://github.com/<you>/<repo>/releases/latest/download/Skreen.apk`**
+
+Open that on the tablet in Chrome, allow *install unknown apps* when asked, and install. Updates install over the old version and keep your settings (every build is signed with the same key in `android/skreen-sideload.jks`, which is deliberately public: it's for personal sideloading, not the Play Store). Fully Kiosk Browser or Chrome's *Add to Home screen* still work if you'd rather not sideload.
 
 ## Files
 
@@ -57,4 +67,6 @@ Everything is explained **inside the app** (⚙ → Setup guide), including a on
 | `dashboard/setup/Code.gs`, `appsscript.json` | The Google backend |
 | `dashboard/fonts/` | Bricolage Grotesque and Geist Mono (SIL OFL) |
 | `dashboard/sw.js`, `manifest.webmanifest`, `icon.svg` | Offline fallback and installability |
+| `android/` | The Android app (bundles `dashboard/`) |
 | `.github/workflows/pages.yml` | Publishes `dashboard/` to GitHub Pages |
+| `.github/workflows/android.yml` | Builds `Skreen.apk` and publishes it to the latest release |
