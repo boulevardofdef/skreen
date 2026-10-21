@@ -12,7 +12,7 @@
     showcaseMinutes: '5', pixelShift: '1',
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
     dayBrightness: 'system', nightBrightness: '3',
-    signedIn: false, calendarIds: [], taskListId: '', welcomed: false, people: [],
+    signedIn: false, calendarIds: [], taskListId: '', welcomed: false,
   };
   const STORE_KEY = 'skreen-settings';
   const LEGACY_KEY = 'kitchen-dashboard-settings';
@@ -26,6 +26,7 @@
   function saveSettings() { try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch (_) {} }
 
   let cfg = loadSettings();
+  if (cfg.people) { delete cfg.people; saveSettings(); }   // names used to be cached on the device; they now come from the tasks themselves
   // Where the data comes from: Google sign-in (Android app), the older Apps Script, or sample data.
   const canSignIn = () => !!(window.SkreenNative && window.SkreenNative.signIn);
   const usingGoogle = () => canSignIn() && !!cfg.signedIn;
@@ -383,27 +384,30 @@
   }
   const buildNotes = (who, rest = '') => [who.map((n) => '@' + n.trim().replace(/\s+/g, '_')).join(' '), rest].filter(Boolean).join('\n');
 
-  const displayName = (raw) => {
-    const known = (cfg.people || []).find((n) => nameKey(n) === nameKey(raw));
-    return known || (raw.charAt(0).toUpperCase() + raw.slice(1));
-  };
-  function rememberPeople(names) {
-    const have = new Set((cfg.people || []).map(nameKey));
-    let changed = false;
-    names.forEach((n) => { if (n && !have.has(nameKey(n))) { cfg.people = [...(cfg.people || []), n].slice(-12); have.add(nameKey(n)); changed = true; } });
-    if (changed) saveSettings();
+  // Who is "in the household" right now: everyone named on a task we can see (open, or done in the
+  // last 24 hours), plus anyone just typed into a dialog that is still open. Nothing is stored.
+  const sessionNames = new Map();   // key → display, cleared whenever a dialog opens
+  function knownPeople() {
+    const known = new Map();
+    state.tasks.forEach((t) => (t.who || []).forEach((n) => { if (!known.has(nameKey(n))) known.set(nameKey(n), n); }));
+    sessionNames.forEach((n, k) => { if (!known.has(k)) known.set(k, n); });
+    return known;
   }
+  const displayName = (raw) => knownPeople().get(nameKey(raw)) || (raw.charAt(0).toUpperCase() + raw.slice(1));
   function decorateTasks(list) {
+    // first pass: tidy names as written; second pass: use the first spelling seen for each person
+    const spelled = new Map();
     list.forEach((t) => {
       if (typeof t.notes === 'string') {
         const seen = [];
-        t.who = parseNotes(t.notes).who.filter((n) => !seen.includes(nameKey(n)) && seen.push(nameKey(n))).map(displayName);
+        t.who = parseNotes(t.notes).who.filter((n) => !seen.includes(nameKey(n)) && seen.push(nameKey(n)));
       } else if (!Array.isArray(t.who)) t.who = [];
+      t.who.forEach((n) => { if (!spelled.has(nameKey(n))) spelled.set(nameKey(n), n.charAt(0).toUpperCase() + n.slice(1)); });
     });
-    rememberPeople(list.flatMap((t) => t.who));
+    list.forEach((t) => { t.who = t.who.map((n) => spelled.get(nameKey(n)) || n); });
     return list;
   }
-  const rosterNames = () => (cfg.people || []).slice().sort((a, b) => nameKey(a).localeCompare(nameKey(b)));
+  const rosterNames = () => Array.from(knownPeople().values()).sort((a, b) => nameKey(a).localeCompare(nameKey(b)));
   const chipsHtml = (who) => (who && who.length
     ? `<span class="whos">${who.slice(0, 3).map((n) => `<span class="who-chip" style="--p:${personColor(n)}">${esc(n)}</span>`).join('')}${who.length > 3 ? `<span class="who-chip more">+${who.length - 3}</span>` : ''}</span>`
     : '');
@@ -555,30 +559,29 @@
   // The "Who?" picker, used by both the Add dialog and the item details dialog.
   function whoPicker({ pills, box, input, addBtn }) {
     let selected = new Map();   // key → display name
-    let edit = false;
     const picker = {
       reset(names = []) {
+        sessionNames.clear();
         selected = new Map(names.map((n) => [nameKey(n), n]));
-        edit = false; box.hidden = true; input.value = '';
+        box.hidden = true; input.value = '';
         picker.render();
       },
       names: () => Array.from(selected.values()).sort((a, b) => nameKey(a).localeCompare(nameKey(b))),
       render() {
-        const known = new Map(rosterNames().map((n) => [nameKey(n), n]));
-        selected.forEach((n, k) => { if (!known.has(k)) known.set(k, n); });   // someone on the task but not in this device's list
+        const known = knownPeople();
+        selected.forEach((n, k) => { if (!known.has(k)) known.set(k, n); });
         const all = Array.from(known.values()).sort((a, b) => nameKey(a).localeCompare(nameKey(b)));
         pills.innerHTML =
           `<button type="button" class="who-pill${selected.size ? '' : ' on'}" data-anyone="1">Anyone</button>` +
-          all.map((n) => `<button type="button" class="who-pill${selected.has(nameKey(n)) ? ' on' : ''}" data-who="${esc(n)}" style="--p:${personColor(n)}"><i></i>${esc(n)}${edit ? '<b>×</b>' : ''}</button>`).join('') +
-          '<button type="button" class="who-pill ghost" data-act="new">+ Someone</button>' +
-          (all.length ? `<button type="button" class="who-pill ghost" data-act="edit">${edit ? 'Done' : 'Edit'}</button>` : '');
+          all.map((n) => `<button type="button" class="who-pill${selected.has(nameKey(n)) ? ' on' : ''}" data-who="${esc(n)}" style="--p:${personColor(n)}"><i></i>${esc(n)}</button>`).join('') +
+          '<button type="button" class="who-pill ghost" data-act="new">+ Someone</button>';
       },
       // Take whatever name is typed in the box (even if "Add person" wasn't tapped). True if there was one.
       commit() {
         const name = input.value.replace(/[@\s]+/g, ' ').trim();
         if (!name) return false;
         const shown = displayName(name);
-        rememberPeople([shown]);
+        sessionNames.set(nameKey(name), shown);
         selected.set(nameKey(name), shown);
         input.value = ''; box.hidden = true;
         picker.render();
@@ -590,11 +593,9 @@
       if (!b) return;
       if (b.dataset.anyone) selected.clear();
       else if (b.dataset.act === 'new') { box.hidden = false; input.focus(); return; }
-      else if (b.dataset.act === 'edit') edit = !edit;
       else if (b.dataset.who) {
         const k = nameKey(b.dataset.who);
-        if (edit) { cfg.people = (cfg.people || []).filter((n) => nameKey(n) !== k); selected.delete(k); saveSettings(); }
-        else if (selected.has(k)) selected.delete(k); else selected.set(k, b.dataset.who);
+        if (selected.has(k)) selected.delete(k); else selected.set(k, b.dataset.who);
       }
       picker.render();
     });
