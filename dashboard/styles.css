@@ -317,6 +317,11 @@ body.has-photo .hero { padding-left: 1.2rem; padding-right: 1.2rem; margin-right
 .loc-results button { border: 1px solid var(--rule); background: none; padding: 0.5rem 0.9rem; font: 500 0.9rem/1 var(--mono); }
 .test-result { font: 500 0.85rem/1.2 var(--mono); color: var(--muted); margin-right: auto; }
 
+.native-only { display: none; }
+body.native .group.native-only { display: block; }
+body.native .field-grid.native-only { display: grid; }
+.group em { font-style: normal; color: var(--faint); letter-spacing: 0.04em; text-transform: none; margin-left: 0.5rem; font-weight: 400; }
+
 /* ─── Setup guide ────────────────────────────────────────────────────────── */
 
 .guide { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: 17rem minmax(0, 1fr); background: #0e0d0b; user-select: text; }
@@ -342,7 +347,8 @@ body.has-photo .hero { padding-left: 1.2rem; padding-right: 1.2rem; margin-right
 .guide-body b { font-weight: 700; }
 .guide-body .note { margin: 1rem 0; padding: 0.9rem 1.1rem; border-left: 4px solid var(--sand); background: var(--wash); color: var(--ink); font-size: 1.05rem; }
 .guide-body .note.warn { border-left-color: var(--accent); }
-.guide-body .btn { margin: 0.3rem 0.5rem 0.3rem 0; }
+.guide-body .btn { margin: 0.3rem 0.5rem 0.3rem 0; text-decoration: none; display: inline-block; }
+.guide-body a { color: var(--ink); }
 .guide-body .btn.primary { color: var(--bg); }
 .guide-body .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0.7rem; margin: 0.8rem 0; }
 .guide-body .sw { height: 5.2rem; border: 1px solid var(--rule); position: relative; }

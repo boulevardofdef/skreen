@@ -36,7 +36,16 @@ window.Guide = (() => {
       html: `
 <h1>On the tablet</h1>
 <p class="lede">Make it full-screen, always on, and back after a restart.</p>
-<h2>Best: Fully Kiosk Browser</h2>
+<h2>Best: the Skreen Android app</h2>
+<p>A small app that holds this display, built automatically from the same GitHub repository. It's full-screen, keeps the screen awake, still shows its layout with no internet, and can <b>dim the screen itself</b> (the best burn-in protection). It isn't in the Play Store, so you install it directly, which is called sideloading.</p>
+<ol>
+  <li>On the tablet, open the download in Chrome:<br><a class="btn primary" data-apk href="#" target="_blank" rel="noopener">Download Skreen.apk</a></li>
+  <li>Open the downloaded file. Android asks to allow <b>installing unknown apps</b> from Chrome. Allow it, then tap <b>Install</b>.</li>
+  <li>Open <b>Skreen</b>, tap the faint settings icon, paste your backend URL and secret, and pick your city.</li>
+  <li><i>Optional:</i> press the Home button and choose <b>Skreen → Always</b>. Skreen becomes the tablet's Home screen, so it opens at boot and Home always returns to it.</li>
+</ol>
+<div class="note">To update, download and install the new file over the old one. Your settings stay. A new version is built every time the project changes.</div>
+<h2>Or: Fully Kiosk Browser</h2>
 <ol>
   <li>Install <b>Fully Kiosk Browser</b> from the Play Store. The free version is enough.</li>
   <li>Set the <b>Start URL</b> to this page's address.</li>
@@ -50,6 +59,7 @@ window.Guide = (() => {
 <h2>Use another device</h2>
 <p>Settings live on each device. Typing a long URL on a wall tablet is miserable, so make a link on a computer and send it to the tablet (email it to yourself, for instance). Opening it saves the settings and the secret disappears from the address bar.</p>
 <div class="linkgen">
+  <input id="lgBase" placeholder="Skreen web address (https://you.github.io/skreen/)" autocomplete="off">
   <input id="lgUrl" placeholder="Backend URL (…/exec)" autocomplete="off">
   <input id="lgKey" placeholder="Secret key" autocomplete="off">
   <div class="out" id="lgOut">Fill in both boxes to build your link.</div>
@@ -107,7 +117,7 @@ window.Guide = (() => {
 </ul>
 <h2>What you can do</h2>
 <ul>
-  <li><b>Lower the tablet's brightness.</b> This is the single biggest help, and a wall display doesn't need to be bright. A web page can't control it, so set it in the tablet's settings.</li>
+  <li><b>Lower the brightness.</b> This is the single biggest help, and a wall display doesn't need to be bright. In the Android app, set it under Settings → Brightness (daytime and night levels). In a browser, set it in the tablet's own settings, since a web page can't.</li>
   <li>Use the tablet's <b>adaptive brightness</b> so it dims at night.</li>
   <li>Keep the tablet cool and out of direct sun.</li>
 </ul>`

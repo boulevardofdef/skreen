@@ -1,0 +1,52 @@
+plugins {
+    id 'com.android.application'
+}
+
+def runNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+
+android {
+    namespace 'app.skreen'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'app.skreen.wall'
+        minSdk 26
+        targetSdk 34
+        versionCode runNumber
+        versionName "1.0.${runNumber}"
+    }
+
+    // A fixed key checked into the repo, so every build is signed the same way and
+    // a new APK installs over the old one. Fine for a personal sideloaded app.
+    signingConfigs {
+        sideload {
+            storeFile file('../skreen-sideload.jks')
+            storePassword 'skreen-sideload'
+            keyAlias 'skreen'
+            keyPassword 'skreen-sideload'
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.sideload
+            minifyEnabled false
+        }
+    }
+
+    // The web app in /dashboard is bundled into the APK as-is.
+    sourceSets {
+        main {
+            assets.srcDirs = ['../../dashboard']
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.11.0'
+}

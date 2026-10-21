@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="skreen_ink">#0E0D0B</color>
+    <style name="Theme.Skreen" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/skreen_ink</item>
+        <item name="android:statusBarColor">@color/skreen_ink</item>
+        <item name="android:navigationBarColor">@color/skreen_ink</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+</resources>

@@ -11,6 +11,7 @@
     bg: 'auto', photoMinutes: '5',
     showcaseMinutes: '5', pixelShift: '1',
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
+    dayBrightness: 'system', nightBrightness: '3',
   };
   const STORE_KEY = 'skreen-settings';
   const LEGACY_KEY = 'kitchen-dashboard-settings';
@@ -46,6 +47,10 @@
   const DAY_MS = 86400000;
   const DONE_KEEP_MS = DAY_MS;          // checked-off items stay for 24 hours
   const TOUR_VIEW_MS = 7500;            // 4 views ≈ 30 seconds
+
+  // Present only inside the Skreen Android app.
+  const NATIVE = window.SkreenNative || null;
+  if (NATIVE) document.body.classList.add('native');
 
   const $ = (id) => document.getElementById(id);
   const clockHtml = (hm) => hm.replace(':', '<span class="colon">:</span>');
@@ -158,11 +163,21 @@
       applyBackground();       // new day → new background
       updateNight(now);
       nudgeLayout(now);
+      applyBrightness(now);
       maybeStartTour(now);
       // Fresh start every night: picks up app updates and keeps memory tidy.
       if (now.getHours() === 3 && now.getMinutes() === 30) location.reload();
     }
     setTimeout(tick, 1000 - now.getMilliseconds() + 5);
+  }
+
+  // Android app only: set the screen's own brightness (the best burn-in protection there is).
+  function applyBrightness(now = new Date()) {
+    if (!NATIVE) return;
+    let level = -1;
+    if (isNight(now)) level = Number(cfg.nightBrightness) / 100;
+    else if (cfg.dayBrightness !== 'system') level = Number(cfg.dayBrightness) / 100;
+    try { NATIVE.setBrightness(level); } catch (_) {}
   }
 
   // Slide the whole layout a few pixels, slowly, so no edge stays on the same pixels.
@@ -337,20 +352,22 @@
   });
   addSheet.addEventListener('click', (e) => { if (e.target === addSheet) addSheet.close(); });
 
-  // Voice input, where the browser supports it (Chrome on Android does).
+  // Voice input: the Android app uses the system recognizer; Chrome uses its own.
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) $('micBtn').hidden = true;
-  else {
+  const capFirst = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  if (NATIVE && NATIVE.startVoice) {
+    window.skreenVoice = (text) => { if (text) { $('addInput').value = capFirst(text); $('addInput').focus(); } };
+    $('micBtn').addEventListener('click', () => NATIVE.startVoice());
+  } else if (!SR) {
+    $('micBtn').hidden = true;
+  } else {
     let rec = null;
     $('micBtn').addEventListener('click', () => {
       if (rec) { rec.stop(); return; }
       rec = new SR();
       rec.lang = navigator.language || 'en-US';
       rec.interimResults = true;
-      rec.onresult = (e) => {
-        const text = Array.from(e.results).map((r) => r[0].transcript).join('');
-        $('addInput').value = text.charAt(0).toUpperCase() + text.slice(1);
-      };
+      rec.onresult = (e) => { $('addInput').value = capFirst(Array.from(e.results).map((r) => r[0].transcript).join('')); };
       rec.onend = () => { rec = null; $('micBtn').classList.remove('listening'); };
       rec.onerror = rec.onend;
       $('micBtn').classList.add('listening');
@@ -643,16 +660,24 @@
     const sw = body.querySelector('#swatches');
     if (sw) sw.innerHTML = Backgrounds.list.map((b) => `<div class="sw" style="background:${b.css.replace(/"/g, '&quot;')}"><span>${esc(b.name)}</span></div>`).join('');
 
-    const url = body.querySelector('#lgUrl'), key = body.querySelector('#lgKey');
+    const apk = body.querySelector('[data-apk]');
+    if (apk) {
+      const m = /^([^.]+)\.github\.io$/.exec(location.hostname), repo = location.pathname.split('/')[1];
+      if (m && repo) apk.href = `https://github.com/${m[1]}/${repo}/releases/latest/download/Skreen.apk`;
+      else apk.outerHTML = '<p>Open your GitHub repository’s <b>Releases</b> page on the tablet and download <code>Skreen.apk</code>.</p>';
+    }
+
+    const url = body.querySelector('#lgUrl'), key = body.querySelector('#lgKey'), base = body.querySelector('#lgBase');
     if (url) {
       url.value = cfg.backendUrl; key.value = cfg.secret;
+      base.value = NATIVE ? '' : `${location.origin}${location.pathname}`;
       const build = () => {
-        const u = url.value.trim(), k = key.value.trim();
-        body.querySelector('#lgOut').textContent = u && k
-          ? `${location.origin}${location.pathname}?backend=${encodeURIComponent(u)}&key=${encodeURIComponent(k)}`
-          : 'Fill in both boxes to build your link.';
+        const u = url.value.trim(), k = key.value.trim(), b = base.value.trim();
+        body.querySelector('#lgOut').textContent = u && k && /^https?:/.test(b)
+          ? `${b}${b.includes('?') ? '&' : '?'}backend=${encodeURIComponent(u)}&key=${encodeURIComponent(k)}`
+          : 'Fill in all three boxes to build your link.';
       };
-      url.oninput = key.oninput = build; build();
+      url.oninput = key.oninput = base.oninput = build; build();
     }
   }
 
@@ -773,6 +798,7 @@
     tour.last = Date.now();
     lastMinute = -1;
     nudgeLayout(new Date());
+    applyBrightness();
     refreshData();
     refreshWeather();
   });
@@ -828,6 +854,15 @@
     if (document.visibilityState === 'visible') { keepAwake(); refreshData(); refreshWeather(); }
   });
 
+  // Android back button: close whatever is open, never leave the app.
+  window.skreenBack = () => {
+    if (tour.on) { endTour(); return true; }
+    if (!guide.hidden) { closeGuide(); return true; }
+    const open = document.querySelector('dialog[open]');
+    if (open) { open.close(); return true; }
+    return false;
+  };
+
   // ─── Boot ──────────────────────────────────────────────────────────────────
 
   function boot() {
@@ -846,9 +881,10 @@
     refreshData();
     refreshWeather();
     keepAwake();
+    applyBrightness();
     setInterval(refreshData, REFRESH_DATA_MS);
     setInterval(refreshWeather, REFRESH_WEATHER_MS);
-    if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+    if (!NATIVE && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 
   boot();
