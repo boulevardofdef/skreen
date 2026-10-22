@@ -27,7 +27,7 @@ If sign-in lapses after about a week while the app is in *Testing*, switch **Pub
 Calendar and Tasks are "sensitive" scopes, so Google reviews the app before removing the warning screen and the 100-user cap. It's free, but takes days to weeks. You'll need:
 
 - **A domain you own.** Google requires an "authorized domain" and a homepage/privacy-policy URL on it. `github.io` addresses don't qualify. Buy a domain (for example `skreen.app`), point it at GitHub Pages (repo **Settings → Pages → Custom domain**), and verify it in Google Search Console.
-- **Privacy policy URL:** `https://<your-domain>/privacy.html` (the file is `dashboard/privacy.html`; replace the contact email placeholder first).
+- **Privacy policy URL:** `https://<your-domain>/privacy.html` (the file is `dashboard/privacy.html`; contact email is support@skreen.fyi).
 - **Scope justifications** (paste into the form):
   - *calendar.readonly*: "Skreen is a wall display. It reads the user's calendar events to show the day's schedule on screen. It never modifies calendars."
   - *tasks*: "Skreen shows the user's chosen Google Tasks list and lets them add items and check items off from the display."
