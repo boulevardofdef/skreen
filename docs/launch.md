@@ -46,7 +46,7 @@ Calendar and Tasks are "sensitive" scopes, so Google reviews the app before remo
 
 ## 4. Weather
 
-Forecasts come from MET Norway through the Cloudflare Worker in `worker/` (free for commercial use; keep the attribution, and re-read their terms before launch). City search in Settings still uses Open-Meteo's free geocoder, which is non-commercial only: swap it for another geocoder (or Open-Meteo's paid plan) before launch.
+Forecasts come from MET Norway through the Cloudflare Worker in `worker/` (free for commercial use; keep the attribution, and re-read their terms before launch). City search and place names go through the same Worker to OpenStreetMap Nominatim (`/geocode`, `/reverse`): keep the "© OpenStreetMap contributors" credit, keep request volume low (Nominatim's policy is about 1 request a second; the Worker caches), and redeploy the Worker whenever `worker/index.js` changes (paste it into the Cloudflare editor again).
 
 ## Skreen Plus (paid features)
 

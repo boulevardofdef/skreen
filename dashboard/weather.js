@@ -124,5 +124,17 @@ const Weather = (() => {
 
   const forecast = (lat, lon, units) => met(lat, lon, units);
 
-  return { forecast, met, wmo };
+  // City / ZIP search and reverse lookup go through the same relay (OpenStreetMap data).
+  async function search(q) {
+    const res = await fetch(`${PROXY}/geocode?q=${encodeURIComponent(q)}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return (await res.json()).results || [];
+  }
+  async function reverse(lat, lon) {
+    const res = await fetch(`${PROXY}/reverse?lat=${lat}&lon=${lon}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  return { forecast, met, wmo, search, reverse };
 })();

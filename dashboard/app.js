@@ -1148,9 +1148,8 @@
       if (name) return name;
     }
     try {
-      const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
-      const j = await res.json();
-      return formatPlace({ city: j.city || j.locality, region: j.principalSubdivision, country: j.countryCode });
+      const j = await Weather.reverse(lat, lon);
+      return formatPlace({ city: j.name, region: j.region, country: j.country });
     } catch (_) { return null; }
   }
 
@@ -1347,14 +1346,14 @@
     if (!q) return;
     $('locResults').textContent = 'Searching…';
     try {
-      const { results = [] } = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=6&language=en&name=${encodeURIComponent(q)}`)).json();
+      const results = await Weather.search(q);
       if (!results.length) { $('locResults').textContent = 'No matches.'; return; }
       $('locResults').innerHTML = '';
       results.forEach((r) => {
-        const place = [r.name, r.admin1, r.country_code].filter(Boolean).join(', ');
+        const place = formatPlace({ city: r.name, region: r.region, country: r.country });
         const b = document.createElement('button');
         b.type = 'button'; b.textContent = place;
-        b.onclick = () => setDraftLoc({ lat: r.latitude, lon: r.longitude, place });
+        b.onclick = () => setDraftLoc({ lat: r.lat, lon: r.lon, place });
         $('locResults').appendChild(b);
       });
     } catch (_) { $('locResults').textContent = 'Search failed.'; }
