@@ -9,7 +9,7 @@
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage',
     showcaseMinutes: '5', pixelShift: '1',
-    layout: 'clock,weather,agenda,todo',
+    layout: 'clock,weather,agenda,todo', photoFolder: '', photoSeconds: '30',
     ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
     dayBrightness: 'system', nightBrightness: '3',
@@ -806,9 +806,9 @@
 
   // ─── Big-screen tour (burn-in protection) ──────────────────────────────────
 
-  const TOUR_ALL = { time: 'clock', weather: 'weather', agenda: 'agenda', todo: 'todo' };
+  const TOUR_ALL = { time: 'clock', weather: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos' };
   let TOUR = Object.keys(TOUR_ALL);
-  const tourViews = () => Object.keys(TOUR_ALL).filter((v) => visibleWidgets().includes(TOUR_ALL[v]));
+  const tourViews = () => Object.keys(TOUR_ALL).filter((v) => visibleWidgets().includes(TOUR_ALL[v]) && (v !== 'photos' || (photosShown() && photo.current)));
   const tour = { on: false, i: 0, cycle: 0, timer: null, last: Date.now() };
 
   // Skreen+: the tour can run all the time. A tap ends it for two minutes, then it resumes.
@@ -876,6 +876,7 @@
   $('showcase').addEventListener('click', endTour);
 
   function tourHtml(name) {
+    if (name === 'photos') return `<div class="sv-photo" style="background-image:url('${photo.current}')"></div>`;
     const now = new Date();
     if (name === 'time') {
       const { hm, ap } = timeParts(now);
@@ -1266,8 +1267,8 @@
   // cfg.layout is the order, with hidden widgets prefixed "-": "agenda,todo,-weather,clock".
   // Clock and weather sit in one column when they're next to each other.
 
-  const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list' };
-  const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92 };
+  const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos (Skreen+)' };
+  const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92, photos: 1.15 };
   const hasPlus = () => Plus.active();
 
   function parseLayout(str) {
@@ -1276,7 +1277,7 @@
       const off = raw.trim().startsWith('-'), id = raw.trim().replace(/^-/, '');
       if (WIDGETS[id] && !seen.has(id)) { seen.add(id); out.push({ id, on: !off }); }
     }
-    for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: true });
+    for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: id !== 'photos' });   // photos start hidden
     if (!out.some((w) => w.on)) out.forEach((w) => { w.on = true; });
     return out;
   }
@@ -1306,6 +1307,59 @@
       dash.insertBefore(lane, shelf);
     }
     dash.style.setProperty('--cols', lanes.map((l) => `minmax(0, ${LAYOUT_FR[l.kind]}fr)`).join(' '));
+    if (typeof syncPhotos === 'function') syncPhotos();
+  }
+
+  // ─── Photos widget (Skreen+) ────────────────────────────────────────────────
+
+  const photo = { ids: [], order: [], i: -1, folder: '', listedAt: 0, timer: null, front: 'B', current: '' };
+  const photosShown = () => hasPlus() && visibleWidgets().includes('photos');
+
+  function showPhoto(id, then) {
+    const img = new Image();
+    img.onload = () => {
+      const back = photo.front === 'A' ? $('pfB') : $('pfA'), front = photo.front === 'A' ? $('pfA') : $('pfB');
+      back.style.backgroundImage = `url("${img.src}")`;
+      back.classList.add('on'); front.classList.remove('on');
+      photo.front = photo.front === 'A' ? 'B' : 'A';
+      photo.current = img.src;
+      then(true);
+    };
+    img.onerror = () => then(false);
+    img.src = Photos.url(id);
+  }
+
+  function nextPhoto(failures = 0) {
+    clearTimeout(photo.timer);
+    if (!photo.ids.length || failures > 5) { $('photoNote').textContent = photo.ids.length ? 'Couldn\u2019t load the pictures. Check the folder is shared with anyone who has the link.' : ''; return; }
+    if (photo.i + 1 >= photo.order.length) { photo.order = Photos.shuffled(photo.ids); photo.i = -1; }
+    const id = photo.order[++photo.i];
+    showPhoto(id, (ok) => {
+      if (!ok) return nextPhoto(failures + 1);
+      $('photoNote').textContent = '';
+      photo.timer = setTimeout(() => nextPhoto(), Math.max(10, Number(cfg.photoSeconds) || 30) * 1000);
+    });
+  }
+
+  async function syncPhotos(force = false) {
+    clearTimeout(photo.timer);
+    if (!photosShown()) return;
+    const note = $('photoNote'), folder = Photos.folderId(cfg.photoFolder);
+    if (!Photos.configured) { note.textContent = 'Photos aren\u2019t switched on in this build yet.'; return; }
+    if (!folder) { note.textContent = 'Choose a Google Drive folder in Settings \u2192 Photos'; return; }
+    if (force || folder !== photo.folder || Date.now() - photo.listedAt > 6 * 3600e3) {
+      note.textContent = 'Loading pictures\u2026';
+      try {
+        photo.ids = await Photos.list(folder);
+        photo.folder = folder; photo.listedAt = Date.now(); photo.order = []; photo.i = -1;
+        if (!photo.ids.length) { note.textContent = 'That folder has no pictures yet.'; return; }
+      } catch (err) {
+        note.textContent = err.message === 'folder not shared' ? 'Can\u2019t read that folder. Share it as \u201cAnyone with the link\u201d.' : 'Couldn\u2019t load the pictures right now.';
+        photo.timer = setTimeout(() => syncPhotos(true), 5 * 60000);
+        return;
+      }
+    }
+    nextPhoto();
   }
 
   // The editor in Settings: a tick to show/hide and arrows to reorder (no dragging on a wall display).
@@ -1314,6 +1368,7 @@
     const on = Plus.active(), st = Plus.state;
     $('plusCard').classList.toggle('on', on);
     $('layoutField').classList.toggle('locked', !on);
+    $('photoField').classList.toggle('locked', !on);
     $('plusText').innerHTML = on
       ? '<b>Skreen+ is unlocked.</b> Thank you. It\u2019s yours for good.'
       : 'One payment unlocks Skreen+: several Google accounts and to-do lists, your own layout, an always-on slideshow and more. Everything you see on the main screen today stays free.';
@@ -1388,6 +1443,18 @@
       out.textContent = err.message === 'not a calendar' ? 'That link isn\u2019t a calendar feed. It should end in .ics or come from \u201cpublish calendar\u201d.' : `Couldn\u2019t read that link (${err.message}).`;
     }
   });
+  $('photoCheck').addEventListener('click', async () => {
+    const out = $('photoResult'), id = Photos.folderId($('photoLink').value);
+    if (!Photos.configured) { out.textContent = 'Photos aren\u2019t switched on in this build yet.'; return; }
+    if (!id) { out.textContent = 'Paste the folder\u2019s share link from Google Drive.'; return; }
+    out.textContent = 'Checking the folder\u2026';
+    try {
+      const ids = await Photos.list(id);
+      out.textContent = ids.length ? `\u2713 Found ${ids.length} picture${ids.length === 1 ? '' : 's'}. Save, then add Photos under Layout.` : 'That folder has no pictures in it yet.';
+    } catch (err) {
+      out.textContent = err.message === 'folder not shared' ? 'Can\u2019t read that folder. In Drive, share it as \u201cAnyone with the link\u201d.' : `Couldn\u2019t read the folder (${err.message}).`;
+    }
+  });
   $('icsHelp').addEventListener('click', (e) => { e.preventDefault(); settingsSheet.close(); openGuide('calendars'); });
 
   let draftLoc = null;
@@ -1422,6 +1489,8 @@
     const tourSel = form.elements.showcaseMinutes;
     tourSel.querySelector('option[value="always"]').disabled = !hasPlus();
     if (!hasPlus() && tourSel.value === 'always') tourSel.value = '5';
+    $('photoLink').value = cfg.photoFolder ? `https://drive.google.com/drive/folders/${cfg.photoFolder}` : '';
+    $('photoResult').textContent = '';
     draftIcs = (cfg.ics || []).map((c) => ({ ...c }));
     drawIcs();
     $('icsResult').textContent = '';
@@ -1551,6 +1620,7 @@
     for (const el of form.elements) if (el.name && el.name in cfg) cfg[el.name] = el.value.trim();
     if (draftLoc) Object.assign(cfg, draftLoc);
     cfg.ics = draftIcs;
+    if (hasPlus()) cfg.photoFolder = Photos.folderId($('photoLink').value);
     if (draftLayout && hasPlus()) cfg.layout = serializeLayout(draftLayout);
     document.querySelectorAll('#acctBox .acct').forEach((el) => {
       const acct = el.dataset.a;

@@ -53,6 +53,9 @@
       <ul class="scroll tasks" id="tasks"></ul>
       <button class="add-btn" id="addBtn" type="button"><span id="addIcon"></span>Add to list</button>
     </section>
+    <section class="w w-photos" data-w="photos">
+      <div class="photo-frame" id="photoFrame"><div class="pf" id="pfA"></div><div class="pf" id="pfB"></div><div class="pf-note" id="photoNote"></div></div>
+    </section>
     <div id="shelf" hidden></div>
   </main>
 
@@ -213,6 +216,19 @@
           <div class="layout-list" id="layoutList"></div>
         </div>
 
+        <div class="group">Photos <span class="plus-chip" data-plus-logo></span></div>
+        <div class="field" id="photoField">
+          <span>Show a Google Drive folder of pictures as a slideshow</span>
+          <div class="loc-row">
+            <input id="photoLink" type="url" inputmode="url" autocomplete="off" placeholder="Paste the folder's share link">
+            <button type="button" class="btn ghost small" id="photoCheck">Check</button>
+          </div>
+          <div class="test-result" id="photoResult"></div>
+          <label class="field"><span>Change picture every</span>
+            <select name="photoSeconds"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option></select></label>
+          <p class="credit">In Google Drive, share the folder as <b>Anyone with the link</b>, then add the widget under Layout. Google Photos albums can't be used; put copies of the pictures in a Drive folder.</p>
+        </div>
+
         <div class="group">Look</div>
         <div class="field-grid">
           <label class="field"><span>Background</span>
@@ -287,6 +303,7 @@
   <script src="weather.js?v=dev"></script>
   <script src="vendor/ical.min.js?v=dev"></script>
   <script src="ics.js?v=dev"></script>
+  <script src="photos.js?v=dev"></script>
   <script src="backgrounds.js?v=dev"></script>
   <script src="guide.js?v=dev"></script>
   <script src="app.js?v=dev"></script>

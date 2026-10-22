@@ -592,3 +592,15 @@ body.native .native-block { display: block; }
 .acct-body { margin-top: 0.7rem; }
 .acct-body .sub { display: block; margin: 0.6rem 0 0.3rem; font: 500 0.8rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .list-tag { display: inline-block; margin-top: 0.35rem; font: 500 0.78rem/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--rule); padding: 0.2rem 0.4rem; }
+
+/* Photos widget (Skreen+) */
+.w-photos { flex: 1; min-height: 0; display: flex; }
+.photo-frame { position: relative; flex: 1; min-height: 0; overflow: hidden; background: rgba(0, 0, 0, 0.25); }
+.pf { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity 2.5s ease; }
+.pf.on { opacity: 1; animation: kenburns 40s ease-in-out infinite alternate; }
+@keyframes kenburns { from { transform: scale(1); } to { transform: scale(1.07) translate(-1%, -1%); } }
+.pf-note { position: absolute; inset: 0; display: grid; place-items: center; padding: 1.5rem; text-align: center; font: 500 0.95rem/1.4 var(--mono); color: var(--muted); letter-spacing: 0.04em; }
+.pf-note:empty { display: none; }
+.sv.sv-photos { padding: 0; }
+.sv-photo { position: absolute; inset: 0; background-size: cover; background-position: center; }
+#photoField.locked { opacity: 0.4; pointer-events: none; }
