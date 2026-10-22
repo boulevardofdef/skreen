@@ -71,6 +71,12 @@
       <div class="scroll meal-list" id="mealList"></div>
     </section>
 
+    <section class="w col shop" data-w="shop">
+      <div class="col-head"><span>Shopping</span><span class="count" id="shopCount"></span></div>
+      <ul class="scroll tasks shop-list" id="shopList"></ul>
+      <button class="add-btn" id="shopAdd" type="button"><span id="shopAddIcon"></span>Add item</button>
+    </section>
+
     <section class="w w-photos" data-w="photos">
       <div class="photo-frame" id="photoFrame"><div class="pf" id="pfA"></div><div class="pf" id="pfB"></div><div class="pf-caption" id="photoCaption"></div><div class="pf-note" id="photoNote"></div></div>
     </section>
@@ -136,6 +142,20 @@
     <div class="alarm-actions">
       <button type="button" class="btn ghost" id="alarmMore">+5 more minutes</button>
       <button type="button" class="btn primary" id="alarmStop">Stop</button>
+    </div>
+  </dialog>
+
+  <!-- Shopping list -->
+  <dialog class="sheet meal-sheet" id="shopSheet">
+    <div class="brand-row sm" data-brand></div>
+    <h3>Add to shopping</h3>
+    <div class="add-row">
+      <input id="shopInput" type="text" autocomplete="off" enterkeyhint="done" placeholder="e.g. Milk" maxlength="120">
+      <button type="button" class="mic" id="shopMic" aria-label="Speak"></button>
+    </div>
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="shopCancel">Done</button>
+      <button type="button" class="btn primary" id="shopSave">Add</button>
     </div>
   </dialog>
 
@@ -238,6 +258,11 @@
         <div class="group native-only">Dinners <span class="plus-chip" data-plus-logo></span></div>
         <div class="native-block" id="mealField">
           <label class="field"><span>Dinner planner list <em>(a Google Tasks list, one dinner per day by due date)</em></span><select id="mealPick"></select></label>
+        </div>
+
+        <div class="group native-only">Shopping list <span class="plus-chip" data-plus-logo></span></div>
+        <div class="native-block" id="shopField">
+          <label class="field"><span>Shopping list <em>(a Google Tasks list)</em></span><select id="shopPick"></select></label>
         </div>
 
         <div class="group">Other calendars</div>

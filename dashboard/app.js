@@ -9,7 +9,7 @@
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage',
     showcaseMinutes: '5', pixelShift: '1',
-    layout: 'clock,weather,agenda,todo', photoSource: 'art', photoSeconds: '30', mealList: '', pageSeconds: '60',
+    layout: 'clock,weather,agenda,todo', photoSource: 'art', photoSeconds: '30', mealList: '', shopList: '', pageSeconds: '60',
     ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
     dayBrightness: 'system', nightBrightness: '3',
@@ -1050,9 +1050,9 @@
 
   // ─── Big-screen tour (burn-in protection) ──────────────────────────────────
 
-  const TOUR_ALL = { time: 'clock', weather: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news', meals: 'meals' };
+  const TOUR_ALL = { time: 'clock', weather: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news', meals: 'meals', shop: 'shop' };
   let TOUR = Object.keys(TOUR_ALL);
-  const tourViews = () => Object.keys(TOUR_ALL).filter((v) => visibleWidgets().includes(TOUR_ALL[v]) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (!['agenda', 'todo'].includes(v) || state.loaded));
+  const tourViews = () => Object.keys(TOUR_ALL).filter((v) => visibleWidgets().includes(TOUR_ALL[v]) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (!['agenda', 'todo'].includes(v) || state.loaded));
   const tour = { on: false, i: 0, cycle: 0, timer: null, last: Date.now() };
 
   // Skreen+: the tour can run all the time. A tap ends it for two minutes, then it resumes.
@@ -1128,6 +1128,10 @@
         return `<div class="row${i === 0 ? ' now' : ''}"><div class="rt">${esc(i === 0 ? 'Tonight' : fmtDate(d, { weekday: 'short' }))}</div><div class="rn">${items.length ? esc(items.map((m) => m.title).join(' + ')) : '<span class="sv-none">\u2014</span>'}</div></div>`;
       }).join('');
       return `<div class="kicker">Dinner this week</div><div class="sv-list">${rows}</div>`;
+    }
+    if (name === 'shop') {
+      const rows = shopState.items.slice(0, 8).map((t) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(t.title)}</div></div>`).join('');
+      return `<div class="kicker">Shopping</div><div class="sv-list sv-news">${rows}</div>`;
     }
     if (name === 'news') {
       const rows = News.current.slice(0, 4).map((s) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(s.text)}</div></div>`).join('');
@@ -1525,8 +1529,8 @@
   // cfg.layout is the order, with hidden widgets prefixed "-": "agenda,todo,-weather,clock".
   // Clock and weather sit in one column when they're next to each other.
 
-  const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos (Skreen+)', news: 'In the news (Skreen+)', meals: 'Dinners (Skreen+)' };
-  const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92, photos: 1.15, news: 1.1, meals: 1.1 };
+  const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos (Skreen+)', news: 'In the news (Skreen+)', meals: 'Dinners (Skreen+)', shop: 'Shopping list (Skreen+)' };
+  const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92, photos: 1.15, news: 1.1, meals: 1.1, shop: 1 };
   const hasPlus = () => Plus.active();
 
   function parseLayout(str) {
@@ -1535,7 +1539,7 @@
       const off = raw.trim().startsWith('-'), id = raw.trim().replace(/^-/, '');
       if (WIDGETS[id] && !seen.has(id)) { seen.add(id); out.push({ id, on: !off }); }
     }
-    for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: !['photos', 'news', 'meals'].includes(id) });   // the Plus widgets start hidden
+    for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: !['photos', 'news', 'meals', 'shop'].includes(id) });   // the Plus widgets start hidden
     if (!out.some((w) => w.on)) out.forEach((w) => { w.on = true; });
     return out;
   }
@@ -1599,6 +1603,7 @@
     if (typeof syncPhotos === 'function') syncPhotos();
     if (typeof syncNews === 'function') syncNews();
     if (typeof refreshMeals === 'function') { drawMeals(); refreshMeals(); }
+    if (typeof refreshShop === 'function') { drawShop(); refreshShop(); }
   }
 
   function setPage(i, { manual = false, instant = false } = {}) {
@@ -1825,6 +1830,88 @@
     }
     drawMeals();
   }
+
+  // Shopping list: one Google Tasks list. Tap an item to tick it off; ticked items drop away on the next refresh.
+
+  const shopShown = () => hasPlus() && visibleWidgets().includes('shop');
+  const shopTarget = () => { const [a, l] = String(cfg.shopList || '').split('|'); return a && l && accountList().includes(a) ? { a, l } : null; };
+  const shopState = { items: [], ready: false, error: '' };
+
+  function drawShop() {
+    const box = $('shopList');
+    if (!shopShown() && !tour.on) return;
+    const unset = !isDemo() && !shopTarget();
+    $('shopAdd').hidden = unset;
+    if (unset) {
+      $('shopCount').textContent = '';
+      box.innerHTML = `<li><button type="button" class="sk-cta" data-shop-setup>${canSignIn() ? 'Choose a Google Tasks list for shopping in Settings' : 'Shopping needs the Android app and Google sign-in'}</button></li>`;
+      return;
+    }
+    if (!shopState.ready) { box.innerHTML = [1, 2, 3, 4].map(() => `<li class="task skeleton">${sk(60, 1.5)}</li>`).join(''); return; }
+    const open = shopState.items.filter((t) => !t.done).length;
+    $('shopCount').textContent = shopState.error ? 'Offline' : open ? `${open} to get` : '';
+    box.innerHTML = shopState.items.length ? shopState.items.map((t) => `
+      <li class="task${t.done ? ' done' : ''}" data-id="${esc(t.id)}"><span class="box"><span class="ico">${Icons.check}</span></span><span class="body"><span class="label">${esc(t.title)}</span></span></li>`).join('')
+      : `<li class="task task-empty">${Icons.check}Nothing to buy</li>`;
+  }
+
+  async function refreshShop() {
+    if (!shopShown()) return;
+    if (isDemo()) {
+      if (!shopState.ready) shopState.items = ['Milk', 'Eggs', 'Bananas', 'Bread', 'Dish soap', 'Coffee'].map((title, i) => ({ id: 's' + i, title, done: false }));
+      shopState.ready = true; shopState.error = '';
+      drawShop();
+      return;
+    }
+    const t = shopTarget();
+    if (!t) { drawShop(); return; }
+    try {
+      const all = await Google.tasks(t.a, t.l);
+      shopState.items = all.filter((x) => !x.done);
+      shopState.ready = true; shopState.error = '';
+    } catch (err) {
+      shopState.error = err.message || 'failed';
+    }
+    drawShop();
+  }
+
+  async function toggleShop(id) {
+    const it = shopState.items.find((x) => x.id === id), t = shopTarget();
+    if (!it || (!t && !isDemo())) return;
+    it.done = !it.done;
+    drawShop();
+    if (isDemo()) return;
+    try { await Google.setDone(t.a, t.l, id, it.done); }
+    catch (e) { it.done = !it.done; drawShop(); showToast('Couldn\u2019t update the list'); }
+  }
+
+  async function addShop() {
+    const text = $('shopInput').value.trim(), t = shopTarget();
+    if (!text) return;
+    $('shopInput').value = '';
+    $('shopInput').focus();
+    const tmp = { id: 'tmp' + Date.now(), title: text, done: false };
+    shopState.items.push(tmp);
+    shopState.ready = true;
+    drawShop();
+    if (isDemo()) return;
+    try { const real = await Google.addTask(t.a, t.l, text); tmp.id = real.id; }
+    catch (e) { shopState.items = shopState.items.filter((x) => x !== tmp); drawShop(); showToast('Couldn\u2019t add that item'); }
+  }
+
+  $('shopList').addEventListener('click', (e) => {
+    if (e.target.closest('[data-shop-setup]')) { if (canSignIn()) openSettings(); return; }
+    const li = e.target.closest('.task[data-id]');
+    if (li) toggleShop(li.dataset.id);
+  });
+  $('shopAddIcon').innerHTML = Icons.plus || '+';
+  $('shopAdd').addEventListener('click', () => { $('shopSheet').showModal(); setTimeout(() => $('shopInput').focus(), 50); });
+  $('shopSave').addEventListener('click', addShop);
+  $('shopCancel').addEventListener('click', () => $('shopSheet').close());
+  $('shopInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addShop(); } });
+  $('shopMic').innerHTML = Icons.mic;
+  if (NATIVE && NATIVE.startVoice) $('shopMic').addEventListener('click', () => { voiceSink = (text) => { $('shopInput').value = capFirst(text); }; NATIVE.startVoice(); });
+  else $('shopMic').hidden = true;
 
   let mealEditing = null;   // { date, first }
   function openMeal(date) {
@@ -2083,6 +2170,7 @@
     }));
     drawAddTo();
     drawMealPick(all);
+    drawShopPick(all);
   }
   // The dinner planner's list: any Google Tasks list on a signed-in account.
   function drawMealPick(all) {
@@ -2092,6 +2180,14 @@
     // Offer a list that already looks like a dinner list as the default.
     const guess = opts.find((o) => /dinner|meal/i.test(o.label));
     const cur = cfg.mealList || (guess ? guess.v : '');
+    sel.innerHTML = '<option value="">Not set</option>' + opts.map((o) => `<option value="${esc(o.v)}" ${o.v === cur ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
+  }
+  function drawShopPick(all) {
+    const sel = $('shopPick');
+    const opts = [];
+    all.forEach((a) => { const c = acctChoices[a]; if (c) c.lists.forEach((l) => opts.push({ v: `${a}|${l.id}`, label: `${l.title}${all.length > 1 ? ' \u00b7 ' + a : ''}` })); });
+    const guess = opts.find((o) => /shop|grocer/i.test(o.label));
+    const cur = cfg.shopList || (guess ? guess.v : '');
     sel.innerHTML = '<option value="">Not set</option>' + opts.map((o) => `<option value="${esc(o.v)}" ${o.v === cur ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
   }
   // Where new to-dos go, when more than one list is shown.
@@ -2181,6 +2277,7 @@
     });
     if ($('addToPick') && !$('addToField').hidden) cfg.addTo = $('addToPick').value;
     if ($('mealPick') && $('mealPick').options.length > 1 && hasPlus()) cfg.mealList = $('mealPick').value;
+    if ($('shopPick') && $('shopPick').options.length > 1 && hasPlus()) cfg.shopList = $('shopPick').value;
     Google.forgetCaches();
     saveSettings();
     state.nightDismissedUntil = 0;
@@ -2320,6 +2417,7 @@
     if (canUpdate()) { setTimeout(backgroundUpdateCheck, 20000); setInterval(backgroundUpdateCheck, UPDATE_CHECK_MS); }
     setInterval(() => syncNews(true), 30 * 60000);
     setInterval(refreshMeals, 10 * 60000);
+    setInterval(refreshShop, 5 * 60000);
     setInterval(refreshData, REFRESH_DATA_MS);
     setInterval(refreshWeather, REFRESH_WEATHER_MS);
     if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname !== 'appassets.androidplatform.net') navigator.serviceWorker.register('sw.js').catch(() => {});
