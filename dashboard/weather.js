@@ -6,7 +6,7 @@
 //   Cloudflare Worker in /worker (it adds the header and caches) to switch it on.
 //   Open-Meteo: used until then, and as the fallback. Free for non-commercial use only.
 const Weather = (() => {
-  const PROXY = ''; // e.g. 'https://skreen-weather.<you>.workers.dev'
+  const PROXY = 'https://skreen-weather.tiszenkel.workers.dev';
   const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const isoHour = (d) => `${iso(d)}T${String(d.getHours()).padStart(2, '0')}:00`;
 
