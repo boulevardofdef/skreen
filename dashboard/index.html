@@ -77,6 +77,7 @@
     <div id="shelf" hidden></div>
   </main>
 
+  <div class="page-dots" id="pageDots" hidden></div>
   <button class="status" id="status" type="button" hidden></button>
   <button class="gear" id="gearBtn" type="button" aria-label="Settings"></button>
   <button class="gear timer-btn" id="timerBtn" type="button" aria-label="Timers"></button>
@@ -291,8 +292,10 @@
 
         <div class="group">Layout <span class="plus-chip" data-plus-logo></span></div>
         <div class="field" id="layoutField">
-          <span>Show, hide and reorder what's on the screen</span>
+          <span>Show, hide and reorder what's on the screen. One screen fits three columns; the rest go on more screens you can swipe between.</span>
           <div class="layout-list" id="layoutList"></div>
+          <label class="field"><span>Switch screens by itself</span>
+            <select name="pageSeconds"><option value="0">Off, I'll swipe</option><option value="30">Every 30 seconds</option><option value="60">Every minute</option><option value="120">Every 2 minutes</option><option value="300">Every 5 minutes</option><option value="600">Every 10 minutes</option></select></label>
         </div>
 
         <div class="group">Photos <span class="plus-chip" data-plus-logo></span></div>

@@ -98,11 +98,12 @@ button { cursor: pointer; }
 .dash {
   position: relative; z-index: 1;
   height: 100vh; height: 100dvh;
-  display: grid;
-  grid-template-columns: var(--cols, minmax(0, 1.06fr) minmax(0, 1.3fr) minmax(0, 0.92fr));
   padding: 2rem 2.2rem 2.4rem;
   transition: transform 6s ease-in-out;
 }
+.pager-view { width: 100%; height: 100%; overflow: hidden; }
+.pager { display: flex; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1); touch-action: pan-y; }
+.page { flex: 0 0 100%; min-width: 0; height: 100%; display: grid; grid-template-columns: var(--cols, minmax(0, 1.06fr) minmax(0, 1.3fr) minmax(0, 0.92fr)); }
 .lane { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 0 1.8rem; border-left: 1px solid var(--rule); container-type: inline-size; }
 .lane:first-child { padding-left: 0; border-left: 0; }
 .lane:last-child { padding-right: 0; }
@@ -515,7 +516,8 @@ body.native .field.native-only { display: flex; }
 
 @media (orientation: portrait) {
   :root { font-size: clamp(11px, min(2.1vw, 1.35vh), 30px); }
-  .dash { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto minmax(0, 1fr); padding: 1.8rem 1.8rem 2.4rem; }
+  .dash { padding: 1.8rem 1.8rem 2.4rem; }
+  .page { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto minmax(0, 1fr); }
   .lane.pair { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 2.4rem; padding: 0 0 1.6rem; border-left: 0; }
   .lane.pair .weather { flex: 1; max-width: 34rem; }
   .lane:not(.pair) { padding: 0 1rem; }
@@ -554,7 +556,10 @@ body.native .field.native-only { display: flex; }
 @media (orientation: portrait) and (max-width: 700px) {
   :root { font-size: 16px; }
   html, body { height: auto; min-height: 100%; overflow-x: hidden; overflow-y: auto; }
-  .dash { display: flex; flex-direction: column; height: auto; min-height: 100dvh; padding: 1.4rem 1.1rem 4.6rem; }
+  .dash { height: auto; min-height: 100dvh; padding: 1.4rem 1.1rem 4.6rem; overflow: visible; }
+  .pager-view { overflow: visible; height: auto; }
+  .pager { display: block; height: auto; transform: none !important; }
+  .page { display: flex; flex-direction: column; height: auto; }
   .lane, .lane:not(.pair) { flex: none; padding: 0; border: 0; margin-bottom: 1.8rem; }
   .lane.pair { flex-direction: column; align-items: stretch; gap: 1.6rem; justify-content: flex-start; }
   .lane.pair .weather { max-width: none; flex: none; }
@@ -698,7 +703,7 @@ body.timer-inline .wx-days { display: none; }
 .meal-what .sep { color: var(--muted); font-weight: 400; }
 .meal.empty .meal-what { color: var(--faint); font-weight: 500; font-size: 1.05rem; }
 .meal.today { background: var(--accent); color: #0e0d0b; padding-left: 0.8rem; padding-right: 0.8rem; margin: 0 -0.8rem; width: calc(100% + 1.6rem); }
-.meal.today .meal-day { color: rgba(14, 13, 11, 0.7); }
+.meal.today .meal-day { color: #0e0d0b; }
 .meal-sheet { width: min(34rem, 94vw); }
 .sv-none { opacity: 0.4; }
 
@@ -711,3 +716,12 @@ body.timer-inline .wx-days { display: none; }
 .code-field input { flex: 1; min-width: 0; border: 0; background: transparent; font: 600 1.05rem/1 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; }
 .code-field:focus-within { border-color: var(--accent); }
 .code-field input:focus { outline: 0; }
+
+/* Screens */
+.page-dots { position: fixed; left: 50%; bottom: 0.65rem; transform: translateX(-50%); z-index: 3; display: flex; gap: 0.2rem; }
+.page-dots[hidden] { display: none; }
+.page-dots button { width: 1.6rem; height: 1.6rem; padding: 0; border: 0; background: none; position: relative; }
+.page-dots button::after { content: ""; position: absolute; left: 50%; top: 50%; width: 0.55rem; height: 0.55rem; transform: translate(-50%, -50%); background: rgba(243, 238, 227, 0.35); }
+.page-dots button.on::after { background: var(--accent); width: 0.8rem; }
+.layout-screen { padding: 0.45rem 0.8rem; font: 600 0.78rem/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); border-top: 1px solid var(--accent); background: rgba(255, 91, 46, 0.07); }
+.news-list { -webkit-mask-image: none; mask-image: none; }

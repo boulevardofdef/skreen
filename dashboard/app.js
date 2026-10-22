@@ -9,7 +9,7 @@
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage',
     showcaseMinutes: '5', pixelShift: '1',
-    layout: 'clock,weather,agenda,todo', photoFolder: '', photoSeconds: '30', mealList: '',
+    layout: 'clock,weather,agenda,todo', photoFolder: '', photoSeconds: '30', mealList: '', pageSeconds: '60',
     ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
     dayBrightness: 'system', nightBrightness: '3',
@@ -1543,32 +1543,135 @@
   const activeLayout = () => parseLayout(hasPlus() ? cfg.layout : DEFAULTS.layout);
   const visibleWidgets = () => activeLayout().filter((w) => w.on).map((w) => w.id);
 
+  // ─── Screens: at most three columns on one screen; the rest go on further screens ───
+
+  const MAX_LANES = 3;   // columns per screen; the clock and weather side by side share one
+  const phoneLayout = () => matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
+  function buildLanes(ids) {
+    const lanes = [];
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i], next = ids[i + 1];
+      const pair = (id === 'clock' && next === 'weather') || (id === 'weather' && next === 'clock');
+      lanes.push(pair ? { kind: 'pair', ids: [id, next] } : { kind: id, ids: [id] });
+      if (pair) i++;
+    }
+    return lanes;
+  }
+  const paginate = (lanes) => {
+    if (phoneLayout()) return [lanes];          // a phone scrolls one long screen instead
+    const pages = [];
+    for (let i = 0; i < lanes.length; i += MAX_LANES) pages.push(lanes.slice(i, i + MAX_LANES));
+    return pages.length ? pages : [[]];
+  };
+  const pager = { index: 0, count: 1, changedAt: Date.now(), dragging: false };
+
   function applyLayout() {
     const dash = $('dash'), shelf = $('shelf');
     const items = activeLayout();
     const els = {};
     dash.querySelectorAll('[data-w]').forEach((el) => { els[el.dataset.w] = el; });
-    dash.querySelectorAll('.lane').forEach((l) => l.remove());
+    dash.querySelectorAll('.pager-view').forEach((p) => p.remove());
     items.filter((w) => !w.on).forEach((w) => shelf.appendChild(els[w.id]));
-    const lanes = [];
-    const vis = items.filter((w) => w.on).map((w) => w.id);
-    for (let i = 0; i < vis.length; i++) {
-      const id = vis[i], next = vis[i + 1];
-      const pair = (id === 'clock' && next === 'weather') || (id === 'weather' && next === 'clock');
-      lanes.push(pair ? { kind: 'pair', ids: [id, next] } : { kind: id, ids: [id] });
-      if (pair) i++;
+    const pages = paginate(buildLanes(items.filter((w) => w.on).map((w) => w.id)));
+    const track = document.createElement('div');
+    track.className = 'pager';
+    for (const lanes of pages) {
+      const page = document.createElement('div');
+      page.className = 'page';
+      for (const l of lanes) {
+        const lane = document.createElement('div');
+        lane.className = 'lane' + (l.kind === 'pair' ? ' pair' : '');
+        l.ids.forEach((id) => lane.appendChild(els[id]));
+        page.appendChild(lane);
+      }
+      page.style.setProperty('--cols', lanes.map((l) => `minmax(0, ${LAYOUT_FR[l.kind]}fr)`).join(' '));
+      track.appendChild(page);
     }
-    for (const l of lanes) {
-      const lane = document.createElement('div');
-      lane.className = 'lane' + (l.kind === 'pair' ? ' pair' : '');
-      l.ids.forEach((id) => lane.appendChild(els[id]));
-      dash.insertBefore(lane, shelf);
-    }
-    dash.style.setProperty('--cols', lanes.map((l) => `minmax(0, ${LAYOUT_FR[l.kind]}fr)`).join(' '));
+    const view = document.createElement('div');
+    view.className = 'pager-view';
+    view.appendChild(track);
+    dash.insertBefore(view, shelf);
+    pager.count = pages.length;
+    pager.index = Math.min(pager.index, pager.count - 1);
+    track.style.transition = 'none';
+    setPage(pager.index, { instant: true });
+    drawDots();
     if (typeof syncPhotos === 'function') syncPhotos();
     if (typeof syncNews === 'function') syncNews();
     if (typeof refreshMeals === 'function') { drawMeals(); refreshMeals(); }
   }
+
+  function setPage(i, { manual = false, instant = false } = {}) {
+    const track = document.querySelector('#dash .pager');
+    if (!track) return;
+    pager.index = ((i % pager.count) + pager.count) % pager.count;
+    pager.changedAt = Date.now();
+    if (instant) { track.style.transition = 'none'; } else { track.style.transition = ''; }
+    track.style.transform = pager.count > 1 ? `translateX(${-pager.index * 100}%)` : '';
+    if (instant) { void track.offsetWidth; track.style.transition = ''; }
+    document.querySelectorAll('#pageDots button').forEach((b, k) => b.classList.toggle('on', k === pager.index));
+    if (manual) pager.changedAt = Date.now() + 15000;   // after a swipe, leave it alone for a while
+  }
+  function drawDots() {
+    const box = $('pageDots');
+    box.hidden = pager.count < 2;
+    box.innerHTML = Array.from({ length: pager.count }, (_, k) => `<button type="button" data-page="${k}" class="${k === pager.index ? 'on' : ''}" aria-label="Screen ${k + 1}"></button>`).join('');
+  }
+  $('pageDots').addEventListener('click', (e) => { const b = e.target.closest('[data-page]'); if (b) setPage(+b.dataset.page, { manual: true }); });
+
+  // Swipe sideways between screens (a horizontal drag; vertical scrolling of lists is untouched).
+  (function swipe() {
+    const dash = $('dash');
+    let sx = 0, sy = 0, dx = 0, active = false, moved = false, t0 = 0;
+    dash.addEventListener('pointerdown', (e) => {
+      if (pager.count < 2 || e.button > 0 || e.target.closest('input, textarea, select')) return;
+      active = true; moved = false; sx = e.clientX; sy = e.clientY; dx = 0; t0 = Date.now();
+    });
+    dash.addEventListener('pointermove', (e) => {
+      if (!active) return;
+      dx = e.clientX - sx;
+      const dy = e.clientY - sy;
+      if (!moved && Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * 1.4) { moved = true; pager.dragging = true; try { dash.setPointerCapture(e.pointerId); } catch (_) {} }
+      if (moved) {
+        const track = dash.querySelector('.pager');
+        track.style.transition = 'none';
+        const atEdge = (pager.index === 0 && dx > 0) || (pager.index === pager.count - 1 && dx < 0);
+        track.style.transform = `translateX(calc(${-pager.index * 100}% + ${atEdge ? dx / 3 : dx}px))`;
+      }
+    });
+    const end = (e) => {
+      if (!active) return;
+      active = false;
+      if (!moved) return;
+      pager.dragging = false;
+      const fast = Math.abs(dx) / Math.max(1, Date.now() - t0) > 0.5;
+      const go = Math.abs(dx) > window.innerWidth * 0.18 || (fast && Math.abs(dx) > 40);
+      const next = go ? pager.index + (dx < 0 ? 1 : -1) : pager.index;
+      setPage(Math.max(0, Math.min(pager.count - 1, next)), { manual: true });
+      suppressClick = true; setTimeout(() => { suppressClick = false; }, 60);
+    };
+    let suppressClick = false;
+    dash.addEventListener('pointerup', end);
+    dash.addEventListener('pointercancel', end);
+    dash.addEventListener('click', (e) => { if (suppressClick) { e.stopPropagation(); e.preventDefault(); } }, true);
+    document.addEventListener('keydown', (e) => {
+      if (pager.count < 2 || dialogOpen() || tour.on || /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '')) return;
+      if (e.key === 'ArrowRight') setPage(pager.index + 1, { manual: true });
+      if (e.key === 'ArrowLeft') setPage(pager.index - 1, { manual: true });
+    });
+  })();
+
+  // Automatic switching every so often (Settings → Layout), only while the screens are being looked at.
+  setInterval(() => {
+    const secs = Number(cfg.pageSeconds);
+    if (pager.count < 2 || !secs || pager.dragging) return;
+    if (tour.on || refresh.on || dialogOpen() || !$('night').hidden || alarm.on) return;
+    if (Date.now() - pager.changedAt < secs * 1000) return;
+    setPage(pager.index + 1);
+  }, 1000);
+
+  let layoutResizeTimer = null;
+  window.addEventListener('resize', () => { clearTimeout(layoutResizeTimer); layoutResizeTimer = setTimeout(applyLayout, 300); });
 
   // ─── Photos widget (Skreen+) ────────────────────────────────────────────────
 
@@ -1806,10 +1909,18 @@
 
   function drawLayoutEditor() {
     const box = $('layoutList');
-    box.innerHTML = draftLayout.map((w, i) => `<div class="layout-row${w.on ? '' : ' off'}">
+    // Which screen each visible widget lands on, so the list can show where a new screen starts.
+    const screenOf = {};
+    paginate(buildLanes(draftLayout.filter((w) => w.on).map((w) => w.id))).forEach((lanes, n) => lanes.forEach((l) => l.ids.forEach((id) => { screenOf[id] = n; })));
+    let last = 0;
+    box.innerHTML = draftLayout.map((w, i) => {
+      let marker = '';
+      if (w.on && screenOf[w.id] !== last) { last = screenOf[w.id]; marker = `<div class="layout-screen">Screen ${last + 1}</div>`; }
+      return `${marker}<div class="layout-row${w.on ? '' : ' off'}">
       <label class="check"><input type="checkbox" data-i="${i}" ${w.on ? 'checked' : ''}> ${esc(WIDGETS[w.id])}</label>
       <button type="button" class="btn ghost small" data-up="${i}" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>${Icons.up}</button>
-      <button type="button" class="btn ghost small" data-down="${i}" aria-label="Move down" ${i === draftLayout.length - 1 ? 'disabled' : ''}>${Icons.down}</button></div>`).join('');
+      <button type="button" class="btn ghost small" data-down="${i}" aria-label="Move down" ${i === draftLayout.length - 1 ? 'disabled' : ''}>${Icons.down}</button></div>`;
+    }).join('');
   }
   $('layoutList').addEventListener('click', (e) => {
     const up = e.target.closest('[data-up]'), down = e.target.closest('[data-down]');
