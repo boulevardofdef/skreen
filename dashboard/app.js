@@ -93,7 +93,15 @@
 
   // ─── Accounts, calendars and lists (several accounts and lists are Skreen+) ─
 
-  const accountList = () => { try { return NATIVE && NATIVE.getAccounts ? JSON.parse(NATIVE.getAccounts()) : []; } catch (_) { return []; } };
+  // (An older app build only knows one account: getAccount.)
+  const accountList = () => {
+    try {
+      if (!NATIVE) return [];
+      if (NATIVE.getAccounts) return JSON.parse(NATIVE.getAccounts());
+      const one = NATIVE.getAccount ? NATIVE.getAccount() : '';
+      return one ? [one] : [];
+    } catch (_) { return []; }
+  };
   const activeAccounts = () => { const all = accountList(); return hasPlus() ? all : all.slice(0, 1); };
 
   // Older versions kept one flat list of calendar ids and one list id; move them under the first account.
