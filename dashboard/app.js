@@ -878,12 +878,17 @@
 
   function ringing() { return timers.filter((t) => t.end <= Date.now()); }
 
+  // Timers sit under the date in the clock area, so nothing else on the screen moves. When the clock
+  // isn't on screen (hidden in Layout, the big-screen tour, night mode) they float across the top instead.
   function renderTimers() {
-    const bar = $('timerBar'), now = Date.now();
-    document.body.classList.toggle('has-timers', timers.length > 0);
-    bar.hidden = !timers.length;
+    const bar = $('timerBar'), inline = $('clockTimers'), now = Date.now();
     const night = !$('night').hidden;
-    bar.innerHTML = timers.map((t) => `<button type="button" class="tpill${t.end <= now ? ' ring' : ''}${night ? ' dim' : ''}" data-tid="${esc(t.id)}">${t.label ? esc(t.label) : ''}<b>${t.end <= now ? 'DONE' : fmtClock(t.end - now)}</b></button>`).join('');
+    const inClock = !tour.on && !night && visibleWidgets().includes('clock');
+    const pills = timers.map((t) => `<button type="button" class="tpill${t.end <= now ? ' ring' : ''}${night ? ' dim' : ''}" data-tid="${esc(t.id)}">${t.label ? `<span>${esc(t.label)}</span>` : ''}<b>${t.end <= now ? 'DONE' : fmtClock(t.end - now)}</b></button>`).join('');
+    inline.hidden = !(timers.length && inClock);
+    bar.hidden = !(timers.length && !inClock);
+    inline.innerHTML = inClock ? pills : '';
+    bar.innerHTML = inClock ? '' : pills;
     if ($('timerSheet').open) renderTimerSheet();
   }
 
@@ -960,7 +965,7 @@
   $('timerBtn').innerHTML = Icons.timer;
   $('timerMic').innerHTML = Icons.mic;
   $('timerBtn').addEventListener('click', openTimerSheet);
-  $('timerBar').addEventListener('click', (e) => { if (e.target.closest('.tpill')) { if (alarm.on) return; openTimerSheet(); } });
+  [$('timerBar'), $('clockTimers')].forEach((box) => box.addEventListener('click', (e) => { if (e.target.closest('.tpill')) { if (alarm.on) return; openTimerSheet(); } }));
   $('timerClose').addEventListener('click', () => $('timerSheet').close());
   $('timerSheet').addEventListener('click', (e) => { if (e.target === $('timerSheet')) $('timerSheet').close(); });
   $('timerPresets').addEventListener('click', (e) => {
