@@ -885,6 +885,8 @@
     const night = !$('night').hidden;
     const inClock = !tour.on && !night && visibleWidgets().includes('clock');
     const pills = timers.map((t) => `<button type="button" class="tpill${t.end <= now ? ' ring' : ''}${night ? ' dim' : ''}" data-tid="${esc(t.id)}">${t.label ? `<span>${esc(t.label)}</span>` : ''}<b>${t.end <= now ? 'DONE' : fmtClock(t.end - now)}</b></button>`).join('');
+    document.body.classList.toggle('timer-inline', !!(timers.length && inClock));   // makes room: the 5-day forecast steps aside
+    inline.classList.toggle('dense', timers.length >= 3);
     inline.hidden = !(timers.length && inClock);
     bar.hidden = !(timers.length && !inClock);
     inline.innerHTML = inClock ? pills : '';
