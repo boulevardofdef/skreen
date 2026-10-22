@@ -1696,7 +1696,8 @@
       $('photoCaption').textContent = item.caption || '';
       then(true);
     };
-    img.onerror = () => then(false);
+    let triedSmall = false;
+    img.onerror = () => { if (item.fallback && !triedSmall) { triedSmall = true; img.src = item.fallback; } else then(false); };   // the smaller copy of a painting, if the large one won't load
     img.src = item.url;
   }
 

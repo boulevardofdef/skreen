@@ -117,6 +117,7 @@ export default {
         const items = ((await res.json()).data || []).filter((a) => a.image_id).map((a) => ({
           title: a.title || '', artist: a.artist_title || '',
           image: `https://www.artic.edu/iiif/2/${a.image_id}/full/1686,/0/default.jpg`,
+          small: `https://www.artic.edu/iiif/2/${a.image_id}/full/843,/0/default.jpg`,
         }));
         if (items.length >= 5) return json({ items }, 200, { 'Cache-Control': 'public, max-age=3600' });
       }
