@@ -730,3 +730,6 @@ body.timer-inline .wx-days { display: none; }
 .sv-photo.art { background-size: contain; background-repeat: no-repeat; background-color: #0a0908; }
 .pf-caption { position: absolute; left: 0; right: 0; bottom: 0; padding: 2.2rem 1.1rem 0.8rem; font: 500 0.8rem/1.3 var(--mono); letter-spacing: 0.05em; color: rgba(243, 238, 227, 0.8); background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent); }
 .pf-caption:empty { display: none; }
+
+/* Lists scroll up and down only, so a sideways swipe always reaches the pager. */
+.pager .scroll, .pager .tasks { touch-action: pan-y; }

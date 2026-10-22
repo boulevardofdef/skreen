@@ -1640,7 +1640,7 @@
       if (moved) {
         const track = dash.querySelector('.pager');
         track.style.transition = 'none';
-        const atEdge = (pager.index === 0 && dx > 0) || (pager.index === pager.count - 1 && dx < 0);
+        const atEdge = pager.count < 2;
         track.style.transform = `translateX(calc(${-pager.index * 100}% + ${atEdge ? dx / 3 : dx}px))`;
       }
     });
@@ -1652,7 +1652,7 @@
       const fast = Math.abs(dx) / Math.max(1, Date.now() - t0) > 0.5;
       const go = Math.abs(dx) > window.innerWidth * 0.18 || (fast && Math.abs(dx) > 40);
       const next = go ? pager.index + (dx < 0 ? 1 : -1) : pager.index;
-      setPage(Math.max(0, Math.min(pager.count - 1, next)), { manual: true });
+      setPage(next, { manual: true });   // wraps round, like the automatic switching
       suppressClick = true; setTimeout(() => { suppressClick = false; }, 60);
     };
     let suppressClick = false;
