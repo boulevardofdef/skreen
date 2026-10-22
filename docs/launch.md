@@ -62,7 +62,7 @@ Forecasts come from MET Norway through the Cloudflare Worker in `worker/` (free 
 The app lives at `https://app.skreen.fyi/`; the bare `skreen.fyi` is reserved for a marketing site (host it separately, for example on Cloudflare Pages). The Android app trusts only `app.skreen.fyi` with its native bridge.
 
 1. Cloudflare DNS for `skreen.fyi`, set to **DNS only** (grey cloud): a `CNAME` named `app` pointing to `boulevardofdef.github.io`.
-2. GitHub repo Settings \u2192 Pages \u2192 Custom domain: `app.skreen.fyi`, save, wait for the DNS check, then tick **Enforce HTTPS**.
+2. GitHub repo Settings → Pages → Custom domain: `app.skreen.fyi`, save, wait for the DNS check, then tick **Enforce HTTPS**.
 3. Old four `A` records and the `www` CNAME (pointing at GitHub) are no longer needed once the marketing site has a host; point the bare domain there instead.
 4. `SKREEN_START_URL` in `android.yml` points the APK at `https://app.skreen.fyi/`. Settings saved in the page (location, layout, Plus code) are per web address, so they reset when the address changes.
 5. Marketing site should carry the privacy policy at `https://skreen.fyi/privacy` (or keep `https://app.skreen.fyi/privacy.html`) for Google verification and the store listings; verify the domain in Google Search Console.
@@ -70,13 +70,13 @@ The app lives at `https://app.skreen.fyi/`; the bare `skreen.fyi` is reserved fo
 ## Play Store build (Android App Bundle)
 
 - Two builds share one codebase: `sideload` (the APK on GitHub Releases, with the self-updater) and `play` (the bundle for Google Play: no updater, no install permission, targets Android 16 / API 36 as Play requires for new apps). CI compiles both on every Android change.
-- **Upload key:** make a private upload keystore (never commit it) and add four repository secrets under Settings \u2192 Secrets and variables \u2192 Actions: `UPLOAD_KEYSTORE_B64` (the keystore, base64), `UPLOAD_KEYSTORE_PASSWORD`, `UPLOAD_KEY_ALIAS`, `UPLOAD_KEY_PASSWORD`. Keep a copy of the keystore and passwords in a password manager.
-- **Build:** Actions \u2192 "Build Play Store bundle" \u2192 Run workflow, then download `Skreen-play-aab` from the run page and upload the `.aab` to the Play Console. Enrol in Play App Signing; add Play's signing-key SHA-1 to the Android OAuth client in Google Cloud (see section 3).
+- **Upload key:** make a private upload keystore (never commit it) and add four repository secrets under Settings → Secrets and variables → Actions: `UPLOAD_KEYSTORE_B64` (the keystore, base64), `UPLOAD_KEYSTORE_PASSWORD`, `UPLOAD_KEY_ALIAS`, `UPLOAD_KEY_PASSWORD`. Keep a copy of the keystore and passwords in a password manager.
+- **Build:** Actions → "Build Play Store bundle" → Run workflow, then download `Skreen-play-aab` from the run page and upload the `.aab` to the Play Console. Enrol in Play App Signing; add Play's signing-key SHA-1 to the Android OAuth client in Google Cloud (see section 3).
 - The build counter for the bundle is that workflow's run number; Play needs every upload to have a higher version code than the last, which it does.
 
 ## Photos widget (Skreen+)
 
-- Reads a Google Drive folder shared "Anyone with the link" using a Drive **API key** (no sign-in, no access to the rest of the Drive). Create one in Google Cloud: enable the **Google Drive API**; Credentials \u2192 Create credentials \u2192 API key; restrict it to the Google Drive API and to the website `https://app.skreen.fyi/*`; put it in `API_KEY` at the top of `dashboard/photos.js`. Until then the widget says photos aren't switched on yet.
+- Reads a Google Drive folder shared "Anyone with the link" using a Drive **API key** (no sign-in, no access to the rest of the Drive). Create one in Google Cloud: enable the **Google Drive API**; Credentials → Create credentials → API key; restrict it to the Google Drive API and to the website `https://app.skreen.fyi/*`; put it in `API_KEY` at the top of `dashboard/photos.js`. Until then the widget says photos aren't switched on yet.
 - Google Photos albums can't be read by apps; the in-app text says so.
 - Pictures are loaded from Drive's thumbnail address, which Google could change; if it stops working, the fix is in `Photos.url`.
 
