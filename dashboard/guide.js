@@ -8,11 +8,12 @@ window.Guide = (() => {
 <p class="lede">A wall display for the things you glance at all day: the time, the weather, what's on the calendar and what's on the list.</p>
 <h2>Getting started</h2>
 <ol>
-  <li><b>Install the Android app</b> on your tablet. <button class="btn ghost small" data-go="device">How →</button></li>
   <li><b>Sign in with Google.</b> Tap the button, choose your account and allow access. That's all there is to it. <button class="btn ghost small" data-go="signin">What you're allowing →</button></li>
-  <li><b>Pick your city</b> in Settings for the weather, and choose which calendars to show.</li>
+  <li><b>Pick your city</b> in Settings for the weather, and choose which calendars and which to-do list to show.</li>
+  <li><b>Optional:</b> add Outlook, Apple or other calendars with a link. <button class="btn ghost small" data-go="calendars">How →</button></li>
+  <li><b>Optional:</b> make the tablet a proper wall display. <button class="btn ghost small" data-go="device">Tips →</button></li>
 </ol>
-<p>Until you sign in, you're looking at <b>sample data</b>.</p>
+<p>Until you sign in or add a calendar link, you're looking at <b>sample data</b>.</p>
 <div class="note">Weather works straight away with no account. You only need to pick your location in Settings.</div>`
     },
     {
@@ -31,7 +32,7 @@ window.Guide = (() => {
   <li><b>Read your calendars.</b> To show your schedule. Skreen can't change or delete events.</li>
   <li><b>Manage your tasks.</b> To show your to-do list, add items, and check them off.</li>
 </ul>
-<p>Skreen talks directly to Google from your tablet. Your calendar and tasks aren't sent to us or stored anywhere else.</p>
+<p>Skreen talks directly to Google from your tablet. Your Google calendar and tasks aren't sent to us or stored anywhere else.</p>
 <h2>Changing or removing access</h2>
 <ul>
   <li><b>Switch account:</b> Settings → Sign out, then sign in again.</li>
@@ -44,16 +45,13 @@ window.Guide = (() => {
       html: `
 <h1>On the tablet</h1>
 <p class="lede">Make it full-screen, always on, and back after a restart.</p>
-<h2>The Skreen Android app</h2>
-<p>A small app that holds this display. It's full-screen, keeps the screen awake, handles Google sign-in, and can <b>dim the screen itself</b> (the best burn-in protection). It loads your live Skreen site, so changes to the site show up on the tablet by themselves, and it keeps working through Wi-Fi drops.</p>
-<ol>
-  <li>On the tablet, open the download in Chrome:<br><a class="btn primary" data-apk href="#" target="_blank" rel="noopener">Download Skreen.apk</a></li>
-  <li>Open the downloaded file. Android asks to allow <b>installing unknown apps</b> from Chrome. Allow it, then tap <b>Install</b>.</li>
-  <li>Open <b>Skreen</b> and sign in with Google.</li>
-  <li><i>Optional:</i> press the Home button and choose <b>Skreen → Always</b>. Skreen becomes the tablet's Home screen, so it opens at boot and Home always returns to it.</li>
-</ol>
-<div class="note">Most changes reach the tablet by themselves, because the app loads your Skreen site. When the app itself has a new version, Skreen tells you: an <b>Install update</b> notice appears at the bottom of the screen (you can also check under <b>Settings → App</b>). Tap it and Android asks you to confirm; the first time, it also asks you to allow Skreen to install apps. Your settings stay through updates. If the tablet can't reach the site at all (for example, the very first launch while offline), the app shows a built-in copy with sample data and switches to the real thing as soon as it's online.</div>
-`
+<ul>
+  <li><b>Full screen and awake.</b> Skreen fills the screen and keeps it on while the app is open. Leave the tablet plugged in.</li>
+  <li><b>Make it the Home screen.</b> <i>Optional.</i> Press the Home button and choose <b>Skreen → Always</b>. Skreen then opens when the tablet starts, and Home always returns to it.</li>
+  <li><b>Brightness.</b> A wall display doesn't need to be bright. Settings → Brightness sets a daytime and a night level for this app only.</li>
+  <li><b>Updates.</b> Google Play keeps the app up to date. The screens inside the app update themselves, usually overnight.</li>
+  <li><b>Mounting.</b> Any tablet works, in either direction. Wall mounts and stands that keep the charger connected are easy to find.</li>
+</ul>`
     },
     {
       id: 'calendars', title: 'Other calendars',
@@ -75,6 +73,22 @@ window.Guide = (() => {
   <li>Changes can take a few minutes to appear, and some services refresh their published links only every few hours.</li>
   <li>Links are stored on this tablet only. Skreen can't add or change events on these calendars.</li>
 </ul>`
+    },
+    {
+      id: 'plus', title: 'Skreen+',
+      html: `
+<h1>Skreen+</h1>
+<p class="lede">Everything you see on the main screen is free, for good. Skreen+ is a single one-time purchase that adds extras.</p>
+<h2>What it adds</h2>
+<ul>
+  <li><b>Several Google accounts</b>, and several calendars and to-do lists from each, shown together.</li>
+  <li><b>Your own layout.</b> Show or hide the clock, weather, schedule and to-do list, and put them in any order.</li>
+  <li><b>Photos.</b> A slideshow from a Google Drive folder, on the main screen and in the big-screen tour.</li>
+  <li><b>Always-on slideshow.</b> The big-screen tour can run all the time instead of every few minutes.</li>
+</ul>
+<h2>Buying and restoring</h2>
+<p>Open <b>Settings → Skreen+</b> and tap <b>Unlock Skreen+</b>. You pay once through Google Play, and it's yours for good. Installed Skreen on another tablet signed in to the same Google Play account? Open Settings there and it unlocks by itself.</p>
+<div class="note">Photos need a Google Drive folder shared as <b>Anyone with the link</b>. Google Photos albums can't be read by apps, so put copies of the pictures in a Drive folder.</div>`
     },
     {
       id: 'look', title: 'Backgrounds',
