@@ -476,7 +476,7 @@ body.native .field.native-only { display: flex; }
 .sv.p1.sv-weather, .sv.p2.sv-weather { justify-content: center; align-items: center; text-align: left; }
 .sv.p2.sv-weather { flex-direction: row-reverse; }
 
-.sv-list { gap: 0; }
+.sv-list { gap: 0; text-align: left; }
 .sv-list { width: 100%; }
 .sv.p1 .sv-list, .sv.p2 .sv-list { width: fit-content; max-width: 100%; }
 .sv-list .row { display: flex; align-items: baseline; gap: 3vw; padding: 2.2vh 0; border-top: 2px solid rgba(243, 238, 227, 0.22); width: 100%; }
