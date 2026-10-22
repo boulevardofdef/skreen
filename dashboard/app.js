@@ -1218,7 +1218,7 @@
     if (state.updating) {
       const u = state.updating;
       el.dataset.go = 'none';
-      el.innerHTML = `<span class="dot"></span>${u.ready ? 'Update downloaded. Confirm the install on screen' : `Downloading update${u.pct ? ` · ${u.pct}%` : '…'}`}`;
+      el.innerHTML = `<span class="dot"></span>${u.ready ? 'Update downloaded. Confirm the install on skreen' : `Downloading update${u.pct ? ` · ${u.pct}%` : '…'}`}`;
     } else if (!isDemo() && state.syncError === 'auth') {
       el.classList.add('error');
       el.dataset.go = 'signin';
@@ -1615,7 +1615,7 @@
   function drawDots() {
     const box = $('pageDots');
     box.hidden = pager.count < 2;
-    box.innerHTML = Array.from({ length: pager.count }, (_, k) => `<button type="button" data-page="${k}" class="${k === pager.index ? 'on' : ''}" aria-label="Screen ${k + 1}"></button>`).join('');
+    box.innerHTML = Array.from({ length: pager.count }, (_, k) => `<button type="button" data-page="${k}" class="${k === pager.index ? 'on' : ''}" aria-label="Skreen ${k + 1}"></button>`).join('');
   }
   $('pageDots').addEventListener('click', (e) => { const b = e.target.closest('[data-page]'); if (b) setPage(+b.dataset.page, { manual: true }); });
 
@@ -1907,7 +1907,7 @@
     if (!on && tourSel.value === 'always') tourSel.value = '5';
     $('plusText').innerHTML = on
       ? '<b>Skreen+ is unlocked.</b> Thank you. It\u2019s yours for good.'
-      : 'One payment unlocks Skreen+: several Google accounts and to-do lists, your own layout, an always-on slideshow and more. Everything you see on the main screen today stays free.';
+      : 'One payment unlocks Skreen+: several Google accounts and to-do lists, your own layout, an always-on slideshow and more. Everything you see on the main skreen today stays free.';
     $('plusBuy').hidden = on || !st.canBuy;
     $('plusBuy').textContent = st.price ? `Unlock Skreen+ \u00b7 ${st.price}` : 'Unlock Skreen+';
     $('plusForget').hidden = !(on && st.code);
@@ -1938,7 +1938,7 @@
     let last = 0;
     box.innerHTML = draftLayout.map((w, i) => {
       let marker = '';
-      if (w.on && screenOf[w.id] !== last) { last = screenOf[w.id]; marker = `<div class="layout-screen">Screen ${last + 1}</div>`; }
+      if (w.on && screenOf[w.id] !== last) { last = screenOf[w.id]; marker = `<div class="layout-screen">Skreen ${last + 1}</div>`; }
       return `${marker}<div class="layout-row${w.on ? '' : ' off'}">
       <label class="check"><input type="checkbox" data-i="${i}" ${w.on ? 'checked' : ''}> ${esc(WIDGETS[w.id])}</label>
       <button type="button" class="btn ghost small" data-up="${i}" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>${Icons.up}</button>
@@ -1956,7 +1956,7 @@
   $('layoutList').addEventListener('change', (e) => {
     const i = +e.target.dataset.i, w = draftLayout[i];
     if (!w) return;
-    if (!e.target.checked && draftLayout.filter((x) => x.on).length === 1) { e.target.checked = true; showToast('Keep at least one thing on screen'); return; }
+    if (!e.target.checked && draftLayout.filter((x) => x.on).length === 1) { e.target.checked = true; showToast('Keep at least one thing on skreen'); return; }
     w.on = e.target.checked;
     drawLayoutEditor();
   });

@@ -22,7 +22,7 @@ window.Guide = (() => {
 <h1>Sign in with Google</h1>
 <p class="lede">One tap, no setup, nothing to copy and paste.</p>
 <ol>
-  <li>In the Skreen app, tap <b>Sign in with Google</b> (on the welcome screen, or in Settings).</li>
+  <li>In the Skreen app, tap <b>Sign in with Google</b> (on the welcome skreen, or in Settings).</li>
   <li>Choose the Google account whose calendar and to-do list you want on the wall.</li>
   <li>Google shows what Skreen is asking for. Tap <b>Allow</b>.</li>
   <li>Open <b>Settings</b> (the small button in the bottom-left corner). Tick the calendars to show and choose a to-do list.</li>
@@ -49,7 +49,7 @@ window.Guide = (() => {
   <li><b>Full screen and awake.</b> Skreen fills the screen and keeps it on while the app is open. Leave the tablet plugged in.</li>
   <li><b>Make it the Home screen.</b> <i>Optional.</i> Press the Home button and choose <b>Skreen → Always</b>. Skreen then opens when the tablet starts, and Home always returns to it.</li>
   <li><b>Brightness.</b> A wall display doesn't need to be bright. Settings → Brightness sets a daytime and a night level for this app only.</li>
-  <li><b>Updates.</b> Google Play keeps the app up to date. The screens inside the app update themselves, usually overnight.</li>
+  <li><b>Updates.</b> Google Play keeps the app up to date. The skreens inside the app update themselves, usually overnight.</li>
   <li><b>Mounting.</b> Any tablet works, in either direction. Wall mounts and stands that keep the charger connected are easy to find.</li>
 </ul>`
     },
@@ -78,15 +78,15 @@ window.Guide = (() => {
       id: 'plus', title: 'Skreen+',
       html: `
 <h1>Skreen+</h1>
-<p class="lede">Everything you see on the main screen is free, for good. Skreen+ is a single one-time purchase that adds extras.</p>
+<p class="lede">Everything you see on the main skreen is free, for good. Skreen+ is a single one-time purchase that adds extras.</p>
 <h2>What it adds</h2>
 <ul>
   <li><b>Several Google accounts</b>, and several calendars and to-do lists from each, shown together.</li>
   <li><b>Your own layout.</b> Show or hide the clock, weather, schedule and to-do list, and put them in any order.</li>
-  <li><b>Photos.</b> A slideshow on the main screen and in the big-screen tour: either public-domain paintings (no setup), or your own pictures chosen from Google Photos or the tablet.</li>
+  <li><b>Photos.</b> A slideshow on the main skreen and in the big-skreen tour: either public-domain paintings (no setup), or your own pictures chosen from Google Photos or the tablet.</li>
   <li><b>Dinner planner.</b> What's for dinner each day this week, kept in a Google Tasks list. Add it under Settings → Layout. <button class="btn ghost small" data-go="dinners">How it works →</button></li>
-  <li><b>In the news.</b> A short list of today's top stories from Wikipedia's front page, as a widget and in the big-screen tour. Add it under Settings → Layout.</li>
-  <li><b>Always-on slideshow.</b> The big-screen tour can run all the time instead of every few minutes.</li>
+  <li><b>In the news.</b> A short list of today's top stories from Wikipedia's front page, as a widget and in the big-skreen tour. Add it under Settings → Layout.</li>
+  <li><b>Always-on slideshow.</b> The big-skreen tour can run all the time instead of every few minutes.</li>
 </ul>
 <h2>Buying and restoring</h2>
 <p>Open <b>Settings → Skreen+</b> and tap <b>Unlock Skreen+</b>. You pay once through Google Play, and it's yours for good. Installed Skreen on another tablet signed in to the same Google Play account? Open Settings there and it unlocks by itself.</p>
@@ -100,8 +100,8 @@ window.Guide = (() => {
 <ul>
   <li><b>Set a time</b> with the presets (1, 5, 10, 15, 30 minutes, 1 hour) or the number pad. Type 1, 0, 0, 0 for ten minutes, like a microwave. Give it a name if you like, such as <i>Pasta</i>.</li>
   <li><b>Say it.</b> Tap the microphone and say, for example, <i>"ten minutes"</i> or <i>"an hour and a half"</i>.</li>
-  <li><b>Run up to four at once.</b> They show as big countdowns across the top of the screen, also during the big-screen tour and at night. Tap one to add a minute or cancel it.</li>
-  <li><b>When one finishes</b> the whole screen turns orange and the tablet plays its alarm tone until you tap <b>Stop</b> (or <b>+5 more minutes</b>). The sound uses the tablet's <i>alarm</i> volume, so turn that up in the tablet's sound settings.</li>
+  <li><b>Run up to four at once.</b> They show as big countdowns across the top of the skreen, also during the big-skreen tour and at night. Tap one to add a minute or cancel it.</li>
+  <li><b>When one finishes</b> the whole skreen turns orange and the tablet plays its alarm tone until you tap <b>Stop</b> (or <b>+5 more minutes</b>). The sound uses the tablet's <i>alarm</i> volume, so turn that up in the tablet's sound settings.</li>
   <li>Timers carry on if Skreen restarts or reloads itself.</li>
 </ul>`
     },
@@ -124,7 +124,7 @@ window.Guide = (() => {
 <h1>Backgrounds</h1>
 <p class="lede">Soft, dark colour fields that change every day, so the wall never feels stale and the text stays easy to read.</p>
 <p>Skreen rotates through these, one per day. To pin one, go to <b>Settings → Background</b>. You can also change the <b>Typeface</b> there: five options, from the default through an editorial serif to a tall poster face, previewed live behind the settings sheet.</p>
-<p>Under <b>Settings → Layout</b> you can hide things you don't need (say, the schedule, to give the to-do list the room) and move them around with the arrows. The big-screen tour skips anything you've hidden.</p>
+<p>Under <b>Settings → Layout</b> you can hide things you don't need (say, the schedule, to give the to-do list the room) and move them around with the arrows. The big-skreen tour skips anything you've hidden.</p>
 <div class="swatches" id="swatches"></div>`
     },
     {
@@ -142,10 +142,10 @@ window.Guide = (() => {
 </ul>`
     },
     {
-      id: 'care', title: 'Screen care',
+      id: 'care', title: 'Skreen care',
       html: `
-<h1>Screen care</h1>
-<p class="lede">Will an always-on screen burn in? It depends on the panel.</p>
+<h1>Skreen care</h1>
+<p class="lede">Will an always-on skreen burn in? It depends on the panel.</p>
 <h2>The honest answer</h2>
 <ul>
   <li><b>OLED/AMOLED tablets</b> (such as the Samsung Galaxy Tab S series) <i>can</i> permanently burn in after months of the same bright shapes in the same place.</li>
@@ -154,13 +154,13 @@ window.Guide = (() => {
 <p>Not sure which you have? Search your model name plus "OLED or LCD".</p>
 <h2>What Skreen does about it</h2>
 <ul>
-  <li><b>Big-screen tour.</b> Every few minutes it takes over for about 30 seconds and shows the time, then the weather, the calendar and the to-do list, each as one huge page, and alternates left, centre and right. Nothing sits in the same pixels for long. Change the interval in Settings, or turn it off. Tap the screen to end a tour early.</li>
+  <li><b>Big-skreen tour.</b> Every few minutes it takes over for about 30 seconds and shows the time, then the weather, the calendar and the to-do list, each as one huge page, and alternates left, centre and right. Nothing sits in the same pixels for long. Change the interval in Settings, or turn it off. Tap the skreen to end a tour early.</li>
   <li><b>Gentle layout nudge.</b> The whole layout drifts a few pixels over the day.</li>
-  <li><b>Night mode.</b> From <span data-night>10:30 PM to 6:00 AM</span> (set under Settings → Screen care) the screen goes black with a dim clock that wanders slowly. On OLED, black pixels are off. Tap to wake the full display for two minutes.</li>
+  <li><b>Night mode.</b> From <span data-night>10:30 PM to 6:00 AM</span> (set under Settings → Skreen care) the skreen goes black with a dim clock that wanders slowly. On OLED, black pixels are off. Tap to wake the full display for two minutes.</li>
   <li><b>Moving backgrounds.</b> The background colours drift slowly, and change daily.</li>
 </ul>
 <h2>If you see a faint ghost image</h2>
-<p>A faint outline of something that used to be on the screen (a home screen, an old app) is usually <b>temporary image retention</b>. Showing the screen varied content clears it, and Skreen's tour and night mode help. For a stubborn one, open <b>Settings → Screen care → Refresh screen</b>: it washes the whole screen slowly through white, black, red, green and blue for five minutes. Tap anywhere to stop. On an OLED panel, long-standing ghosts can be permanent burn-in, which no software can undo.</p>
+<p>A faint outline of something that used to be on the skreen (a home screen, an old app) is usually <b>temporary image retention</b>. Showing the skreen varied content clears it, and Skreen's tour and night mode help. For a stubborn one, open <b>Settings → Skreen care → Refresh skreen</b>: it washes the whole skreen slowly through white, black, red, green and blue for five minutes. Tap anywhere to stop. On an OLED panel, long-standing ghosts can be permanent burn-in, which no software can undo.</p>
 <h2>What you can do</h2>
 <ul>
   <li><b>Lower the brightness.</b> This is the single biggest help, and a wall display doesn't need to be bright. In the Android app, set it under Settings → Brightness (daytime and night levels). </li>
@@ -180,7 +180,7 @@ window.Guide = (() => {
 <p>In Settings, tick exactly the calendars you want under <b>Calendars to show</b>.</p>
 <h2>The to-do list is empty or the wrong one</h2>
 <p>Choose the list under <b>To-do list</b> in Settings.</p>
-<h2>The screen looks wrong or stale</h2>
+<h2>The skreen looks wrong or stale</h2>
 <p>Skreen checks for a newer version of itself every half hour and reloads once nobody is using it (no pop-up open, nothing touched for two minutes). It also reloads at 3:30 AM every night. To force it right now, close and reopen the app.</p>`
     },
   ];
