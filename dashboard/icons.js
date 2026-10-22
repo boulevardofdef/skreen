@@ -40,6 +40,8 @@ window.Icons = (() => {
     plus: wrap(`<path d="M24 8V40M8 24H40" stroke-width="4"/>`),
     mic: wrap(`<rect x="17" y="5" width="14" height="24"/><path d="M10 22v4a14 14 0 0 0 28 0v-4M24 40v5"/>`),
     timer: wrap(`<circle cx="24" cy="27" r="14"/><path d="M24 27V18M19 8H29M24 8V13"/>`),
+    up: wrap(`<path d="M24 38V10M11 22L24 9L37 22"/>`),
+    down: wrap(`<path d="M24 10V38M11 26L24 39L37 26"/>`),
     gear: wrap(`<path d="M6 12H42M6 24H42M6 36H42"/><rect x="28" y="7" width="8" height="10" fill="#0e0d0b"/><rect x="12" y="19" width="8" height="10" fill="#0e0d0b"/><rect x="26" y="31" width="8" height="10" fill="#0e0d0b"/>`),
     umbrella: wrap(`<path d="M5 24A19 19 0 0 1 43 24Z"/><path d="M24 24V40a4 4 0 0 1-8 0"/>`),
     close: wrap(`<path d="M10 10L38 38M38 10L10 38" stroke-width="4"/>`),

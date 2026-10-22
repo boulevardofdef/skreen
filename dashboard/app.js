@@ -1625,16 +1625,24 @@
   // ─── In the news widget (Skreen+) ───────────────────────────────────────────
 
   const newsShown = () => hasPlus() && visibleWidgets().includes('news');
+  let newsFailed = false, newsRetry = null;
   function drawNews() {
     const list = News.current;
     $('newsList').innerHTML = list.length
       ? list.map((s) => `<li class="news-item"><a ${s.url ? `href="${esc(s.url)}" data-ext` : ''}>${esc(s.text)}</a></li>`).join('')
-      : '<li class="news-item news-empty">Loading the news\u2026</li>';
+      : `<li class="news-item news-empty">${newsFailed ? 'Couldn\u2019t load the news right now. Trying again soon.' : 'Loading the news\u2026'}</li>`;
   }
   async function syncNews(force = false) {
-    if (!newsShown() && !(force && newsShown())) return;
+    clearTimeout(newsRetry);
+    if (!newsShown()) return;
+    newsFailed = false;
     drawNews();
-    try { await News.stories(force); } catch (_) { /* keep what we have; try again at the next refresh */ }
+    try {
+      await News.stories(force);
+    } catch (_) {
+      newsFailed = true;                                   // keep what we have, say so if there's nothing, and retry
+      newsRetry = setTimeout(() => syncNews(true), 3 * 60000);
+    }
     drawNews();
   }
 
@@ -1768,6 +1776,9 @@
     $('plusCard').classList.toggle('on', on);
     $('layoutField').classList.toggle('locked', !on);
     $('photoField').classList.toggle('locked', !on);
+    const tourSel = form.elements.showcaseMinutes;
+    tourSel.querySelector('option[value="always"]').disabled = !on;
+    if (!on && tourSel.value === 'always') tourSel.value = '5';
     $('plusText').innerHTML = on
       ? '<b>Skreen+ is unlocked.</b> Thank you. It\u2019s yours for good.'
       : 'One payment unlocks Skreen+: several Google accounts and to-do lists, your own layout, an always-on slideshow and more. Everything you see on the main screen today stays free.';
@@ -1778,6 +1789,14 @@
   }
   $('plusBuy').addEventListener('click', () => Plus.buy());
   $('plusForget').addEventListener('click', () => Plus.forgetCode());
+  // The code field fixes itself as you type: capital letters, the SKR- start and the hyphens are added for you.
+  const formatCode = (raw) => {
+    let s = String(raw).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (s.length > 16 && s.startsWith('SKR')) s = s.slice(3);   // someone typed or pasted the SKR start too
+    return (s.slice(0, 16).match(/.{1,4}/g) || []).join('-');
+  };
+  $('plusCode').addEventListener('input', (e) => { e.target.value = formatCode(e.target.value); });
+  $('plusCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('plusRedeem').click(); } });
   $('plusRedeem').addEventListener('click', async () => {
     const ok = await Plus.redeem($('plusCode').value);
     $('plusResult').textContent = ok ? 'Unlocked. Thank you!' : 'That code didn\u2019t work.';
@@ -1789,8 +1808,8 @@
     const box = $('layoutList');
     box.innerHTML = draftLayout.map((w, i) => `<div class="layout-row${w.on ? '' : ' off'}">
       <label class="check"><input type="checkbox" data-i="${i}" ${w.on ? 'checked' : ''}> ${esc(WIDGETS[w.id])}</label>
-      <button type="button" class="btn ghost small" data-up="${i}" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>↑</button>
-      <button type="button" class="btn ghost small" data-down="${i}" aria-label="Move down" ${i === draftLayout.length - 1 ? 'disabled' : ''}>↓</button></div>`).join('');
+      <button type="button" class="btn ghost small" data-up="${i}" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>${Icons.up}</button>
+      <button type="button" class="btn ghost small" data-down="${i}" aria-label="Move down" ${i === draftLayout.length - 1 ? 'disabled' : ''}>${Icons.down}</button></div>`).join('');
   }
   $('layoutList').addEventListener('click', (e) => {
     const up = e.target.closest('[data-up]'), down = e.target.closest('[data-down]');

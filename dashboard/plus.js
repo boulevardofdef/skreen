@@ -12,8 +12,14 @@ const Plus = (() => {
   const state = { play: false, price: '', canBuy: false, code: false };
   let onChange = () => {};
 
+  // However it was typed (lower case, no hyphens, with or without SKR), reduce it to SKR-XXXX-XXXX-XXXX-XXXX.
+  const canonical = (code) => {
+    let s = String(code).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (s.length > 16 && s.startsWith('SKR')) s = s.slice(3);
+    return 'SKR-' + (s.match(/.{1,4}/g) || []).join('-');
+  };
   const hash = async (code) => {
-    const bytes = new TextEncoder().encode('skreen-plus:' + code.trim().toUpperCase());
+    const bytes = new TextEncoder().encode('skreen-plus:' + canonical(code));
     const buf = await crypto.subtle.digest('SHA-256', bytes);
     return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
   };
@@ -43,7 +49,7 @@ const Plus = (() => {
 
   async function redeem(code) {
     if (!(await checkCode(code))) return false;
-    try { localStorage.setItem(KEY, code.trim().toUpperCase()); } catch (_) {}
+    try { localStorage.setItem(KEY, canonical(code)); } catch (_) {}
     state.code = true;
     onChange();
     return true;

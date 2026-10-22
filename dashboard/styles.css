@@ -701,3 +701,13 @@ body.timer-inline .wx-days { display: none; }
 .meal.today .meal-day { color: rgba(14, 13, 11, 0.7); }
 .meal-sheet { width: min(34rem, 94vw); }
 .sv-none { opacity: 0.4; }
+
+.layout-row .btn { display: grid; place-items: center; width: 2.8rem; height: 2.8rem; padding: 0; line-height: 1; }
+.layout-row .btn .ico { font-size: 1.15rem; }
+.layout-row .btn:disabled { opacity: 0.3; }
+
+.code-field { display: flex; align-items: stretch; flex: 1; min-width: 0; border: 1px solid var(--rule); }
+.code-prefix { display: grid; place-items: center; padding: 0 0.2rem 0 0.9rem; font: 600 1.05rem/1 var(--mono); color: var(--muted); letter-spacing: 0.05em; }
+.code-field input { flex: 1; min-width: 0; border: 0; background: transparent; font: 600 1.05rem/1 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; }
+.code-field:focus-within { border-color: var(--accent); }
+.code-field input:focus { outline: 0; }
