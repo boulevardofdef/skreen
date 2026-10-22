@@ -1083,7 +1083,9 @@
     if (prev) { prev.classList.add('out'); setTimeout(() => prev.remove(), 600); }
     const name = TOUR[tour.i];
     const v = document.createElement('div');
-    v.className = `sv sv-${name} p${(tour.cycle + tour.i) % 3}`;
+    // The every-few-minutes tour keeps everything left-aligned; only the always-on slideshow shifts position
+    // (left, centre, right) so a big slide doesn't sit on the same pixels all day.
+    v.className = `sv sv-${name} p${alwaysTour() ? (tour.cycle + tour.i) % 3 : 0}`;
     v.innerHTML = tourHtml(name);
     body.appendChild(v);
     fitToWidth(v.querySelector('.big'), v.clientWidth * 0.88);
