@@ -55,3 +55,7 @@ Weather: `weather.js` supports MET Norway (free for commercial products; deploy 
 - **Unlock code:** a personal code (its hash lives in `plus.js`; the code itself is not in the repo) unlocks Plus on sideloaded builds, the owner's devices and testers. To make a new one: pick a random `SKR-XXXX-XXXX-XXXX-XXXX`, put `sha256("skreen-plus:" + code)` in `CODE_HASH`. Treat it like a password: anyone with the code has Plus.
 - **Limits of the lock:** it runs on the device, so a determined person can bypass it. Fine for layout options; the cloud calendar and to-do list will be enforced on the server.
 - **iOS:** needs StoreKit (Apple in-app purchase) in the iOS shell, since Apple requires it for digital features.
+
+## Remove before launch
+
+- **Weather test toggle:** search for `TEST TOGGLE` in `dashboard/weather.js` and `dashboard/app.js` (tapping the temperature switches providers, and the place line shows `MET`/`OM`). Delete those blocks.
