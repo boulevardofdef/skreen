@@ -34,11 +34,8 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Point the app at this repo's GitHub Pages site
-        run: |
-          owner="${GITHUB_REPOSITORY_OWNER,,}"
-          repo="${GITHUB_REPOSITORY#*/}"
-          echo "SKREEN_START_URL=https://${owner}.github.io/${repo}/" >> "$GITHUB_ENV"
+      - name: Point the app at the live site (custom domain)
+        run: echo "SKREEN_START_URL=https://skreen.fyi/" >> "$GITHUB_ENV"
 
       - name: Build release APK
         working-directory: android
