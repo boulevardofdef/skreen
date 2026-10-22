@@ -98,6 +98,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Apps targeting Android 16 no longer get onBackPressed(); register for the back gesture instead.
+        if (Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::onBackPressed);
+        }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         // Cover every pixel: an opaque window, drawing edge to edge (including behind camera
@@ -363,6 +368,7 @@ public class MainActivity extends Activity {
      * (which asks the user to confirm and only accepts an APK signed with the same key as this app).
      */
     private void downloadAndInstall(final String url, final String sha256) {
+        if (BuildConfig.PLAY) return;   // Google Play updates the app; no self-updater in the store build
         if (url == null || !url.startsWith("https://github.com/")) { notifyUpdate("error", "bad_url"); return; }
         if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
             runOnUiThread(() -> startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
@@ -524,6 +530,12 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 return "";
             }
+        }
+
+        /** True for the Google Play build, which updates through the store and has no self-updater. */
+        @JavascriptInterface
+        public boolean isStoreBuild() {
+            return BuildConfig.PLAY;
         }
 
         /** Download and install a new APK from our GitHub release. Progress comes back via window.skreenUpdate. */

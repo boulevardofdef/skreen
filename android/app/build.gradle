@@ -9,15 +9,33 @@ def startUrl = System.getenv('SKREEN_START_URL') ?: ''
 
 android {
     namespace 'app.skreen'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId 'app.skreen.wall'
         minSdk 26
-        targetSdk 34
         versionCode runNumber
         versionName "1.0.${runNumber}"
         resValue 'string', 'start_url', startUrl
+    }
+
+    buildFeatures { buildConfig true }
+
+    // Two builds of the same app:
+    //   sideload: the APK on GitHub Releases, with the in-app updater.
+    //   play:     the Android App Bundle for Google Play (no self-updater, no install permission).
+    flavorDimensions 'dist'
+    productFlavors {
+        sideload {
+            dimension 'dist'
+            targetSdk 34
+            buildConfigField 'boolean', 'PLAY', 'false'
+        }
+        play {
+            dimension 'dist'
+            targetSdk 36   // Google Play requires new apps to target Android 16 (API 36)
+            buildConfigField 'boolean', 'PLAY', 'true'
+        }
     }
 
     // A fixed key checked into the repo, so every build is signed the same way and
@@ -31,9 +49,23 @@ android {
         }
     }
 
+    // Upload key for Google Play: private, supplied by CI from repository secrets (never committed).
+    def uploadStore = System.getenv('UPLOAD_KEYSTORE_PATH')
+    if (uploadStore) {
+        signingConfigs {
+            upload {
+                storeFile file(uploadStore)
+                storePassword System.getenv('UPLOAD_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('UPLOAD_KEY_ALIAS')
+                keyPassword System.getenv('UPLOAD_KEY_PASSWORD')
+            }
+        }
+        productFlavors.play.signingConfig = signingConfigs.upload
+    }
+    productFlavors.sideload.signingConfig = signingConfigs.sideload
+
     buildTypes {
         release {
-            signingConfig signingConfigs.sideload
             minifyEnabled false
         }
     }

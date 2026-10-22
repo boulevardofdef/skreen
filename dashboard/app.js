@@ -915,7 +915,7 @@
 
   const UPDATE_CHECK_MS = 3600 * 1000;       // hourly, and also when the screen wakes after a gap
   let lastUpdateCheck = 0;
-  const canUpdate = () => !!(NATIVE && NATIVE.getVersion && NATIVE.installUpdate);
+  const canUpdate = () => !!(NATIVE && NATIVE.getVersion && NATIVE.installUpdate && !(NATIVE.isStoreBuild && NATIVE.isStoreBuild()));
 
   function releaseRepo() {
     const m = /^([^.]+)\.github\.io$/.exec(location.hostname), repo = location.pathname.split('/')[1];
