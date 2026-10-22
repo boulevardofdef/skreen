@@ -59,3 +59,11 @@ Weather: `weather.js` supports MET Norway (free for commercial products; deploy 
 ## Remove before launch
 
 - **Weather test toggle:** search for `TEST TOGGLE` in `dashboard/weather.js` and `dashboard/app.js` (tapping the temperature switches providers, and the place line shows `MET`/`OM`). Delete those blocks.
+
+## Custom domain (skreen.fyi)
+
+1. Ship an APK that trusts `skreen.fyi` first (done in `MainActivity.isSkreenDomain`). An older APK would open the redirect in the browser instead of the app.
+2. Cloudflare DNS for `skreen.fyi`, all set to **DNS only** (grey cloud): four `A` records for `@` pointing to `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`; a `CNAME` for `www` pointing to `boulevardofdef.github.io`. (Check GitHub's current Pages docs for the addresses.)
+3. GitHub repo Settings → Pages → Custom domain: `skreen.fyi`, save, wait for the DNS check, then tick **Enforce HTTPS**.
+4. Later: point the APK's start URL at `https://skreen.fyi/` (`SKREEN_START_URL` in `android.yml`). Settings saved in the page (location, layout, Plus code) are per web address, so they reset when the address changes.
+5. Use `https://skreen.fyi/privacy.html` for Google verification and the store listings; verify the domain in Google Search Console.

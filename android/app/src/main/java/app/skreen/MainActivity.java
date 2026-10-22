@@ -211,12 +211,17 @@ public class MainActivity extends Activity {
     /** Only our own pages may run with the native bridge; everything else opens in the browser. */
     private boolean isTrusted(Uri uri) {
         String host = uri.getHost();
-        return HOST.equals(host) || (remoteHost != null && remoteHost.equals(host));
+        return HOST.equals(host) || (remoteHost != null && remoteHost.equals(host)) || isSkreenDomain(host);
+    }
+
+    /** Skreen's own domain. GitHub redirects the old github.io address here once the custom domain is on. */
+    private static boolean isSkreenDomain(String host) {
+        return "skreen.fyi".equals(host) || "www.skreen.fyi".equals(host);
     }
 
     /** The live site couldn't be reached: show the bundled copy until the network is back. */
     private void fallBack(Uri failed) {
-        if (onFallback || remoteHost == null || !remoteHost.equals(failed.getHost())) return;
+        if (onFallback || remoteHost == null || !(remoteHost.equals(failed.getHost()) || isSkreenDomain(failed.getHost()))) return;
         onFallback = true;
         web.loadUrl(BUNDLED_URL);
     }
