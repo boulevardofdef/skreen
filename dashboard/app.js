@@ -10,6 +10,7 @@
     bg: 'auto', font: 'bricolage',
     showcaseMinutes: '5', pixelShift: '1',
     layout: 'clock,weather,agenda,todo',
+    ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
     dayBrightness: 'system', nightBrightness: '3',
     signedIn: false, calendarIds: [], taskListId: '', welcomed: false,
@@ -30,7 +31,7 @@
   // Where the data comes from: Google sign-in in the app, or sample data.
   const canSignIn = () => !!(window.SkreenNative && window.SkreenNative.signIn);
   const usingGoogle = () => canSignIn() && !!cfg.signedIn;
-  const isDemo = () => !usingGoogle();
+  const isDemo = () => !usingGoogle() && !(cfg.ics && cfg.ics.length);
 
 
   const REFRESH_DATA_MS = 2 * 60 * 1000;
@@ -93,8 +94,10 @@
   // One interface, whichever source is in use.
   const backend = {
     async dashboard() {
+      const other = Ics.events(cfg.ics, AGENDA_DAYS);   // never throws; one bad link just shows nothing
+      if (!usingGoogle()) return { events: await other, tasks: [] };
       const [events, tasks] = await Promise.all([Google.events(cfg.calendarIds, AGENDA_DAYS), Google.tasks(cfg.taskListId)]);
-      return { events, tasks };
+      return { events: events.concat(await other), tasks };
     },
     addTask: (title, who = []) => Google.addTask(cfg.taskListId, title, buildNotes(who)),
     setNotes: (id, notes) => Google.setNotes(cfg.taskListId, id, notes),
@@ -414,7 +417,8 @@
     const { open, done } = taskGroups();
     $('taskCount').textContent = open.length || '';
     let html = '';
-    if (!open.length) html += `<li class="task task-empty">${Icons.check}All caught up</li>`;
+    if (!usingGoogle() && !isDemo()) html += `<li class="task task-empty">Sign in with Google to show a to-do list here.</li>`;
+    else if (!open.length) html += `<li class="task task-empty">${Icons.check}All caught up</li>`;
     html += open.map((t) => `
       <li class="task${t.pending ? ' pending' : ''}" data-id="${esc(t.id)}">
         <span class="box">${Icons.check}</span><span class="body"><span class="label">${esc(t.title)}</span>${chipsHtml(t.who)}</span>
@@ -600,6 +604,7 @@
   const addWho = whoPicker({ pills: $('whoPills'), box: $('whoNew'), input: $('whoInput'), addBtn: $('whoAdd') });
 
   $('addBtn').addEventListener('click', () => {
+    if (!usingGoogle() && !isDemo()) { showToast('Sign in with Google to use the to-do list'); return; }
     $('addInput').value = '';
     addWho.reset();
     addSheet.showModal();
@@ -888,6 +893,9 @@
       el.innerHTML = canSignIn()
         ? '<span class="dot"></span>Showing sample data · <u>Sign in with Google →</u>'
         : '<span class="dot"></span>Showing sample data · <u>Set up Skreen →</u>';
+    } else if (!usingGoogle() && canSignIn()) {
+      el.dataset.go = 'signin';
+      el.innerHTML = '<span class="dot"></span>Showing your calendar links · <u>Sign in with Google for a to-do list →</u>';
     } else { el.hidden = true; el.innerHTML = ''; }
   }
   $('status').addEventListener('click', (e) => {
@@ -1259,6 +1267,39 @@
   // ─── Settings sheet ────────────────────────────────────────────────────────
 
   const settingsSheet = $('settingsSheet'), form = $('settingsForm');
+
+  // ─── Other calendars (published links) ─────────────────────────────────────
+
+  let draftIcs = [];
+  function drawIcs() {
+    $('icsList').hidden = !draftIcs.length;
+    $('icsList').innerHTML = draftIcs.map((c, i) => `<label class="check"><i style="background:${esc(c.color)}"></i><span>${esc(c.name)}</span><button type="button" class="btn ghost small" data-rm-ics="${i}">Remove</button></label>`).join('');
+  }
+  $('icsList').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-rm-ics]');
+    if (b) { draftIcs.splice(+b.dataset.rmIcs, 1); drawIcs(); }
+  });
+  $('icsAddBtn').addEventListener('click', async () => {
+    const out = $('icsResult');
+    let link = $('icsUrl').value.trim();
+    if (!link) { out.textContent = 'Paste a calendar link first.'; return; }
+    if (/^webcal:/i.test(link)) link = 'https:' + link.slice(7);
+    if (!/^https:\/\//i.test(link)) { out.textContent = 'The link should start with https:// or webcal://'; return; }
+    if (draftIcs.length >= 8) { out.textContent = 'That\u2019s the most calendars Skreen can show.'; return; }
+    out.className = 'test-result'; out.textContent = 'Checking the link\u2026';
+    try {
+      const r = await Ics.test(link);
+      const name = $('icsName').value.trim() || r.name || 'Calendar ' + (draftIcs.length + 1);
+      draftIcs.push({ id: Math.random().toString(36).slice(2, 8), name, url: link, color: Ics.COLORS[draftIcs.length % Ics.COLORS.length] });
+      $('icsUrl').value = ''; $('icsName').value = '';
+      out.textContent = `\u2713 Added \u201c${name}\u201d (${r.count} events in the next 30 days). Save to show it.`;
+      drawIcs();
+    } catch (err) {
+      out.textContent = err.message === 'not a calendar' ? 'That link isn\u2019t a calendar feed. It should end in .ics or come from \u201cpublish calendar\u201d.' : `Couldn\u2019t read that link (${err.message}).`;
+    }
+  });
+  $('icsHelp').addEventListener('click', (e) => { e.preventDefault(); settingsSheet.close(); openGuide('calendars'); });
+
   let draftLoc = null;
 
   function fillBackgroundOptions() {
@@ -1291,6 +1332,9 @@
     const tourSel = form.elements.showcaseMinutes;
     tourSel.querySelector('option[value="always"]').disabled = !hasPlus();
     if (!hasPlus() && tourSel.value === 'always') tourSel.value = '5';
+    draftIcs = (cfg.ics || []).map((c) => ({ ...c }));
+    drawIcs();
+    $('icsResult').textContent = '';
     draftLayout = parseLayout(cfg.layout);
     drawLayoutEditor();
     drawPlusCard();
@@ -1379,6 +1423,7 @@
   form.addEventListener('submit', () => {
     for (const el of form.elements) if (el.name && el.name in cfg) cfg[el.name] = el.value.trim();
     if (draftLoc) Object.assign(cfg, draftLoc);
+    cfg.ics = draftIcs;
     if (draftLayout && hasPlus()) cfg.layout = serializeLayout(draftLayout);
     if (calChoices) {
       cfg.calendarIds = Array.from($('calList').querySelectorAll('input:checked')).map((el) => calChoices[+el.dataset.i].id);

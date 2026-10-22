@@ -56,6 +56,27 @@ window.Guide = (() => {
 `
     },
     {
+      id: 'calendars', title: 'Other calendars',
+      html: `
+<h1>Other calendars</h1>
+<p class="lede">Outlook, Apple, Yahoo and most other calendars can show up on Skreen with a link, free, with no extra sign-in.</p>
+<p>Each of these services can <b>publish</b> a calendar as a private web link. Copy that link, then paste it into <b>Settings → Other calendars</b> and tap <b>Add calendar</b>.</p>
+<h2>Where to find the link</h2>
+<ul>
+  <li><b>Outlook.com / Microsoft 365:</b> on the web, open <b>Settings → Calendar → Shared calendars</b>. Under <b>Publish a calendar</b>, choose the calendar and <b>Can view all details</b>, click <b>Publish</b>, then copy the <b>ICS</b> link. (Some work and school accounts don't allow publishing.)</li>
+  <li><b>Apple iCloud:</b> on icloud.com, open Calendar, click the share icon next to a calendar, tick <b>Public Calendar</b> and copy the link. It starts with <code>webcal://</code>, which Skreen accepts.</li>
+  <li><b>Yahoo, Fastmail and others:</b> look for <b>share</b>, <b>subscribe</b> or <b>export as iCal</b> and copy the link that ends in <code>.ics</code>.</li>
+  <li><b>Google Calendar:</b> you don't need a link. Sign in with Google instead.</li>
+</ul>
+<h2>Good to know</h2>
+<ul>
+  <li><b>Treat the link like a password.</b> Anyone who has it can read that calendar. You can unpublish it from the service at any time.</li>
+  <li>Skreen's relay fetches the link for you because browsers can't read most calendar hosts directly. It keeps the calendar for about five minutes so a busy moment doesn't hammer your provider, and stores nothing else.</li>
+  <li>Changes can take a few minutes to appear, and some services refresh their published links only every few hours.</li>
+  <li>Links are stored on this tablet only. Skreen can't add or change events on these calendars.</li>
+</ul>`
+    },
+    {
       id: 'look', title: 'Backgrounds',
       html: `
 <h1>Backgrounds</h1>

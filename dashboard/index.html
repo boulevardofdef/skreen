@@ -170,6 +170,19 @@
           <select id="listSelect"></select>
         </label>
 
+        <div class="group">Other calendars</div>
+        <div class="field">
+          <span>Outlook, Apple, Yahoo and others: paste a calendar link</span>
+          <div class="checks" id="icsList"></div>
+          <div class="ics-add">
+            <input id="icsUrl" type="url" inputmode="url" autocomplete="off" placeholder="https:// or webcal:// calendar link">
+            <input id="icsName" type="text" autocomplete="off" placeholder="Name (optional)" maxlength="24">
+            <button type="button" class="btn ghost small" id="icsAddBtn">Add calendar</button>
+          </div>
+          <div class="test-result" id="icsResult"></div>
+          <p class="credit">Skreen's relay fetches the link for you and keeps nothing. <a href="#" id="icsHelp">How to get a link</a></p>
+        </div>
+
         <div class="group">Weather</div>
         <div class="field">
           <span>Location</span>
@@ -285,6 +298,8 @@
   <script src="plus.js?v=dev"></script>
   <script src="google.js?v=dev"></script>
   <script src="weather.js?v=dev"></script>
+  <script src="vendor/ical.min.js?v=dev"></script>
+  <script src="ics.js?v=dev"></script>
   <script src="backgrounds.js?v=dev"></script>
   <script src="guide.js?v=dev"></script>
   <script src="app.js?v=dev"></script>

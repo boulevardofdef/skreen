@@ -136,5 +136,5 @@ const Weather = (() => {
     return res.json();
   }
 
-  return { forecast, met, wmo, search, reverse };
+  return { forecast, met, wmo, search, reverse, relay: PROXY };
 })();

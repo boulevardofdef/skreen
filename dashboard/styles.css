@@ -577,3 +577,8 @@ body.native .field.native-only { display: flex; }
 .plus-head .brand-logo { font-size: 1.9rem; }
 .plus-chip { display: inline-flex; vertical-align: middle; margin-left: 0.7rem; }
 .plus-chip .brand-logo { font-size: 0.95rem; opacity: 0.9; }
+
+.ics-add { display: grid; grid-template-columns: 1fr 9rem auto; gap: 0.5rem; margin-top: 0.6rem; }
+.check .btn { margin-left: auto; }
+.credit a { color: var(--accent); }
+@media (orientation: portrait) and (max-width: 700px) { .ics-add { grid-template-columns: 1fr; } }
