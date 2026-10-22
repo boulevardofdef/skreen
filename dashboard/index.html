@@ -80,6 +80,7 @@
 
   <!-- Event details -->
   <dialog class="sheet event-sheet" id="eventSheet">
+    <div class="brand-row sm" data-brand></div>
     <div class="ev-bar" id="evBar"></div>
     <h3 id="evTitle"></h3>
     <div class="ev-rows" id="evRows"></div>
@@ -88,6 +89,7 @@
 
   <!-- To-do item details -->
   <dialog class="sheet task-sheet" id="taskSheet">
+    <div class="brand-row sm" data-brand></div>
     <input id="tkTitle" class="tk-title" type="text" autocomplete="off" enterkeyhint="done" maxlength="300" aria-label="Title">
     <div class="who">
       <span class="who-label">Who?</span>
@@ -108,6 +110,7 @@
   <!-- Add item sheet -->
   <dialog class="sheet" id="addSheet">
     <form method="dialog" id="addForm">
+      <div class="brand-row sm" data-brand></div>
       <h3>Add to the list</h3>
       <div class="add-row">
         <input id="addInput" type="text" autocomplete="off" enterkeyhint="done" placeholder="e.g. Paper towels" maxlength="300">
@@ -131,7 +134,8 @@
 
   <!-- First-run welcome (Android app) -->
   <dialog class="sheet welcome" id="welcome">
-    <h3>Welcome to Skreen</h3>
+    <div class="brand-row" data-brand></div>
+    <h3>Welcome</h3>
     <p class="lede">Your calendar, your to-do list, the weather and the time, built to be read from across the room.</p>
     <p>Sign in with Google to show your own calendar and list. Skreen reads your calendars and manages one Google Tasks list. It only talks to Google, and it never copies your data anywhere else.</p>
     <div class="sheet-actions">
@@ -143,6 +147,7 @@
   <!-- Settings -->
   <dialog class="sheet settings" id="settingsSheet">
     <form method="dialog" id="settingsForm">
+      <div class="brand-row" data-brand></div>
       <div class="sheet-title">
         <h3>Settings</h3>
         <button type="button" class="btn ghost small" id="openGuide">Setup guide <span id="guideArrow"></span></button>
@@ -189,6 +194,7 @@
           <div class="loc-current" id="locCurrent"></div>
           <div class="loc-results" id="locResults"></div>
         </div>
+        <p class="credit">Forecasts from MET Norway and Open-Meteo.</p>
 
         <div class="field-grid">
           <label class="field"><span>Temperature</span>
@@ -268,6 +274,7 @@
 
   <script src="icons.js?v=dev"></script>
   <script src="google.js?v=dev"></script>
+  <script src="weather.js?v=dev"></script>
   <script src="backgrounds.js?v=dev"></script>
   <script src="guide.js?v=dev"></script>
   <script src="app.js?v=dev"></script>

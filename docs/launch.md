@@ -46,4 +46,4 @@ Calendar and Tasks are "sensitive" scopes, so Google reviews the app before remo
 
 ## 4. Freemium and weather
 
-The free weather service (Open-Meteo) is for non-commercial use. An app with a paid tier is commercial, so before launch move to their paid plan (a key plus an endpoint change in `refreshWeather()` and the geocoding search in `app.js`) or another provider. Check their current terms.
+Weather: `weather.js` supports MET Norway (free for commercial products; deploy `worker/` and set `PROXY`, and read their terms for attribution) and falls back to Open-Meteo, which is non-commercial only. Geocoding (city search) still uses Open-Meteo's geocoder, so swap that too before launch. Open-Meteo notes: An app with a paid tier is commercial, so before launch move to their paid plan (a key plus an endpoint change in `refreshWeather()` and the geocoding search in `app.js`) or another provider. Check their current terms.

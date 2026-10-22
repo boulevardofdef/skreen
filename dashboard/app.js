@@ -683,27 +683,14 @@
     });
   }
 
-  // ─── Weather (Open-Meteo, no key needed) ───────────────────────────────────
+  // ─── Weather (providers live in weather.js) ────────────────────────────────
 
   const isWet = (code) => code >= 51;
 
   async function refreshWeather() {
     if (cfg.lat == null) return;
-    const u = new URL('https://api.open-meteo.com/v1/forecast');
-    u.search = new URLSearchParams({
-      latitude: cfg.lat, longitude: cfg.lon,
-      current: 'temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,wind_speed_10m',
-      hourly: 'temperature_2m,precipitation_probability,weather_code,is_day',
-      daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset',
-      temperature_unit: cfg.units,
-      wind_speed_unit: cfg.units === 'fahrenheit' ? 'mph' : 'kmh',
-      timezone: 'auto',
-      forecast_days: 6,
-    });
     try {
-      const res = await fetch(u);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      state.weather = await res.json();
+      state.weather = await Weather.forecast(cfg.lat, cfg.lon, cfg.units);
       renderWeather();
     } catch (err) { console.warn('Weather failed', err); }
   }
@@ -1066,7 +1053,7 @@
 
   function renderGuide() {
     const sec = Guide.sections.find((s) => s.id === guideId);
-    $('guideNav').innerHTML = `<div class="brand">skreen<i>.</i></div><div class="tag">Setup guide</div>` +
+    $('guideNav').innerHTML = `${Icons.logo}<div class="tag">Setup guide</div>` +
       Guide.sections.map((s, i) => `<button type="button" data-go="${s.id}" class="${s.id === guideId ? 'on' : ''}"><span class="n">${String(i + 1).padStart(2, '0')}</span>${esc(s.title)}</button>`).join('');
     const body = $('guideBody');
     body.innerHTML = sec.html;
@@ -1456,6 +1443,7 @@
   // ─── Boot ──────────────────────────────────────────────────────────────────
 
   function boot() {
+    document.querySelectorAll('[data-brand]').forEach((el) => { el.innerHTML = Icons.logo; });
     if (cfg.lat == null) {
       // Until a location is chosen, try the device's location, then fall back to New York.
       Object.assign(cfg, { lat: 40.713, lon: -74.006, place: 'New York, NY' });

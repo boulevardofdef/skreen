@@ -12,7 +12,7 @@ A wall display for an always-on Android tablet: **Google Calendar**, a **househo
 
 - **Schedule.** What's left today, then the next few days. **Tap any event for the full details** (complete title, time and duration, full location, video link, calendar and notes). The event in progress is a solid orange block with a progress bar; one starting within the hour gets a countdown. All-day events become tags, declined events are hidden.
 - **To-do list.** Tap to check off. **Checked items stay on screen, struck through, for 24 hours**, then vanish; tap one to bring it back. Add items with the big button, by voice, or from your phone via Google Tasks.
-- **Weather.** Now, the next 6 hours, 5 days, and a plain-English rain outlook. Open-Meteo, no key.
+- **Weather.** Now, the next 6 hours, 5 days, and a plain-English rain outlook. MET Norway (via the small proxy in `worker/`) with Open-Meteo as fallback; no keys.
 - **Typefaces.** Five to choose from in Settings (Bricolage, Fraunces, Archivo, Space Grotesk, Big Shoulders), self-hosted and previewed live.
 - **Backgrounds.** Nine soft, dark colour-gradient backgrounds with gentle contrast, one per day, or pin your favourite. No lines or patterns, so text always reads cleanly.
 - **Big-screen tour.** Every 5 minutes (adjustable) it spends ~30 seconds on **BIG time → BIG weather → BIG calendar → BIG to-do**, alternating left/centre/right. Tap to end it early.

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skreen privacy policy</title>
   <style>
+    @font-face { font-family: 'Bricolage'; src: url('fonts/bricolage.woff2') format('woff2'); font-weight: 200 800; }
     :root { color-scheme: dark; }
     body { margin: 0; background: #0e0d0b; color: #f3eee3; font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
     main { max-width: 42rem; margin: 0 auto; padding: 3rem 1.4rem 5rem; }
@@ -13,10 +14,13 @@
     p, li { color: rgba(243, 238, 227, 0.86); }
     .meta { color: rgba(243, 238, 227, 0.55); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.9rem; }
     a { color: #ff5b2e; }
+    .logo { display: flex; align-items: center; gap: 0.55rem; margin-bottom: 2rem; font: 800 1.5rem/1 'Bricolage', system-ui, sans-serif; letter-spacing: -0.03em; text-transform: uppercase; }
+    .logo svg { height: 1.05em; }
   </style>
 </head>
 <body>
 <main>
+  <div class="logo"><svg viewBox="64 80 384 352" aria-hidden="true"><rect x="96" y="112" width="240" height="72" fill="#ff5b2e"/><rect x="176" y="220" width="240" height="72" fill="#f3eee3"/><rect x="96" y="328" width="240" height="72" fill="#f3eee3" opacity=".5"/></svg><span>Skreen</span></div>
   <h1>Skreen privacy policy</h1>
   <p class="meta">Last updated: October 2026</p>
 
@@ -34,7 +38,7 @@
   <ul>
     <li>Your calendar and task data is fetched directly from Google to your device and is shown on the screen. <b>It is not sent to, or stored on, any server operated by Skreen.</b> Skreen does not run such a server.</li>
     <li>Settings (your chosen calendars, list, city and display preferences) are stored on your device only.</li>
-    <li>To get the weather, your device sends the coordinates of your chosen location to a weather service (currently Open-Meteo). No account details are sent.</li>
+    <li>To get the weather, your device sends the coordinates of your chosen location to a weather service (MET Norway, or Open-Meteo as a backup). No account details are sent.</li>
     <li>Skreen contains no advertising and no analytics, and does not sell or share your information.</li>
   </ul>
 

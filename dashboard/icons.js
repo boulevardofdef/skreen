@@ -65,5 +65,8 @@ window.Icons = (() => {
     return { label: w[0], svg: set[!isDay && w[2] ? w[2] : w[1]] };
   };
 
-  return { ...set, weather, WX };
+  // The Skreen logo: one fixed mark + wordmark, shown on every screen except the main display.
+  const logo = `<span class="brand-logo"><svg class="mark" viewBox="64 80 384 352" aria-hidden="true"><rect x="96" y="112" width="240" height="72" fill="#ff5b2e"/><rect x="176" y="220" width="240" height="72" fill="currentColor"/><rect x="96" y="328" width="240" height="72" fill="currentColor" opacity=".5"/></svg><span class="wordmark">Skreen</span></span>`;
+
+  return { ...set, weather, WX, logo };
 })();
