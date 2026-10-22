@@ -1015,10 +1015,8 @@
   let lastUpdateCheck = 0;
   const canUpdate = () => !!(NATIVE && NATIVE.getVersion && NATIVE.installUpdate && !(NATIVE.isStoreBuild && NATIVE.isStoreBuild()));
 
-  function releaseRepo() {
-    const m = /^([^.]+)\.github\.io$/.exec(location.hostname), repo = location.pathname.split('/')[1];
-    return m && repo ? { owner: m[1], repo } : null;
-  }
+  // The sideload APK is published on this repo's GitHub releases (the site now lives on its own domain).
+  const releaseRepo = () => ({ owner: 'boulevardofdef', repo: 'skreen' });
 
   // Returns {state: 'update' | 'current' | 'unknown', ...}; also updates the banner.
   async function checkForUpdate() {
