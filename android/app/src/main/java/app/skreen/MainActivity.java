@@ -77,6 +77,7 @@ public class MainActivity extends Activity {
     private static final int REQ_VOICE = 2;
     private static final int REQ_ACCOUNT = 3;
     private static final int REQ_AUTH = 4;
+    private PlusBilling billing;
 
     /** What Skreen asks Google for: read the calendars, and manage tasks (to add and check off items). */
     private static final List<Scope> SCOPES = Arrays.asList(
@@ -113,6 +114,10 @@ public class MainActivity extends Activity {
         }
 
         prefs = getSharedPreferences("skreen", MODE_PRIVATE);
+        billing = new PlusBilling(this, prefs, json -> runOnUiThread(() -> {
+            if (web != null) web.evaluateJavascript("window.skreenPlus && window.skreenPlus(" + JSONObject.quote(json) + ")", null);
+        }));
+        billing.start();
         remoteUrl = getString(R.string.start_url).trim();
         if (!remoteUrl.isEmpty()) remoteHost = Uri.parse(remoteUrl).getHost();
 
@@ -279,6 +284,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         hideSystemUi();
+        if (billing != null) billing.resume();
     }
 
     @Override
@@ -295,6 +301,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (billing != null) billing.end();
         if (connectivity != null && networkCallback != null) {
             try {
                 connectivity.unregisterNetworkCallback(networkCallback);
@@ -525,6 +532,18 @@ public class MainActivity extends Activity {
                     startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
                 } catch (ActivityNotFoundException ignored) { }
             });
+        }
+
+        /** Skreen Plus status as JSON: {play, price, canBuy}. Changes arrive via window.skreenPlus(json). */
+        @JavascriptInterface
+        public String getPlus() {
+            return billing != null ? billing.json() : "{}";
+        }
+
+        /** Opens Google Play's purchase sheet for Skreen Plus. */
+        @JavascriptInterface
+        public void buyPlus() {
+            runOnUiThread(() -> { if (billing != null) billing.buy(MainActivity.this); });
         }
 
         @JavascriptInterface

@@ -1214,8 +1214,7 @@
 
   const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list' };
   const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92 };
-  // Paid feature. Until billing exists everyone has it; free builds will return false here.
-  const hasPlus = () => true;
+  const hasPlus = () => Plus.active();
 
   function parseLayout(str) {
     const seen = new Set(), out = [];
@@ -1257,6 +1256,27 @@
 
   // The editor in Settings: a tick to show/hide and arrows to reorder (no dragging on a wall display).
   let draftLayout = null;
+  function drawPlusCard() {
+    const on = Plus.active(), st = Plus.state;
+    $('plusCard').classList.toggle('on', on);
+    $('layoutField').classList.toggle('locked', !on);
+    $('plusText').innerHTML = on
+      ? '<b>Skreen Plus is on.</b> Thank you. Everything else in Skreen stays free.'
+      : 'Choose and arrange what\u2019s on your screen, with more to come: several Google accounts, and a Skreen calendar and to-do list in the cloud. Everything you see on the main screen today stays free.';
+    $('plusBuy').hidden = on || !st.canBuy;
+    $('plusBuy').textContent = st.price ? `Get Skreen Plus \u00b7 ${st.price}` : 'Get Skreen Plus';
+    $('plusForget').hidden = !(on && st.code);
+    $('plusCodeBox').hidden = on;
+  }
+  $('plusBuy').addEventListener('click', () => Plus.buy());
+  $('plusForget').addEventListener('click', () => Plus.forgetCode());
+  $('plusRedeem').addEventListener('click', async () => {
+    const ok = await Plus.redeem($('plusCode').value);
+    $('plusResult').textContent = ok ? 'Unlocked. Thank you!' : 'That code didn\u2019t work.';
+    $('plusResult').className = 'test-result ' + (ok ? 'ok' : 'bad');
+    if (ok) $('plusCode').value = '';
+  });
+
   function drawLayoutEditor() {
     const box = $('layoutList');
     box.innerHTML = draftLayout.map((w, i) => `<div class="layout-row${w.on ? '' : ' off'}">
@@ -1314,6 +1334,8 @@
     for (const el of form.elements) if (el.name && el.name in cfg) el.value = cfg[el.name] ?? '';
     draftLayout = parseLayout(cfg.layout);
     drawLayoutEditor();
+    drawPlusCard();
+    $('plusResult').textContent = '';
     draftLoc = cfg.lat != null ? { lat: cfg.lat, lon: cfg.lon, place: cfg.place } : null;
     $('locCurrent').textContent = draftLoc ? `✓ ${draftLoc.place}` : 'No location set';
     $('locResults').innerHTML = '';
@@ -1413,7 +1435,7 @@
   form.addEventListener('submit', () => {
     for (const el of form.elements) if (el.name && el.name in cfg) cfg[el.name] = el.value.trim();
     if (draftLoc) Object.assign(cfg, draftLoc);
-    if (draftLayout) cfg.layout = serializeLayout(draftLayout);
+    if (draftLayout && hasPlus()) cfg.layout = serializeLayout(draftLayout);
     if (calChoices) {
       cfg.calendarIds = Array.from($('calList').querySelectorAll('input:checked')).map((el) => calChoices[+el.dataset.i].id);
       if (!cfg.calendarIds.length) cfg.calendarIds = calChoices.filter((c) => c.primary).map((c) => c.id);
@@ -1526,6 +1548,7 @@
   function boot() {
     document.querySelectorAll('[data-brand]').forEach((el) => { el.innerHTML = Icons.logo; });
     applyLayout();
+    Plus.init(() => { applyLayout(); if (settingsSheet.open) drawPlusCard(); });
     if (cfg.lat == null) {
       // Until a location is chosen, try the device's location, then fall back to New York.
       Object.assign(cfg, { lat: 40.713, lon: -74.006, place: 'New York, NY' });

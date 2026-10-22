@@ -202,8 +202,25 @@
             <select name="clock"><option value="12">12-hour</option><option value="24">24-hour</option></select></label>
         </div>
 
-        <div class="group">Layout <em class="plus">Skreen Plus</em></div>
-        <div class="field">
+        <div class="group">Skreen Plus</div>
+        <div class="plus-card" id="plusCard">
+          <p id="plusText"></p>
+          <div class="loc-row">
+            <button type="button" class="btn primary small" id="plusBuy" hidden>Get Skreen Plus</button>
+            <button type="button" class="btn ghost small" id="plusForget" hidden>Remove code</button>
+          </div>
+          <details class="adv" id="plusCodeBox">
+            <summary>Have an unlock code?</summary>
+            <div class="loc-row">
+              <input id="plusCode" type="text" autocomplete="off" autocapitalize="characters" placeholder="SKR-XXXX-XXXX-XXXX-XXXX">
+              <button type="button" class="btn ghost small" id="plusRedeem">Unlock</button>
+            </div>
+            <div class="test-result" id="plusResult"></div>
+          </details>
+        </div>
+
+        <div class="group">Layout <em class="plus">Plus</em></div>
+        <div class="field" id="layoutField">
           <span>Show, hide and reorder what's on the screen</span>
           <div class="layout-list" id="layoutList"></div>
         </div>
@@ -278,6 +295,7 @@
   <div class="toast" id="toast" role="status"></div>
 
   <script src="icons.js?v=dev"></script>
+  <script src="plus.js?v=dev"></script>
   <script src="google.js?v=dev"></script>
   <script src="weather.js?v=dev"></script>
   <script src="backgrounds.js?v=dev"></script>

@@ -47,3 +47,11 @@ Calendar and Tasks are "sensitive" scopes, so Google reviews the app before remo
 ## 4. Freemium and weather
 
 Weather: `weather.js` supports MET Norway (free for commercial products; deploy `worker/` and set `PROXY`, and read their terms for attribution) and falls back to Open-Meteo, which is non-commercial only. Geocoding (city search) still uses Open-Meteo's geocoder, so swap that too before launch. Open-Meteo notes: An app with a paid tier is commercial, so before launch move to their paid plan (a key plus an endpoint change in `refreshWeather()` and the geocoding search in `app.js`) or another provider. Check their current terms.
+
+## Skreen Plus (paid features)
+
+- **Play Console:** create one subscription with product ID `skreen_plus` (one base plan, e.g. monthly) and set the price. The app reads the price from Play and shows "Get Skreen Plus · price". `PlusBilling.java` handles purchase, acknowledgement and restore on launch; the answer is cached so Plus works offline. Billing only works for builds installed from Play (internal testing track is fine).
+- **What is gated:** `Plus.active()` in `dashboard/plus.js`. Today that covers the Layout editor; add new paid features by checking it.
+- **Unlock code:** a personal code (its hash lives in `plus.js`; the code itself is not in the repo) unlocks Plus on sideloaded builds, the owner's devices and testers. To make a new one: pick a random `SKR-XXXX-XXXX-XXXX-XXXX`, put `sha256("skreen-plus:" + code)` in `CODE_HASH`. Treat it like a password: anyone with the code has Plus.
+- **Limits of the lock:** it runs on the device, so a determined person can bypass it. Fine for layout options; the cloud calendar and to-do list will be enforced on the server.
+- **iOS:** needs StoreKit (Apple in-app purchase) in the iOS shell, since Apple requires it for digital features.
