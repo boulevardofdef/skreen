@@ -44,9 +44,9 @@ Calendar and Tasks are "sensitive" scopes, so Google reviews the app before remo
 - **Remove self-update from the Play build.** The in-app updater (`REQUEST_INSTALL_PACKAGES`, `downloadAndInstall` in `MainActivity.java`, and the update UI in `app.js`) is for sideloaded APKs only. Play policy doesn't allow apps to install updates outside Play, and the store updates the app for you. Strip the permission and the updater before building the bundle (or gate it behind a build flavor).
 - **Amazon Fire tablets** have no Google Play Services, so native Google sign-in won't work there.
 
-## 4. Freemium and weather
+## 4. Weather
 
-Weather: `weather.js` supports MET Norway (free for commercial products; deploy `worker/` and set `PROXY`, and read their terms for attribution) and falls back to Open-Meteo, which is non-commercial only. Geocoding (city search) still uses Open-Meteo's geocoder, so swap that too before launch. Open-Meteo notes: An app with a paid tier is commercial, so before launch move to their paid plan (a key plus an endpoint change in `refreshWeather()` and the geocoding search in `app.js`) or another provider. Check their current terms.
+Forecasts come from MET Norway through the Cloudflare Worker in `worker/` (free for commercial use; keep the attribution, and re-read their terms before launch). City search in Settings still uses Open-Meteo's free geocoder, which is non-commercial only: swap it for another geocoder (or Open-Meteo's paid plan) before launch.
 
 ## Skreen Plus (paid features)
 
@@ -55,10 +55,6 @@ Weather: `weather.js` supports MET Norway (free for commercial products; deploy 
 - **Unlock code:** a personal code (its hash lives in `plus.js`; the code itself is not in the repo) unlocks Plus on sideloaded builds, the owner's devices and testers. To make a new one: pick a random `SKR-XXXX-XXXX-XXXX-XXXX`, put `sha256("skreen-plus:" + code)` in `CODE_HASH`. Treat it like a password: anyone with the code has Plus.
 - **Limits of the lock:** it runs on the device, so a determined person can bypass it. Fine for layout options; the cloud calendar and to-do list will be enforced on the server.
 - **iOS:** needs StoreKit (Apple in-app purchase) in the iOS shell, since Apple requires it for digital features.
-
-## Remove before launch
-
-- **Weather test toggle:** search for `TEST TOGGLE` in `dashboard/weather.js` and `dashboard/app.js` (tapping the temperature switches providers, and the place line shows `MET`/`OM`). Delete those blocks.
 
 ## Custom domain (skreen.fyi)
 

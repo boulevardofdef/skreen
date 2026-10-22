@@ -5,7 +5,6 @@
   // ─── Settings (stored on this device) ──────────────────────────────────────
 
   const DEFAULTS = {
-    backendUrl: '', secret: '',
     lat: null, lon: null, place: '',
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage',
@@ -27,26 +26,12 @@
   function saveSettings() { try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch (_) {} }
 
   let cfg = loadSettings();
-  if (cfg.people) { delete cfg.people; saveSettings(); }   // names used to be cached on the device; they now come from the tasks themselves
-  // Where the data comes from: Google sign-in (Android app), the older Apps Script, or sample data.
+  if (cfg.people || 'backendUrl' in cfg || 'secret' in cfg) { delete cfg.people; delete cfg.backendUrl; delete cfg.secret; saveSettings(); }   // names now come from the tasks themselves; the script backend is gone
+  // Where the data comes from: Google sign-in in the app, or sample data.
   const canSignIn = () => !!(window.SkreenNative && window.SkreenNative.signIn);
   const usingGoogle = () => canSignIn() && !!cfg.signedIn;
-  const usingScript = () => !usingGoogle() && !!cfg.backendUrl;
-  const isDemo = () => !usingGoogle() && !usingScript();
+  const isDemo = () => !usingGoogle();
 
-  // A link like  …/?backend=URL&key=SECRET  configures a device without typing.
-  (function importLink() {
-    try {
-      const u = new URL(location.href);
-      const b = u.searchParams.get('backend'), k = u.searchParams.get('key');
-      if (!b && !k) return;
-      if (b) cfg.backendUrl = b;
-      if (k) cfg.secret = k;
-      saveSettings();
-      u.searchParams.delete('backend'); u.searchParams.delete('key');
-      history.replaceState(null, '', u.pathname + u.search + u.hash);
-    } catch (_) {}
-  })();
 
   const REFRESH_DATA_MS = 2 * 60 * 1000;
   const REFRESH_WEATHER_MS = 15 * 60 * 1000;
@@ -86,20 +71,7 @@
     update: null, updating: null,
   };
 
-  // ─── Backend ───────────────────────────────────────────────────────────────
-
-  async function api(action, params = {}) {
-    const url = new URL(cfg.backendUrl);
-    url.searchParams.set('action', action);
-    url.searchParams.set('key', cfg.secret);
-    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-    url.searchParams.set('_', Date.now());
-    const res = await fetch(url.toString(), { redirect: 'follow' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    return data;
-  }
+  // ─── Google ────────────────────────────────────────────────────────────────
 
   // Android app: ask the native side for a Google access token.
   const pendingTokens = new Map();
@@ -121,30 +93,13 @@
   // One interface, whichever source is in use.
   const backend = {
     async dashboard() {
-      if (usingGoogle()) {
-        const [events, tasks] = await Promise.all([Google.events(cfg.calendarIds, AGENDA_DAYS), Google.tasks(cfg.taskListId)]);
-        return { events, tasks };
-      }
-      const d = await api('dashboard');
-      return { events: d.events || [], tasks: d.tasks || [] };
+      const [events, tasks] = await Promise.all([Google.events(cfg.calendarIds, AGENDA_DAYS), Google.tasks(cfg.taskListId)]);
+      return { events, tasks };
     },
-    async addTask(title, who = []) {
-      const notes = buildNotes(who);
-      if (usingGoogle()) return Google.addTask(cfg.taskListId, title, notes);
-      return (await api('addTask', { title, notes })).task;
-    },
-    async setNotes(id, notes) {
-      if (usingGoogle()) return Google.setNotes(cfg.taskListId, id, notes);
-      return api('setNotes', { id, notes });
-    },
-    async setTitle(id, title) {
-      if (usingGoogle()) return Google.setTitle(cfg.taskListId, id, title);
-      return api('setTitle', { id, title });
-    },
-    async setDone(id, done) {
-      if (usingGoogle()) return Google.setDone(cfg.taskListId, id, done);
-      return api(done ? 'completeTask' : 'uncompleteTask', { id });
-    },
+    addTask: (title, who = []) => Google.addTask(cfg.taskListId, title, buildNotes(who)),
+    setNotes: (id, notes) => Google.setNotes(cfg.taskListId, id, notes),
+    setTitle: (id, title) => Google.setTitle(cfg.taskListId, id, title),
+    setDone: (id, done) => Google.setDone(cfg.taskListId, id, done),
   };
 
   async function refreshData() {
@@ -696,22 +651,12 @@
     } catch (err) { console.warn('Weather failed', err); }
   }
 
-  // TEST TOGGLE (remove before launch): tap the temperature to switch weather providers.
-  $('wxTemp').addEventListener('click', async () => {
-    const next = Weather.testCycle(state.weather && state.weather.provider);
-    showToast(`Weather: ${next === 'met' ? 'MET Norway' : 'Open-Meteo'}\u2026`);
-    try {
-      state.weather = await Weather.forecast(cfg.lat, cfg.lon, cfg.units);
-      renderWeather();
-    } catch (err) { showToast(`${next === 'met' ? 'MET Norway' : 'Open-Meteo'} failed`); }
-  });
-
   function renderWeather() {
     const w = state.weather;
     if (!w) return;
     const c = w.current, d = w.daily, h = w.hourly;
     const now = Icons.weather(c.weather_code, c.is_day);
-    $('wxPlace').textContent = (cfg.place || '') + (w.provider ? ` \u00b7 ${w.provider === 'met' ? 'MET' : 'OM'}` : '');   // provider tag: TEST TOGGLE, remove before launch
+    $('wxPlace').textContent = cfg.place || '';
     $('wxIcon').innerHTML = now.svg;
     $('wxTemp').textContent = Math.round(c.temperature_2m) + '°';
     $('wxCond').textContent = now.label;
@@ -1092,24 +1037,15 @@
     if (sw) sw.innerHTML = Backgrounds.list.map((b) => `<div class="sw" style="background:${b.css.replace(/"/g, '&quot;')}"><span>${esc(b.name)}</span></div>`).join('');
 
     const apk = body.querySelector('[data-apk]');
-    if (apk) {
-      const m = /^([^.]+)\.github\.io$/.exec(location.hostname), repo = location.pathname.split('/')[1];
-      if (m && repo) apk.href = `https://github.com/${m[1]}/${repo}/releases/latest/download/Skreen.apk`;
-      else apk.outerHTML = '<p>Open your GitHub repository’s <b>Releases</b> page on the tablet and download <code>Skreen.apk</code>.</p>';
-    }
+    if (apk) apk.href = 'https://github.com/boulevardofdef/skreen/releases/latest/download/Skreen.apk';
 
-    const url = body.querySelector('#lgUrl'), key = body.querySelector('#lgKey'), base = body.querySelector('#lgBase');
-    if (url) {
-      url.value = cfg.backendUrl; key.value = cfg.secret;
-      base.value = NATIVE ? '' : `${location.origin}${location.pathname}`;
-      const build = () => {
-        const u = url.value.trim(), k = key.value.trim(), b = base.value.trim();
-        body.querySelector('#lgOut').textContent = u && k && /^https?:/.test(b)
-          ? `${b}${b.includes('?') ? '&' : '?'}backend=${encodeURIComponent(u)}&key=${encodeURIComponent(k)}`
-          : 'Fill in all three boxes to build your link.';
-      };
-      url.oninput = key.oninput = base.oninput = build; build();
-    }
+    body.querySelectorAll('[data-night]').forEach((el) => { el.textContent = nightHoursText(); });
+  }
+
+  // "10:30 PM to 6:00 AM", from the night-mode times in Settings.
+  function nightHoursText() {
+    const t = (v) => { const [h, m] = String(v).split(':').map(Number); return fmtTime(new Date(2000, 0, 1, h || 0, m || 0)); };
+    return `${t(cfg.nightStart)} to ${t(cfg.nightEnd)}`;
   }
 
   async function copyText(text) {
@@ -1127,22 +1063,6 @@
     const go = e.target.closest('[data-go]');
     if (go) { guideId = go.dataset.go; renderGuide(); return; }
     if (e.target.closest('[data-open-settings]')) { closeGuide(); openSettings(); return; }
-    const status = guide.querySelector('[data-copy-status]');
-    if (e.target.closest('[data-copy-script]')) {
-      try {
-        const res = await fetch('setup/Code.gs', { cache: 'no-cache' });
-        if (!res.ok) throw new Error();
-        const ok = await copyText(await res.text());
-        status.textContent = ok ? 'Copied. Now paste it into the Apps Script editor.' : 'Couldn’t copy automatically — open setup/Code.gs and copy it by hand.';
-      } catch (_) { status.textContent = 'Couldn’t load the script. Check your connection.'; }
-    }
-    if (e.target.closest('[data-copy-link]')) {
-      const t = guide.querySelector('#lgOut').textContent;
-      if (!/^https?:/.test(t)) return;
-      const ok = await copyText(t);
-      e.target.closest('button').textContent = ok ? 'Copied' : 'Copy failed';
-      setTimeout(() => { const b = guide.querySelector('[data-copy-link]'); if (b) b.textContent = 'Copy link'; }, 2000);
-    }
   });
   $('guideClose').addEventListener('click', closeGuide);
 
@@ -1364,7 +1284,6 @@
     draftLoc = cfg.lat != null ? { lat: cfg.lat, lon: cfg.lon, place: cfg.place } : null;
     $('locCurrent').textContent = draftLoc ? `✓ ${draftLoc.place}` : 'No location set';
     $('locResults').innerHTML = '';
-    $('testResult').textContent = '';
     settingsSheet.showModal();
     fillGoogleSection();
     refreshAppSection();
@@ -1441,20 +1360,6 @@
       () => { $('locCurrent').textContent = 'Couldn’t get your location — try searching instead.'; },
       { timeout: 15000 }
     );
-  });
-
-  $('settingsTest').addEventListener('click', async () => {
-    const out = $('testResult'), url = form.elements.backendUrl.value.trim();
-    if (!url) { out.textContent = 'Enter the backend URL first.'; return; }
-    out.textContent = 'Testing…';
-    const saved = { ...cfg };
-    cfg.backendUrl = url; cfg.secret = form.elements.secret.value.trim();
-    try {
-      const d = await api('dashboard');
-      out.textContent = `✓ Connected — ${d.events.length} events, ${d.tasks.filter((t) => !t.done).length} to-dos`;
-    } catch (err) {
-      out.textContent = `✗ ${err.message === 'unauthorized' ? 'Secret key doesn’t match' : err.message}`;
-    } finally { cfg = saved; }
   });
 
   form.addEventListener('submit', () => {
@@ -1572,6 +1477,7 @@
 
   function boot() {
     document.querySelectorAll('[data-brand]').forEach((el) => { el.innerHTML = Icons.logo; });
+    document.querySelectorAll('[data-plus-logo]').forEach((el) => { el.innerHTML = Icons.logoPlus; });
     applyLayout();
     Plus.init(() => { applyLayout(); if (settingsSheet.open) drawPlusCard(); });
     if (cfg.lat == null) {
@@ -1595,7 +1501,6 @@
     maybeWelcome();
     setTimeout(checkSiteVersion, 60000); setInterval(checkSiteVersion, SITE_CHECK_MS);
     if (canUpdate()) { setTimeout(backgroundUpdateCheck, 20000); setInterval(backgroundUpdateCheck, UPDATE_CHECK_MS); }
-    if (!canSignIn()) { $('advanced').open = true; $('advanced').querySelector('summary').textContent = 'Google connection'; }
     setInterval(refreshData, REFRESH_DATA_MS);
     setInterval(refreshWeather, REFRESH_WEATHER_MS);
     if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname !== 'appassets.androidplatform.net') navigator.serviceWorker.register('sw.js').catch(() => {});

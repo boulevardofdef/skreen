@@ -170,18 +170,6 @@
           <select id="listSelect"></select>
         </label>
 
-        <details class="adv" id="advanced">
-          <summary>Advanced: connect with a Google script instead <em>(for browsers)</em></summary>
-          <label class="field">
-            <span>Backend URL</span>
-            <input name="backendUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
-          </label>
-          <label class="field">
-            <span>Secret key</span>
-            <input name="secret" type="text" autocomplete="off" placeholder="The SECRET from Code.gs">
-          </label>
-        </details>
-
         <div class="group">Weather</div>
         <div class="field">
           <span>Location</span>
@@ -193,7 +181,7 @@
           <div class="loc-current" id="locCurrent"></div>
           <div class="loc-results" id="locResults"></div>
         </div>
-        <p class="credit">Forecasts from MET Norway and Open-Meteo.</p>
+        <p class="credit">Forecasts from MET Norway.</p>
 
         <div class="field-grid">
           <label class="field"><span>Temperature</span>
@@ -202,7 +190,7 @@
             <select name="clock"><option value="12">12-hour</option><option value="24">24-hour</option></select></label>
         </div>
 
-        <div class="group">Skreen Plus</div>
+        <div class="group plus-head" data-plus-logo></div>
         <div class="plus-card" id="plusCard">
           <p id="plusText"></p>
           <div class="loc-row">
@@ -219,7 +207,7 @@
           </details>
         </div>
 
-        <div class="group">Layout <em class="plus">Plus</em></div>
+        <div class="group">Layout <span class="plus-chip" data-plus-logo></span></div>
         <div class="field" id="layoutField">
           <span>Show, hide and reorder what's on the screen</span>
           <div class="layout-list" id="layoutList"></div>
@@ -277,8 +265,6 @@
       </div>
 
       <div class="sheet-actions">
-        <button type="button" class="btn ghost" id="settingsTest">Test connection</button>
-        <span class="test-result" id="testResult"></span>
         <button type="button" class="btn ghost" id="settingsCancel">Cancel</button>
         <button type="submit" class="btn primary">Save</button>
       </div>

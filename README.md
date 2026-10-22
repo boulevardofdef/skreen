@@ -13,7 +13,7 @@ A wall display for an always-on Android tablet: **Google Calendar**, a **househo
 - **Schedule.** What's left today, then the next few days. **Tap any event for the full details** (complete title, time and duration, full location, video link, calendar and notes). The event in progress is a solid orange block with a progress bar; one starting within the hour gets a countdown. All-day events become tags, declined events are hidden.
 - **To-do list.** Tap to check off. **Checked items stay on screen, struck through, for 24 hours**, then vanish; tap one to bring it back. Add items with the big button, by voice, or from your phone via Google Tasks.
 - **Layout.** Show, hide and reorder the clock, weather, schedule and to-do list (Settings → Layout; this is the first Skreen Plus feature, gated by `hasPlus()` in `app.js`, currently on for everyone).
-- **Weather.** Now, the next 6 hours, 5 days, and a plain-English rain outlook. MET Norway (via the small proxy in `worker/`) with Open-Meteo as fallback; no keys.
+- **Weather.** Now, the next 6 hours, 5 days, and a plain-English rain outlook. MET Norway, through the small proxy in `worker/`.
 - **Typefaces.** Five to choose from in Settings (Bricolage, Fraunces, Archivo, Space Grotesk, Big Shoulders), self-hosted and previewed live.
 - **Backgrounds.** Nine soft, dark colour-gradient backgrounds with gentle contrast, one per day, or pin your favourite. No lines or patterns, so text always reads cleanly.
 - **Big-screen tour.** Every 5 minutes (adjustable) it spends ~30 seconds on **BIG time → BIG weather → BIG calendar → BIG to-do**, alternating left/centre/right. Tap to end it early.
@@ -36,10 +36,10 @@ Keep has no API for personal accounts, so the list lives in **Google Tasks**, wh
   native sign-in)         from Play Services       task list)
         │ loads
         ▼
- dashboard/  (this static site, on GitHub Pages)  ──►  Open-Meteo (weather)
+ dashboard/  (this static site, on GitHub Pages)  ──►  weather proxy (Cloudflare Worker) ──► MET Norway
 ```
 
-Everything is read straight from Google by the tablet. In a plain browser, where Google sign-in isn't available, Skreen can instead use a small Apps Script in your own Google account (see the in-app guide, *Browser version*).
+Everything is read straight from Google by the tablet. Google sign-in lives in the Android app; in a plain browser Skreen shows sample data.
 
 ## Setup
 
@@ -65,7 +65,6 @@ Open that on the tablet in Chrome, allow *install unknown apps* when asked, and 
 |---|---|
 | `dashboard/index.html`, `styles.css`, `app.js` | The display |
 | `dashboard/icons.js`, `backgrounds.js`, `guide.js`, `google.js` | Icons, built-in backgrounds, in-app guide, Google Calendar/Tasks client |
-| `dashboard/setup/Code.gs`, `appsscript.json` | Optional Apps Script backend for plain browsers |
 | `dashboard/privacy.html` | Privacy policy (needed for Google verification) |
 | `docs/launch.md` | Google Cloud setup, verification and store checklist |
 | `dashboard/fonts/` | Bricolage Grotesque, Fraunces, Archivo, Space Grotesk, Big Shoulders and Geist Mono (all SIL OFL) |

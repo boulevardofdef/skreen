@@ -1,31 +1,10 @@
-// Weather providers. Both return the same shape (Open-Meteo's forecast JSON),
-// so the rest of the app doesn't care which one answered.
-//
-//   MET Norway (api.met.no): free, including for commercial products, but its terms
-//   require an identifying User-Agent, which browsers can't set. Point PROXY at the
-//   Cloudflare Worker in /worker (it adds the header and caches) to switch it on.
-//   Open-Meteo: used until then, and as the fallback. Free for non-commercial use only.
+// Weather from MET Norway (api.met.no), converted to the shape the app draws (Open-Meteo's
+// forecast JSON). MET's terms require an identifying User-Agent, which browsers can't set, so
+// requests go through the small Cloudflare Worker in /worker, which adds it and caches.
 const Weather = (() => {
   const PROXY = 'https://skreen-weather.tiszenkel.workers.dev';
   const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const isoHour = (d) => `${iso(d)}T${String(d.getHours()).padStart(2, '0')}:00`;
-
-  async function openMeteo(lat, lon, units) {
-    const u = new URL('https://api.open-meteo.com/v1/forecast');
-    u.search = new URLSearchParams({
-      latitude: lat, longitude: lon,
-      current: 'temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,wind_speed_10m',
-      hourly: 'temperature_2m,precipitation_probability,weather_code,is_day',
-      daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset',
-      temperature_unit: units,
-      wind_speed_unit: units === 'fahrenheit' ? 'mph' : 'kmh',
-      timezone: 'auto',
-      forecast_days: 6,
-    });
-    const res = await fetch(u);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return { ...(await res.json()), provider: 'openmeteo' };
-  }
 
   // MET symbol names → the WMO codes the icons use.
   const SYMBOLS = [
@@ -74,7 +53,7 @@ const Weather = (() => {
   }
 
   async function met(lat, lon, units) {
-    const base = PROXY || 'https://api.met.no';
+    const base = PROXY;
     const res = await fetch(`${base}/weatherapi/locationforecast/2.0/complete?lat=${(+lat).toFixed(3)}&lon=${(+lon).toFixed(3)}`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const ts = (await res.json()).properties.timeseries;
@@ -140,27 +119,10 @@ const Weather = (() => {
       daily.precipitation_probability_max.push(d.pop);
       daily.weather_code.push(codes.length ? codes.reduce((a, b) => (severity(b) > severity(a) ? b : a)) : 3);
     }
-    return { current, hourly, daily, provider: 'met' };
+    return { current, hourly, daily };
   }
 
-  // TEST TOGGLE (remove before launch): tap the temperature to force one provider.
-  const TEST_KEY = 'skreen-wx-test';
-  const testGet = () => { try { return localStorage.getItem(TEST_KEY) || ''; } catch (_) { return ''; } };
-  function testCycle(current) {
-    const next = current === 'met' ? 'openmeteo' : 'met';
-    try { localStorage.setItem(TEST_KEY, next); } catch (_) {}
-    return next;
-  }
+  const forecast = (lat, lon, units) => met(lat, lon, units);
 
-  async function forecast(lat, lon, units) {
-    const forced = testGet();
-    if (forced === 'met') return met(lat, lon, units);
-    if (forced === 'openmeteo') return openMeteo(lat, lon, units);
-    if (PROXY) {
-      try { return await met(lat, lon, units); } catch (e) { console.warn('MET weather failed, falling back', e); }
-    }
-    return openMeteo(lat, lon, units);
-  }
-
-  return { forecast, met, openMeteo, wmo, testCycle };
+  return { forecast, met, wmo };
 })();

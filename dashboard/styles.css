@@ -536,7 +536,6 @@ body.native .field.native-only { display: flex; }
 .settings .credit { margin: -0.4rem 0 0.6rem; font: 400 0.8rem/1.4 var(--mono); color: var(--faint); }
 
 /* ─── Layout editor (Settings) ───────────────────────────────────────────── */
-.plus { font-style: normal; margin-left: 0.6rem; padding: 0.15rem 0.45rem; background: var(--accent); color: #0e0d0b; letter-spacing: 0.1em; }
 .layout-list { display: flex; flex-direction: column; border: 1px solid var(--rule); }
 .layout-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem 0.35rem 0.8rem; border-top: 1px solid var(--rule); }
 .layout-row:first-child { border-top: 0; }
@@ -571,3 +570,10 @@ body.native .field.native-only { display: flex; }
   .gear { left: 1rem; }
   .status { left: 3.4rem; }
 }
+
+/* Skreen+ : the logo with a gold plus, used wherever something is a Plus feature */
+.brand-logo.plus .plus-sign { height: 0.78em; width: auto; flex: none; align-self: flex-start; margin: -0.12em 0 0 -0.28em; filter: drop-shadow(0 0 0.35em rgba(232, 200, 135, 0.45)); }
+.plus-head { display: flex; align-items: center; }
+.plus-head .brand-logo { font-size: 1.9rem; }
+.plus-chip { display: inline-flex; vertical-align: middle; margin-left: 0.7rem; }
+.plus-chip .brand-logo { font-size: 0.95rem; opacity: 0.9; }

@@ -36,9 +36,10 @@
 
   <h2>How it's used and stored</h2>
   <ul>
-    <li>Your calendar and task data is fetched directly from Google to your device and is shown on the screen. <b>It is not sent to, or stored on, any server operated by Skreen.</b> Skreen does not run such a server.</li>
+    <li>Your calendar and task data is fetched directly from Google to your device and is shown on the screen. <b>It is not sent to, or stored on, any server operated by Skreen.</b></li>
     <li>Settings (your chosen calendars, list, city and display preferences) are stored on your device only.</li>
-    <li>To get the weather, your device sends the coordinates of your chosen location to a weather service (MET Norway, or Open-Meteo as a backup). No account details are sent.</li>
+    <li>To get the weather, your device sends the coordinates of your chosen location, rounded to about a kilometre, to Skreen's weather relay (hosted on Cloudflare), which passes them to MET Norway, the Norwegian national weather service, and returns the forecast. No account details, and nothing about your calendar or tasks, are sent. Cloudflare may keep standard request logs, such as IP addresses, for a short time.</li>
+    <li>If you search for a city by name in Settings, the text you type is sent to Open-Meteo's search service to find its coordinates.</li>
     <li>Skreen contains no advertising and no analytics, and does not sell or share your information.</li>
   </ul>
 
