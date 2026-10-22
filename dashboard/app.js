@@ -9,7 +9,7 @@
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage',
     showcaseMinutes: '5', pixelShift: '1',
-    layout: 'clock,weather,agenda,todo', photoFolder: '', photoSeconds: '30', mealList: '', pageSeconds: '60',
+    layout: 'clock,weather,agenda,todo', photoSource: 'art', photoSeconds: '30', mealList: '', pageSeconds: '60',
     ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
     dayBrightness: 'system', nightBrightness: '3',
@@ -1133,7 +1133,7 @@
       const rows = News.current.slice(0, 4).map((s) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(s.text)}</div></div>`).join('');
       return `<div class="kicker">In the news</div><div class="sv-list sv-news">${rows}</div>`;
     }
-    if (name === 'photos') return `<div class="sv-photo" style="background-image:url('${photo.current}')"></div>`;
+    if (name === 'photos') return `<div class="sv-photo${photo.items[photo.order[photo.i]] && photo.items[photo.order[photo.i]].art ? ' art' : ''}" style="background-image:url('${photo.current}')"></div>`;
     const now = new Date();
     if (name === 'time') {
       const { hm, ap } = timeParts(now);
@@ -1675,29 +1675,32 @@
 
   // ─── Photos widget (Skreen+) ────────────────────────────────────────────────
 
-  const photo = { ids: [], order: [], i: -1, folder: '', listedAt: 0, timer: null, front: 'B', current: '' };
+  const photo = { items: [], order: [], i: -1, source: '', listedAt: 0, timer: null, front: 'B', current: '' };
   const photosShown = () => hasPlus() && visibleWidgets().includes('photos');
+  const photoSource = () => (cfg.photoSource === 'mine' && Photos.nativeOK() ? 'mine' : 'art');
 
-  function showPhoto(id, then) {
+  function showPhoto(item, then) {
     const img = new Image();
     img.onload = () => {
       const back = photo.front === 'A' ? $('pfB') : $('pfA'), front = photo.front === 'A' ? $('pfA') : $('pfB');
       back.style.backgroundImage = `url("${img.src}")`;
+      back.classList.toggle('art', !!item.art);
       back.classList.add('on'); front.classList.remove('on');
       photo.front = photo.front === 'A' ? 'B' : 'A';
       photo.current = img.src;
+      $('photoCaption').textContent = item.caption || '';
       then(true);
     };
     img.onerror = () => then(false);
-    img.src = Photos.url(id);
+    img.src = item.url;
   }
 
   function nextPhoto(failures = 0) {
     clearTimeout(photo.timer);
-    if (!photo.ids.length || failures > 5) { $('photoNote').textContent = photo.ids.length ? 'Couldn\u2019t load the pictures. Check the folder is shared with anyone who has the link.' : ''; return; }
-    if (photo.i + 1 >= photo.order.length) { photo.order = Photos.shuffled(photo.ids); photo.i = -1; }
-    const id = photo.order[++photo.i];
-    showPhoto(id, (ok) => {
+    if (!photo.items.length || failures > 5) { $('photoNote').textContent = photo.items.length ? 'Couldn\u2019t load the pictures right now.' : ''; return; }
+    if (photo.i + 1 >= photo.order.length) { photo.order = Photos.shuffled(photo.items); photo.i = -1; }
+    const item = photo.order[++photo.i];
+    showPhoto(item, (ok) => {
       if (!ok) return nextPhoto(failures + 1);
       $('photoNote').textContent = '';
       photo.timer = setTimeout(() => nextPhoto(), Math.max(10, Number(cfg.photoSeconds) || 30) * 1000);
@@ -1707,23 +1710,43 @@
   async function syncPhotos(force = false) {
     clearTimeout(photo.timer);
     if (!photosShown()) return;
-    const note = $('photoNote'), folder = Photos.folderId(cfg.photoFolder);
-    if (!Photos.configured) { note.textContent = 'Photos aren\u2019t switched on in this build yet.'; return; }
-    if (!folder) { note.textContent = 'Choose a Google Drive folder in Settings \u2192 Photos'; return; }
-    if (force || folder !== photo.folder || Date.now() - photo.listedAt > 6 * 3600e3) {
+    const note = $('photoNote'), source = photoSource();
+    if (force || source !== photo.source || (source === 'art' && Date.now() - photo.listedAt > 6 * 3600e3)) {
       note.textContent = 'Loading pictures\u2026';
       try {
-        photo.ids = await Photos.list(folder);
-        photo.folder = folder; photo.listedAt = Date.now(); photo.order = []; photo.i = -1;
-        if (!photo.ids.length) { note.textContent = 'That folder has no pictures yet.'; return; }
-      } catch (err) {
-        note.textContent = err.message === 'folder not shared' ? 'Can\u2019t read that folder. Share it as \u201cAnyone with the link\u201d.' : 'Couldn\u2019t load the pictures right now.';
-        photo.timer = setTimeout(() => syncPhotos(true), 5 * 60000);
+        photo.items = source === 'mine' ? Photos.mine() : await Photos.art();
+        photo.source = source; photo.listedAt = Date.now(); photo.order = []; photo.i = -1;
+      } catch (_) {
+        note.textContent = 'Couldn\u2019t load the pictures right now.';
+        photo.timer = setTimeout(() => syncPhotos(true), 3 * 60000);
         return;
       }
     }
+    if (!photo.items.length) {
+      note.textContent = source === 'mine' ? 'Choose some photos in Settings \u2192 Photos' : 'No pictures to show right now.';
+      return;
+    }
     nextPhoto();
   }
+
+  // Settings → Photos: pick from the tablet / Google Photos, or use the art gallery.
+  function drawPhotoSettings(fromSaved = false) {
+    const mineOK = Photos.nativeOK();
+    const sel = $('photoSource');
+    sel.querySelector('option[value="mine"]').disabled = !mineOK;
+    if (fromSaved) sel.value = photoSource();
+    $('minePhotos').hidden = !mineOK || sel.value !== 'mine';
+    const n = mineOK ? Photos.count() : 0;
+    $('photoCount').textContent = n ? `${n} photo${n === 1 ? '' : 's'} on this tablet` : 'No photos chosen yet';
+    $('photoClear').hidden = !n;
+  }
+  $('photoSource').addEventListener('change', () => drawPhotoSettings());
+  $('photoPick').addEventListener('click', () => { $('photoCount').textContent = 'Opening your photos\u2026'; Photos.pick(); });
+  $('photoClear').addEventListener('click', () => { Photos.clear(); drawPhotoSettings(); syncPhotos(true); });
+  window.skreenPhotos = (done, total, finished, count) => {
+    if (finished) { drawPhotoSettings(); syncPhotos(true); return; }
+    $('photoCount').textContent = `Adding photos\u2026 ${done} of ${total}`;
+  };
 
   // ─── In the news widget (Skreen+) ───────────────────────────────────────────
 
@@ -1972,18 +1995,6 @@
       out.textContent = err.message === 'not a calendar' ? 'That link isn\u2019t a calendar feed. It should end in .ics or come from \u201cpublish calendar\u201d.' : `Couldn\u2019t read that link (${err.message}).`;
     }
   });
-  $('photoCheck').addEventListener('click', async () => {
-    const out = $('photoResult'), id = Photos.folderId($('photoLink').value);
-    if (!Photos.configured) { out.textContent = 'Photos aren\u2019t switched on in this build yet.'; return; }
-    if (!id) { out.textContent = 'Paste the folder\u2019s share link from Google Drive.'; return; }
-    out.textContent = 'Checking the folder\u2026';
-    try {
-      const ids = await Photos.list(id);
-      out.textContent = ids.length ? `\u2713 Found ${ids.length} picture${ids.length === 1 ? '' : 's'}. Save, then add Photos under Layout.` : 'That folder has no pictures in it yet.';
-    } catch (err) {
-      out.textContent = err.message === 'folder not shared' ? 'Can\u2019t read that folder. In Drive, share it as \u201cAnyone with the link\u201d.' : `Couldn\u2019t read the folder (${err.message}).`;
-    }
-  });
   $('icsHelp').addEventListener('click', (e) => { e.preventDefault(); settingsSheet.close(); openGuide('calendars'); });
 
   let draftLoc = null;
@@ -2018,8 +2029,7 @@
     const tourSel = form.elements.showcaseMinutes;
     tourSel.querySelector('option[value="always"]').disabled = !hasPlus();
     if (!hasPlus() && tourSel.value === 'always') tourSel.value = '5';
-    $('photoLink').value = cfg.photoFolder ? `https://drive.google.com/drive/folders/${cfg.photoFolder}` : '';
-    $('photoResult').textContent = '';
+    drawPhotoSettings(true);
     draftIcs = (cfg.ics || []).map((c) => ({ ...c }));
     drawIcs();
     $('icsResult').textContent = '';
@@ -2160,7 +2170,6 @@
     for (const el of form.elements) if (el.name && el.name in cfg) cfg[el.name] = el.value.trim();
     if (draftLoc) Object.assign(cfg, draftLoc);
     cfg.ics = draftIcs;
-    if (hasPlus()) cfg.photoFolder = Photos.folderId($('photoLink').value);
     if (draftLayout && hasPlus()) cfg.layout = serializeLayout(draftLayout);
     document.querySelectorAll('#acctBox .acct').forEach((el) => {
       const acct = el.dataset.a;

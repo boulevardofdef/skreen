@@ -5,13 +5,18 @@ import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.graphics.PixelFormat;
 import android.media.AudioAttributes;
+import android.media.ExifInterface;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
 import android.graphics.drawable.ColorDrawable;
@@ -22,6 +27,7 @@ import android.net.Network;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.speech.RecognizerIntent;
 import android.view.View;
@@ -80,6 +86,8 @@ public class MainActivity extends Activity {
     private static final int REQ_VOICE = 2;
     private static final int REQ_ACCOUNT = 3;
     private static final int REQ_AUTH = 4;
+    private static final int REQ_PICK = 5;
+    private static final int MAX_PHOTOS = 300;
     private PlusBilling billing;
     private MediaPlayer alarmPlayer;
 
@@ -133,6 +141,8 @@ public class MainActivity extends Activity {
         final WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
                 .setDomain(HOST)
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                // The pictures chosen in Settings → Photos, copied into the app's private storage.
+                .addPathHandler("/skreen-photos/", new WebViewAssetLoader.InternalStoragePathHandler(this, photosDir()))
                 .build();
 
         web = new WebView(this);
@@ -280,6 +290,15 @@ public class MainActivity extends Activity {
             authorize(true, pendingAuthRequest, name);
             return;
         }
+        if (requestCode == REQ_PICK) {
+            if (resultCode != RESULT_OK || data == null) { notifyPhotos(0, 0, true); return; }
+            final List<Uri> picked = new ArrayList<>();
+            ClipData clip = data.getClipData();
+            if (clip != null) { for (int i = 0; i < clip.getItemCount(); i++) picked.add(clip.getItemAt(i).getUri()); }
+            else if (data.getData() != null) picked.add(data.getData());
+            new Thread(() -> copyPhotos(picked)).start();
+            return;
+        }
         if (requestCode == REQ_AUTH) {
             if (resultCode != RESULT_OK || data == null) { deliverToken(pendingAuthRequest, null, "cancelled"); return; }
             try {
@@ -410,6 +429,68 @@ public class MainActivity extends Activity {
         try { alarmPlayer.stop(); } catch (Exception ignored) { }
         try { alarmPlayer.release(); } catch (Exception ignored) { }
         alarmPlayer = null;
+    }
+
+    // ─── Photos: chosen with Android's own picker (which includes Google Photos), shrunk and kept here ───
+
+    private File photosDir() {
+        File d = new File(getFilesDir(), "photos");
+        //noinspection ResultOfMethodCallIgnored
+        d.mkdirs();
+        return d;
+    }
+
+    private String[] photoNames() {
+        String[] names = photosDir().list((dir, name) -> name.endsWith(".jpg"));
+        if (names == null) return new String[0];
+        Arrays.sort(names);
+        return names;
+    }
+
+    private void notifyPhotos(int done, int total, boolean finished) {
+        final String js = "window.skreenPhotos && window.skreenPhotos(" + done + "," + total + "," + finished + "," + photoNames().length + ")";
+        runOnUiThread(() -> { if (web != null) web.evaluateJavascript(js, null); });
+    }
+
+    private void copyPhotos(List<Uri> uris) {
+        int total = uris.size(), done = 0;
+        for (Uri uri : uris) {
+            if (photoNames().length >= MAX_PHOTOS) break;
+            try { saveShrunk(uri); } catch (Exception | OutOfMemoryError ignored) { }
+            notifyPhotos(++done, total, false);
+        }
+        notifyPhotos(done, total, true);
+    }
+
+    /** Reads one picture, scales it to at most 2048 pixels on its long side, upright, and stores it as a JPEG. */
+    private void saveShrunk(Uri uri) throws Exception {
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        try (InputStream in = getContentResolver().openInputStream(uri)) { BitmapFactory.decodeStream(in, null, bounds); }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return;
+        int longSide = Math.max(bounds.outWidth, bounds.outHeight), sample = 1;
+        while (longSide / (sample * 2) >= 2048) sample *= 2;
+        BitmapFactory.Options opts = new BitmapFactory.Options();
+        opts.inSampleSize = sample;
+        Bitmap bmp;
+        try (InputStream in = getContentResolver().openInputStream(uri)) { bmp = BitmapFactory.decodeStream(in, null, opts); }
+        if (bmp == null) return;
+        int degrees = 0;
+        try (InputStream in = getContentResolver().openInputStream(uri)) {
+            int o = new ExifInterface(in).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+            degrees = o == ExifInterface.ORIENTATION_ROTATE_90 ? 90 : o == ExifInterface.ORIENTATION_ROTATE_180 ? 180 : o == ExifInterface.ORIENTATION_ROTATE_270 ? 270 : 0;
+        } catch (Exception ignored) { }
+        float scale = Math.min(1f, 2048f / Math.max(bmp.getWidth(), bmp.getHeight()));
+        if (degrees != 0 || scale < 1f) {
+            Matrix m = new Matrix();
+            if (scale < 1f) m.postScale(scale, scale);
+            if (degrees != 0) m.postRotate(degrees);
+            Bitmap out = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), m, true);
+            if (out != bmp) { bmp.recycle(); bmp = out; }
+        }
+        File file = new File(photosDir(), "p" + System.currentTimeMillis() + "_" + (System.nanoTime() % 100000) + ".jpg");
+        try (FileOutputStream os = new FileOutputStream(file)) { bmp.compress(Bitmap.CompressFormat.JPEG, 85, os); }
+        bmp.recycle();
     }
 
     private void notifyUpdate(String kind, String value) {
@@ -641,6 +722,40 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void buyPlus() {
             runOnUiThread(() -> { if (billing != null) billing.buy(MainActivity.this); });
+        }
+
+        /** Opens Android's photo picker so the user can choose pictures for the slideshow. Progress: window.skreenPhotos(done, total, finished, count). */
+        @JavascriptInterface
+        public void pickPhotos() {
+            runOnUiThread(() -> {
+                Intent intent;
+                if (Build.VERSION.SDK_INT >= 33) {
+                    intent = new Intent(MediaStore.ACTION_PICK_IMAGES);
+                    intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, Math.min(100, MediaStore.getPickImagesMaxLimit()));
+                } else {
+                    intent = new Intent(Intent.ACTION_GET_CONTENT);
+                    intent.setType("image/*");
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                }
+                try {
+                    startActivityForResult(intent, REQ_PICK);
+                } catch (ActivityNotFoundException e) {
+                    notifyPhotos(0, 0, true);
+                }
+            });
+        }
+
+        /** The saved pictures, as a JSON array of file names (served under /skreen-photos/). */
+        @JavascriptInterface
+        public String listPhotos() {
+            return new org.json.JSONArray(Arrays.asList(photoNames())).toString();
+        }
+
+        @JavascriptInterface
+        public void clearPhotos() {
+            for (String n : photoNames()) //noinspection ResultOfMethodCallIgnored
+                new File(photosDir(), n).delete();
         }
 
         /** A finished timer: loop the alarm tone until stopAlarm(). */

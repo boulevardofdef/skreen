@@ -76,10 +76,9 @@ The app lives at `https://app.skreen.fyi/`; the bare `skreen.fyi` is reserved fo
 
 ## Photos widget (Skreen+)
 
-- Reads a Google Drive folder shared "Anyone with the link" using a Drive **API key** (no sign-in, no access to the rest of the Drive). Create one in Google Cloud: enable the **Google Drive API**; Credentials → Create credentials → API key; restrict it to the Google Drive API and to the website `https://app.skreen.fyi/*`; put it in `API_KEY` at the top of `dashboard/photos.js`. Until then the widget says photos aren't switched on yet.
-- Google Photos albums can't be read by apps; the in-app text says so.
-- Pictures are loaded from Drive's thumbnail address, which Google could change; if it stops working, the fix is in `Photos.url`.
+- **My photos:** Settings → Photos → Choose photos opens Android's own picker (the system photo picker on Android 13+, which includes Google Photos; the file chooser on older versions). Skreen copies each picture, shrunk to 2048 px, into its private storage (`files/photos`, up to 300) and serves them to the page through `WebViewAssetLoader` at `/skreen-photos/`. No Google permissions or API keys are involved. Native code: `pickPhotos`, `listPhotos`, `clearPhotos`, `copyPhotos`/`saveShrunk` in `MainActivity.java`.
+- **Art gallery:** the relay's `/art` route returns public-domain paintings from the Art Institute of Chicago's API (CC0) with image addresses on their IIIF service. Keep the credit in Settings. If the API's query format changes, the fix is in `worker/index.js`.
 
 ## The relay (Cloudflare Worker)
 
-`worker/index.js` serves forecasts, city search and place names, fetches published calendar links (`/ics`), and the Wikipedia "In the news" list (`/news`, CC BY-SA: keep the credit under the widget). **Redeploy it** (paste the file into the Cloudflare editor, Deploy) whenever it changes. It keeps nothing except short-lived cache entries (calendar links are cached under a hash, not the link).
+`worker/index.js` serves forecasts, city search and place names, public-domain art (`/art`), fetches published calendar links (`/ics`), and the Wikipedia "In the news" list (`/news`, CC BY-SA: keep the credit under the widget). **Redeploy it** (paste the file into the Cloudflare editor, Deploy) whenever it changes. It keeps nothing except short-lived cache entries (calendar links are cached under a hash, not the link).

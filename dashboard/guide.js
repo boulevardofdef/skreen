@@ -83,14 +83,14 @@ window.Guide = (() => {
 <ul>
   <li><b>Several Google accounts</b>, and several calendars and to-do lists from each, shown together.</li>
   <li><b>Your own layout.</b> Show or hide the clock, weather, schedule and to-do list, and put them in any order.</li>
-  <li><b>Photos.</b> A slideshow from a Google Drive folder, on the main screen and in the big-screen tour.</li>
+  <li><b>Photos.</b> A slideshow on the main screen and in the big-screen tour: either public-domain paintings (no setup), or your own pictures chosen from Google Photos or the tablet.</li>
   <li><b>Dinner planner.</b> What's for dinner each day this week, kept in a Google Tasks list. Add it under Settings → Layout. <button class="btn ghost small" data-go="dinners">How it works →</button></li>
   <li><b>In the news.</b> A short list of today's top stories from Wikipedia's front page, as a widget and in the big-screen tour. Add it under Settings → Layout.</li>
   <li><b>Always-on slideshow.</b> The big-screen tour can run all the time instead of every few minutes.</li>
 </ul>
 <h2>Buying and restoring</h2>
 <p>Open <b>Settings → Skreen+</b> and tap <b>Unlock Skreen+</b>. You pay once through Google Play, and it's yours for good. Installed Skreen on another tablet signed in to the same Google Play account? Open Settings there and it unlocks by itself.</p>
-<div class="note">Photos need a Google Drive folder shared as <b>Anyone with the link</b>. Google Photos albums can't be read by apps, so put copies of the pictures in a Drive folder.</div>`
+<div class="note">For your own pictures, open <b>Settings → Photos</b>, choose <b>My photos</b> and tap <b>Choose photos</b>. Android's photo picker opens (it includes Google Photos). Skreen keeps a smaller copy on the tablet only, so to change them just choose again.</div>`
     },
     {
       id: 'timers', title: 'Timers',

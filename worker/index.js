@@ -4,6 +4,7 @@
 //   /reverse?lat=…&lon=…                       → coordinates to a place name
 //   /ics?u=<https calendar link>               → fetches a published calendar (ICS) for the browser
 //   /news                                      → today's "In the news" stories from Wikipedia (CC BY-SA)
+//   /art                                       → public-domain paintings (Art Institute of Chicago, CC0) for the photo slideshow
 // The services we call want every request to identify the app and a contact address, and ask
 // clients to cache. Browsers can't set User-Agent, so this does both, and stores nothing else.
 const CONTACT = 'Skreen/1.0 (+https://github.com/boulevardofdef/skreen; tiszenkel@gmail.com)';
@@ -100,6 +101,24 @@ export default {
           return { text: plain(n.story || ''), url: page || '' };
         }).filter((s) => s.text).slice(0, 8);
         if (stories.length) return json({ stories }, 200, { 'Cache-Control': 'public, max-age=900' });
+      }
+      return json({ error: 'upstream' }, 502);
+    }
+
+    if (url.pathname === '/art') {
+      // Public-domain paintings from the Art Institute of Chicago's open API (CC0). Which hundred we offer
+      // changes daily; each picture is served by their image service at a size that suits a wall display.
+      const base = 'https://api.artic.edu/api/v1/artworks/search?query[term][is_public_domain]=true&limit=100&fields=id,title,artist_title,image_id';
+      const day = Math.floor(Date.now() / 86400000);
+      const attempts = [`${base}&query[term][artwork_type_title]=Painting&page=${1 + (day % 6)}`, `${base}&query[term][artwork_type_title]=Painting&page=1`, `${base}&page=1`];
+      for (const [n, q] of attempts.entries()) {
+        const res = await cached(ctx, `a/${day}/${n}`, 86400, () => fetch(q, { headers: { 'User-Agent': CONTACT, 'AIC-User-Agent': CONTACT, Accept: 'application/json' } }));
+        if (!res) continue;
+        const items = ((await res.json()).data || []).filter((a) => a.image_id).map((a) => ({
+          title: a.title || '', artist: a.artist_title || '',
+          image: `https://www.artic.edu/iiif/2/${a.image_id}/full/1686,/0/default.jpg`,
+        }));
+        if (items.length >= 5) return json({ items }, 200, { 'Cache-Control': 'public, max-age=3600' });
       }
       return json({ error: 'upstream' }, 502);
     }
