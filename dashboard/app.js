@@ -1206,10 +1206,10 @@
     $('plusCard').classList.toggle('on', on);
     $('layoutField').classList.toggle('locked', !on);
     $('plusText').innerHTML = on
-      ? '<b>Skreen Plus is on.</b> Thank you. Everything else in Skreen stays free.'
-      : 'Choose and arrange what\u2019s on your screen, with more to come: several Google accounts, and a Skreen calendar and to-do list in the cloud. Everything you see on the main screen today stays free.';
+      ? '<b>Skreen+ is unlocked.</b> Thank you. It\u2019s yours for good.'
+      : 'One payment unlocks Skreen+: choose and arrange what\u2019s on your screen, with more on the way. Everything you see on the main screen today stays free.';
     $('plusBuy').hidden = on || !st.canBuy;
-    $('plusBuy').textContent = st.price ? `Get Skreen Plus \u00b7 ${st.price}` : 'Get Skreen Plus';
+    $('plusBuy').textContent = st.price ? `Unlock Skreen+ \u00b7 ${st.price}` : 'Unlock Skreen+';
     $('plusForget').hidden = !(on && st.code);
     $('plusCodeBox').hidden = on;
   }

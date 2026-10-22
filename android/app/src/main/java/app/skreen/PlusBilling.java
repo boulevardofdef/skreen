@@ -20,9 +20,9 @@ import org.json.JSONObject;
 import java.util.List;
 
 /**
- * Skreen Plus through Google Play Billing: one subscription product.
+ * Skreen Plus through Google Play Billing: one non-consumable, one-time in-app product.
  *
- * Create a subscription with PRODUCT_ID in the Play Console (one base plan). Without Play
+ * Create a one-time product with PRODUCT_ID in the Play Console and set its price. Without Play
  * (a sideloaded build) setup simply fails and the answer stays "not subscribed".
  * The last known answer is cached so Plus keeps working offline.
  */
@@ -88,23 +88,20 @@ final class PlusBilling implements com.android.billingclient.api.PurchasesUpdate
                 .setProductList(java.util.Collections.singletonList(
                         QueryProductDetailsParams.Product.newBuilder()
                                 .setProductId(PRODUCT_ID)
-                                .setProductType(BillingClient.ProductType.SUBS)
+                                .setProductType(BillingClient.ProductType.INAPP)
                                 .build()))
                 .build();
         client.queryProductDetailsAsync(params, (result, list) -> {
             if (result.getResponseCode() != BillingClient.BillingResponseCode.OK || list.isEmpty()) return;
             details = list.get(0);
-            List<ProductDetails.SubscriptionOfferDetails> offers = details.getSubscriptionOfferDetails();
-            if (offers != null && !offers.isEmpty()) {
-                List<ProductDetails.PricingPhase> phases = offers.get(0).getPricingPhases().getPricingPhaseList();
-                if (!phases.isEmpty()) price = phases.get(phases.size() - 1).getFormattedPrice();
-            }
+            ProductDetails.OneTimePurchaseOfferDetails offer = details.getOneTimePurchaseOfferDetails();
+            if (offer != null) price = offer.getFormattedPrice();
             changed();
         });
     }
 
     private void refreshPurchases() {
-        client.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
+        client.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build(),
                 (result, purchases) -> {
                     if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) apply(purchases);
                 });
@@ -125,13 +122,10 @@ final class PlusBilling implements com.android.billingclient.api.PurchasesUpdate
 
     void buy(Activity activity) {
         if (client == null || details == null) return;
-        List<ProductDetails.SubscriptionOfferDetails> offers = details.getSubscriptionOfferDetails();
-        if (offers == null || offers.isEmpty()) return;
         BillingFlowParams params = BillingFlowParams.newBuilder()
                 .setProductDetailsParamsList(java.util.Collections.singletonList(
                         BillingFlowParams.ProductDetailsParams.newBuilder()
                                 .setProductDetails(details)
-                                .setOfferToken(offers.get(0).getOfferToken())
                                 .build()))
                 .build();
         client.launchBillingFlow(activity, params);

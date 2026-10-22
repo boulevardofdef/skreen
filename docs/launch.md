@@ -50,11 +50,12 @@ Forecasts come from MET Norway through the Cloudflare Worker in `worker/` (free 
 
 ## Skreen Plus (paid features)
 
-- **Play Console:** create one subscription with product ID `skreen_plus` (one base plan, e.g. monthly) and set the price. The app reads the price from Play and shows "Get Skreen Plus · price". `PlusBilling.java` handles purchase, acknowledgement and restore on launch; the answer is cached so Plus works offline. Billing only works for builds installed from Play (internal testing track is fine).
+- **Play Console:** create one **one-time (non-consumable) in-app product** with product ID `skreen_plus` and set its price ($14.99 launch price; you can raise it later and existing buyers keep it). The app reads the price from Play and shows "Unlock Skreen+ · price". `PlusBilling.java` handles purchase, acknowledgement and restore on launch; the answer is cached so Plus works offline. Billing only works for builds installed from Play (internal testing track is fine).
 - **What is gated:** `Plus.active()` in `dashboard/plus.js`. Today that covers the Layout editor; add new paid features by checking it.
 - **Unlock code:** a personal code (its hash lives in `plus.js`; the code itself is not in the repo) unlocks Plus on sideloaded builds, the owner's devices and testers. To make a new one: pick a random `SKR-XXXX-XXXX-XXXX-XXXX`, put `sha256("skreen-plus:" + code)` in `CODE_HASH`. Treat it like a password: anyone with the code has Plus.
 - **Limits of the lock:** it runs on the device, so a determined person can bypass it. Fine for layout options; the cloud calendar and to-do list will be enforced on the server.
-- **iOS:** needs StoreKit (Apple in-app purchase) in the iOS shell, since Apple requires it for digital features.
+- **iOS:** needs StoreKit (Apple in-app purchase, a non-consumable) in the iOS shell, since Apple requires it for digital features.
+- **Pricing:** $14.99 one-time, promoted as a launch price. Careful with "everything": say what Plus includes today, and decide before launch whether future server-hosted features (cloud calendar and to-do) fit a one-time price.
 
 ## Custom domain (skreen.fyi)
 
