@@ -32,8 +32,8 @@
   const canSignIn = () => !!(window.SkreenNative && window.SkreenNative.signIn);
   const usingGoogle = () => canSignIn() && !!cfg.signedIn;
   const noSource = () => !usingGoogle() && !(cfg.ics && cfg.ics.length);
-  // Nothing is connected yet: show an empty skeleton, never made-up data. (Add ?demo to the address to see sample data, for screenshots.)
-  const DEV_DEMO = new URLSearchParams(location.search).has('demo');
+  // Nothing is connected yet: show an empty skeleton, never made-up data. (Add ?test=yes, or ?demo, to the address to see sample data, for testing and screenshots.)
+  const DEV_DEMO = (() => { const q = new URLSearchParams(location.search); return q.has('demo') || q.get('test') === 'yes'; })();
   const isDemo = () => DEV_DEMO && noSource();
 
 
