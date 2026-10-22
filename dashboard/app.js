@@ -274,7 +274,7 @@
 
   // Slide the whole layout a few pixels, slowly, so no edge stays on the same pixels.
   function nudgeLayout(now) {
-    const targets = [$('dash'), $('gearBtn'), $('status')];
+    const targets = [$('dash'), $('gearBtn'), $('timerBtn'), $('timerBar'), $('status')];
     if (cfg.pixelShift !== '1') { targets.forEach((el) => { el.style.transform = ''; }); return; }
     const m = Math.floor(now.getTime() / 60000);
     const t = `translate(${Math.round(Math.sin(m / 11) * 7)}px, ${Math.round(Math.cos(m / 13) * 5)}px)`;
@@ -707,10 +707,14 @@
   addSheet.addEventListener('click', (e) => { if (e.target === addSheet) addSheet.close(); });
 
   // Voice input: the Android app uses the system recognizer; Chrome uses its own.
+  let voiceSink = null;   // who asked: the timer sheet sets this, otherwise the Add box gets the words
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const capFirst = (t) => t.charAt(0).toUpperCase() + t.slice(1);
   if (NATIVE && NATIVE.startVoice) {
-    window.skreenVoice = (text) => { if (text) { $('addInput').value = capFirst(text); $('addInput').focus(); } };
+    window.skreenVoice = (text) => {
+      if (voiceSink) { const f = voiceSink; voiceSink = null; if (text) f(text); return; }
+      if (text) { $('addInput').value = capFirst(text); $('addInput').focus(); }
+    };
     $('micBtn').addEventListener('click', () => NATIVE.startVoice());
   } else if (!SR) {
     $('micBtn').hidden = true;
@@ -788,6 +792,203 @@
   function weatherSummary(w) {
     const r = rainOutlook(w);
     return r ? `${r.wet ? Icons.umbrella : Icons.check}${esc(r.text)}` : '';
+  }
+
+
+  // ─── Timers (free) ──────────────────────────────────────────────────────────
+  // Up to four named countdowns. They are stored as absolute end times, so they carry on through a
+  // reload or restart. When one finishes a full-screen alarm appears over everything (night mode and
+  // the slideshow included) and the app plays the tablet's alarm sound until you stop it.
+
+  const TIMER_KEY = 'skreen-timers', MAX_TIMERS = 4;
+  let timers = [];
+  try { timers = JSON.parse(localStorage.getItem(TIMER_KEY) || '[]').filter((t) => t && t.end && t.end > Date.now() - 10 * 60000); }   // one that finished long ago, while the app was off, is forgotten
+  catch (_) { timers = []; }
+  const saveTimers = () => { try { localStorage.setItem(TIMER_KEY, JSON.stringify(timers)); } catch (_) {} };
+  const alarm = { on: false, soundTimer: null };
+  let timerTick = null, timerDigits = '';
+
+  const fmtClock = (ms) => {
+    const s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+    return h ? `${h}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}` : `${m}:${String(r).padStart(2, '0')}`;
+  };
+
+  // Sound: the Android app plays the tablet's alarm tone; elsewhere a web-audio beep (unlocked by the
+  // tap that started the timer).
+  let audioCtx = null;
+  const unlockAudio = () => {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (_) {}
+  };
+  document.addEventListener('pointerdown', unlockAudio, { once: true, capture: true });
+  function beep() {
+    if (!audioCtx) return;
+    [0, 0.22, 0.44].forEach((d) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime + d;
+      o.type = 'square'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + 0.18);
+    });
+  }
+  function startSound() {
+    stopSound();
+    if (NATIVE && NATIVE.playAlarm) { try { NATIVE.playAlarm(); } catch (_) {} } else { beep(); alarm.soundTimer = setInterval(beep, 1500); }
+    alarm.stopAt = setTimeout(stopSound, 3 * 60000);   // never ring all night; the screen stays red until you stop it
+  }
+  function stopSound() {
+    clearInterval(alarm.soundTimer); clearTimeout(alarm.stopAt);
+    if (NATIVE && NATIVE.stopAlarm) { try { NATIVE.stopAlarm(); } catch (_) {} }
+  }
+
+  function ringing() { return timers.filter((t) => t.end <= Date.now()); }
+
+  function renderTimers() {
+    const bar = $('timerBar'), now = Date.now();
+    document.body.classList.toggle('has-timers', timers.length > 0);
+    bar.hidden = !timers.length;
+    const night = !$('night').hidden;
+    bar.innerHTML = timers.map((t) => `<button type="button" class="tpill${t.end <= now ? ' ring' : ''}${night ? ' dim' : ''}" data-tid="${esc(t.id)}">${t.label ? esc(t.label) : ''}<b>${t.end <= now ? 'DONE' : fmtClock(t.end - now)}</b></button>`).join('');
+    if ($('timerSheet').open) renderTimerSheet();
+  }
+
+  function timerLoop() {
+    clearInterval(timerTick);
+    timerTick = null;
+    if (!timers.length) { renderTimers(); return; }
+    const step = () => {
+      const done = ringing();
+      if (done.length && !alarm.on) startAlarm();
+      if (alarm.on) {
+        if (!done.length) closeAlarm(); else $('alarmWhat').textContent = done.map((t) => t.label || fmtClock(t.dur)).join(' · ');
+      }
+      renderTimers();
+    };
+    step();
+    timerTick = setInterval(step, 1000);
+  }
+
+  function startAlarm() {
+    alarm.on = true;
+    const sheet = $('alarmSheet');
+    if (!sheet.open) sheet.showModal();
+    startSound();
+  }
+  function closeAlarm() {
+    alarm.on = false;
+    stopSound();
+    if ($('alarmSheet').open) $('alarmSheet').close();
+  }
+  $('alarmStop').addEventListener('click', () => {
+    timers = timers.filter((t) => t.end > Date.now());
+    saveTimers(); closeAlarm(); timerLoop();
+  });
+  $('alarmMore').addEventListener('click', () => {
+    timers.forEach((t) => { if (t.end <= Date.now()) { t.end = Date.now() + 5 * 60000; t.dur = 5 * 60000; } });
+    saveTimers(); closeAlarm(); timerLoop();
+  });
+  $('alarmSheet').addEventListener('cancel', (e) => e.preventDefault());   // Escape/back must not silently drop the alarm
+
+  function addTimer(ms, label) {
+    if (timers.length >= MAX_TIMERS) { showToast('That’s the most timers Skreen can run'); return false; }
+    timers.push({ id: Math.random().toString(36).slice(2, 8), label: (label || '').trim().slice(0, 20), end: Date.now() + ms, dur: ms });
+    saveTimers(); timerLoop();
+    return true;
+  }
+
+  // The keypad fills in from the right, like a microwave: 1, 0, 0, 0 reads 00:10:00.
+  const digitsToMs = (d) => {
+    const p = d.padStart(6, '0'), h = +p.slice(0, 2), m = +p.slice(2, 4), s = +p.slice(4, 6);
+    return ((h * 60 + m) * 60 + s) * 1000;
+  };
+  function renderEntry() {
+    const p = timerDigits.padStart(6, '0');
+    $('timerRead').textContent = `${p.slice(0, 2)}:${p.slice(2, 4)}:${p.slice(4, 6)}`;
+    $('timerRead').classList.toggle('set', !!timerDigits);
+    $('timerStart').disabled = !digitsToMs(timerDigits);
+  }
+  function setEntryMs(ms) {
+    const s = Math.round(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+    timerDigits = String(h * 10000 + m * 100 + r).replace(/^0+/, '').slice(-6);
+    renderEntry();
+  }
+  function renderTimerSheet() {
+    const now = Date.now();
+    $('timerRunning').innerHTML = timers.map((t) => `<div class="trow"><span class="t-name">${esc(t.label || 'Timer')}</span><span class="t-left">${t.end <= now ? 'DONE' : fmtClock(t.end - now)}</span>
+      <button type="button" class="btn ghost small" data-more="${esc(t.id)}">+1 min</button><button type="button" class="btn ghost small" data-cancel="${esc(t.id)}">Cancel</button></div>`).join('');
+  }
+  function openTimerSheet() {
+    timerDigits = ''; $('timerLabel').value = '';
+    renderEntry(); renderTimerSheet();
+    if (!$('timerSheet').open) $('timerSheet').showModal();
+  }
+  $('timerBtn').innerHTML = Icons.timer;
+  $('timerMic').innerHTML = Icons.mic;
+  $('timerBtn').addEventListener('click', openTimerSheet);
+  $('timerBar').addEventListener('click', (e) => { if (e.target.closest('.tpill')) { if (alarm.on) return; openTimerSheet(); } });
+  $('timerClose').addEventListener('click', () => $('timerSheet').close());
+  $('timerSheet').addEventListener('click', (e) => { if (e.target === $('timerSheet')) $('timerSheet').close(); });
+  $('timerPresets').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-min]');
+    if (b) setEntryMs(+b.dataset.min * 60000);
+  });
+  $('timerPad').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-k]');
+    if (!b) return;
+    if (b.dataset.k === 'back') timerDigits = timerDigits.slice(0, -1);
+    else timerDigits = (timerDigits + b.dataset.k).replace(/^0+/, '').slice(-6);
+    renderEntry();
+  });
+  $('timerStart').addEventListener('click', () => {
+    unlockAudio();
+    const ms = digitsToMs(timerDigits);
+    if (ms && addTimer(ms, $('timerLabel').value)) $('timerSheet').close();
+  });
+  $('timerRunning').addEventListener('click', (e) => {
+    const more = e.target.closest('[data-more]'), cancel = e.target.closest('[data-cancel]');
+    if (more) { const t = timers.find((x) => x.id === more.dataset.more); if (t) { t.end += 60000; t.dur += 60000; saveTimers(); timerLoop(); } }
+    if (cancel) { timers = timers.filter((x) => x.id !== cancel.dataset.cancel); saveTimers(); timerLoop(); if (!timers.length) $('timerSheet').close(); }
+  });
+
+  // "ten minutes", "1 hour 30 minutes", "an hour and a half", "90 seconds"
+  const WORDS = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, ninety: 90, a: 1, an: 1 };
+  function parseSpoken(text) {
+    const s = String(text || '').toLowerCase().replace(/-/g, ' ').replace(/\bhalf an hour\b/g, '30 minutes');
+    const num = '(\\d+(?:\\.\\d+)?|[a-z]+(?: [a-z]+)?)', unit = '(hours?|hrs?|minutes?|mins?|seconds?|secs?)', half = '(\\s*and a half)?';
+    let total = 0;
+    for (const m of s.matchAll(new RegExp(`${num}${half}\\s*${unit}${half}`, 'g'))) {
+      let n = parseFloat(m[1]);
+      if (isNaN(n)) {
+        const parts = m[1].split(' ');
+        n = parts.length === 2 && WORDS[parts[0]] >= 20 && WORDS[parts[1]] < 10 ? WORDS[parts[0]] + WORDS[parts[1]] : WORDS[parts[parts.length - 1]];
+      }
+      if (n === undefined || isNaN(n)) continue;
+      if (m[2] || m[4]) n += 0.5;
+      const u = m[3][0];
+      total += n * (u === 'h' ? 3600 : u === 'm' ? 60 : 1) * 1000;
+    }
+    return Math.round(total);
+  }
+  function hearTimer(text) {
+    const ms = parseSpoken(text);
+    if (ms) setEntryMs(ms); else showToast(`Didn’t catch a time in “${text}”`);
+  }
+  if (NATIVE && NATIVE.startVoice) {
+    $('timerMic').addEventListener('click', () => { voiceSink = hearTimer; NATIVE.startVoice(); });
+  } else if (!SR) {
+    $('timerMic').hidden = true;
+  } else {
+    let trec = null;
+    $('timerMic').addEventListener('click', () => {
+      if (trec) { trec.stop(); return; }
+      trec = new SR(); trec.lang = navigator.language || 'en-US';
+      trec.onresult = (e) => hearTimer(Array.from(e.results).map((r) => r[0].transcript).join(' '));
+      trec.onend = () => { trec = null; $('timerMic').classList.remove('listening'); };
+      trec.onerror = trec.onend;
+      $('timerMic').classList.add('listening');
+      trec.start();
+    });
   }
 
   // ─── Backgrounds ───────────────────────────────────────────────────────────
@@ -1717,7 +1918,7 @@
   }
   function quietEnough() {
     const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
-    return !dialogOpen() && !tour.on && !refresh.on && !state.mutating && !typing &&
+    return !dialogOpen() && !tour.on && !refresh.on && !state.mutating && !typing && !timers.length &&
       !$('toast').classList.contains('show') && Date.now() - lastTouch > QUIET_MS;
   }
   function maybeSelfReload() { if (newerSite && quietEnough()) location.reload(); }
@@ -1757,6 +1958,7 @@
       }
     }
     tick();
+    timerLoop();
     refreshData();
     refreshWeather();
     nameCurrentLocation();     // also fixes up a location saved earlier as "Current location"

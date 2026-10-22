@@ -11,6 +11,9 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
+import android.media.AudioAttributes;
+import android.media.MediaPlayer;
+import android.media.RingtoneManager;
 import android.graphics.drawable.ColorDrawable;
 import android.location.Address;
 import android.location.Geocoder;
@@ -78,6 +81,7 @@ public class MainActivity extends Activity {
     private static final int REQ_ACCOUNT = 3;
     private static final int REQ_AUTH = 4;
     private PlusBilling billing;
+    private MediaPlayer alarmPlayer;
 
     /** What Skreen asks Google for: read the calendars, and manage tasks (to add and check off items). */
     private static final List<Scope> SCOPES = Arrays.asList(
@@ -316,6 +320,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        stopAlarmSound();
         if (billing != null) billing.end();
         if (connectivity != null && networkCallback != null) {
             try {
@@ -377,6 +382,34 @@ public class MainActivity extends Activity {
                     }
                 })
                 .addOnFailureListener(e -> deliverToken(reqId, null, String.valueOf(e.getMessage())));
+    }
+
+    /** Plays the tablet's alarm tone on a loop (a finished timer) until stopAlarmSound(). */
+    private void startAlarmSound() {
+        stopAlarmSound();
+        try {
+            Uri uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+            if (uri == null) uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            MediaPlayer mp = new MediaPlayer();
+            mp.setAudioAttributes(new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build());
+            mp.setDataSource(this, uri);
+            mp.setLooping(true);
+            mp.prepare();
+            mp.start();
+            alarmPlayer = mp;
+        } catch (Exception e) {
+            alarmPlayer = null;
+        }
+    }
+
+    private void stopAlarmSound() {
+        if (alarmPlayer == null) return;
+        try { alarmPlayer.stop(); } catch (Exception ignored) { }
+        try { alarmPlayer.release(); } catch (Exception ignored) { }
+        alarmPlayer = null;
     }
 
     private void notifyUpdate(String kind, String value) {
@@ -608,6 +641,17 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void buyPlus() {
             runOnUiThread(() -> { if (billing != null) billing.buy(MainActivity.this); });
+        }
+
+        /** A finished timer: loop the alarm tone until stopAlarm(). */
+        @JavascriptInterface
+        public void playAlarm() {
+            runOnUiThread(MainActivity.this::startAlarmSound);
+        }
+
+        @JavascriptInterface
+        public void stopAlarm() {
+            runOnUiThread(MainActivity.this::stopAlarmSound);
         }
 
         @JavascriptInterface

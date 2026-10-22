@@ -91,6 +91,19 @@ window.Guide = (() => {
 <div class="note">Photos need a Google Drive folder shared as <b>Anyone with the link</b>. Google Photos albums can't be read by apps, so put copies of the pictures in a Drive folder.</div>`
     },
     {
+      id: 'timers', title: 'Timers',
+      html: `
+<h1>Timers</h1>
+<p class="lede">Free, and always there: tap the stopwatch button in the bottom-left corner.</p>
+<ul>
+  <li><b>Set a time</b> with the presets (1, 5, 10, 15, 30 minutes, 1 hour) or the number pad. Type 1, 0, 0, 0 for ten minutes, like a microwave. Give it a name if you like, such as <i>Pasta</i>.</li>
+  <li><b>Say it.</b> Tap the microphone and say, for example, <i>"ten minutes"</i> or <i>"an hour and a half"</i>.</li>
+  <li><b>Run up to four at once.</b> They show as big countdowns across the top of the screen, also during the big-screen tour and at night. Tap one to add a minute or cancel it.</li>
+  <li><b>When one finishes</b> the whole screen turns orange and the tablet plays its alarm tone until you tap <b>Stop</b> (or <b>+5 more minutes</b>). The sound uses the tablet's <i>alarm</i> volume, so turn that up in the tablet's sound settings.</li>
+  <li>Timers carry on if Skreen restarts or reloads itself.</li>
+</ul>`
+    },
+    {
       id: 'look', title: 'Backgrounds',
       html: `
 <h1>Backgrounds</h1>

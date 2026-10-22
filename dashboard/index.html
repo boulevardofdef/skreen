@@ -61,6 +61,8 @@
 
   <button class="status" id="status" type="button" hidden></button>
   <button class="gear" id="gearBtn" type="button" aria-label="Settings"></button>
+  <button class="gear timer-btn" id="timerBtn" type="button" aria-label="Timers"></button>
+  <div class="timer-bar" id="timerBar" hidden></div>
 
   <!-- Showcase: big, one thing at a time -->
   <div class="showcase" id="showcase" hidden>
@@ -79,6 +81,44 @@
       <div class="night-next" id="nightNext"></div>
     </div>
   </div>
+
+  <!-- Timers -->
+  <dialog class="sheet timer-sheet" id="timerSheet">
+    <div class="brand-row sm" data-brand></div>
+    <h3>Timers</h3>
+    <div class="timer-running" id="timerRunning"></div>
+    <div class="timer-new">
+      <div class="timer-read" id="timerRead">00:00:00</div>
+      <div class="timer-presets" id="timerPresets">
+        <button type="button" data-min="1">1 min</button><button type="button" data-min="5">5 min</button><button type="button" data-min="10">10 min</button>
+        <button type="button" data-min="15">15 min</button><button type="button" data-min="30">30 min</button><button type="button" data-min="60">1 hr</button>
+      </div>
+      <div class="timer-pad" id="timerPad">
+        <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
+        <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
+        <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
+        <button type="button" data-k="00">00</button><button type="button" data-k="0">0</button><button type="button" data-k="back" aria-label="Delete">&#9003;</button>
+      </div>
+      <div class="timer-row">
+        <input id="timerLabel" type="text" autocomplete="off" placeholder="Name (optional), e.g. Pasta" maxlength="20">
+        <button type="button" class="mic" id="timerMic" aria-label="Say a time"></button>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="timerClose">Close</button>
+      <button type="button" class="btn primary" id="timerStart">Start timer</button>
+    </div>
+  </dialog>
+
+  <!-- Timer finished -->
+  <dialog class="alarm" id="alarmSheet">
+    <div class="alarm-kicker">Time&rsquo;s up</div>
+    <div class="alarm-what" id="alarmWhat"></div>
+    <div class="alarm-actions">
+      <button type="button" class="btn ghost" id="alarmMore">+5 more minutes</button>
+      <button type="button" class="btn primary" id="alarmStop">Stop</button>
+    </div>
+  </dialog>
 
   <!-- Event details -->
   <dialog class="sheet event-sheet" id="eventSheet">
