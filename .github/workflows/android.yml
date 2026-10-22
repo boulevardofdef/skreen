@@ -41,6 +41,10 @@ jobs:
         working-directory: android
         run: gradle assembleSideloadRelease --no-daemon --stacktrace
 
+      - name: Also compile the Play variant (catches store-build breakage early)
+        working-directory: android
+        run: gradle assemblePlayRelease --no-daemon --stacktrace
+
       - name: Name the APK
         run: cp android/app/build/outputs/apk/sideload/release/app-sideload-release.apk Skreen.apk
 
