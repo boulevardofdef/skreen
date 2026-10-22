@@ -271,8 +271,9 @@ public class MainActivity extends Activity {
         if (requestCode == REQ_ACCOUNT) {
             String name = (resultCode == RESULT_OK && data != null) ? data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME) : null;
             if (name == null) { deliverToken(pendingAuthRequest, null, "cancelled"); return; }
-            prefs.edit().putString("account", name).apply();
-            authorize(true, pendingAuthRequest);
+            List<String> all = accounts();
+            if (!all.contains(name)) { all.add(name); saveAccounts(all); }
+            authorize(true, pendingAuthRequest, name);
             return;
         }
         if (requestCode == REQ_AUTH) {
@@ -333,9 +334,30 @@ public class MainActivity extends Activity {
      * succeeds if the user has already granted access; otherwise it shows Google's consent screen.
      * The answer goes back to the page through window.skreenToken(id, token, error).
      */
-    private void authorize(final boolean interactive, final int reqId) {
-        String name = prefs.getString("account", null);
-        if (name == null) { deliverToken(reqId, null, "no_account"); return; }
+    /** The Google accounts signed in to Skreen (the first is the original one). Older versions kept a single "account". */
+    private List<String> accounts() {
+        List<String> out = new ArrayList<>();
+        try {
+            org.json.JSONArray arr = new org.json.JSONArray(prefs.getString("accounts", "[]"));
+            for (int i = 0; i < arr.length(); i++) out.add(arr.getString(i));
+        } catch (Exception ignored) { }
+        String legacy = prefs.getString("account", null);
+        if (legacy != null) {
+            if (!out.contains(legacy)) out.add(0, legacy);
+            saveAccounts(out);
+            prefs.edit().remove("account").apply();
+        }
+        return out;
+    }
+
+    private void saveAccounts(List<String> list) {
+        prefs.edit().putString("accounts", new org.json.JSONArray(list).toString()).apply();
+    }
+
+    private void authorize(final boolean interactive, final int reqId, final String requested) {
+        List<String> all = accounts();
+        String name = requested != null && !requested.isEmpty() ? requested : (all.isEmpty() ? null : all.get(0));
+        if (name == null || !all.contains(name)) { deliverToken(reqId, null, "no_account"); return; }
         AuthorizationRequest request = AuthorizationRequest.builder()
                 .setRequestedScopes(SCOPES)
                 .setAccount(new Account(name, "com.google"))
@@ -469,6 +491,7 @@ public class MainActivity extends Activity {
                 Intent intent = AccountPicker.newChooseAccountIntent(
                         new AccountPicker.AccountChooserOptions.Builder()
                                 .setAllowableAccountsTypes(Arrays.asList("com.google"))
+                                .setAlwaysShowAccountPicker(true)
                                 .build());
                 try {
                     startActivityForResult(intent, REQ_ACCOUNT);
@@ -481,7 +504,27 @@ public class MainActivity extends Activity {
         /** A fresh access token for the account that signed in earlier (silent if access was already granted). */
         @JavascriptInterface
         public void getToken(final int reqId) {
-            runOnUiThread(() -> authorize(false, reqId));
+            runOnUiThread(() -> authorize(false, reqId, null));
+        }
+
+        /** Same, for one particular signed-in account (Skreen+ can show several). */
+        @JavascriptInterface
+        public void getTokenFor(final int reqId, final String account) {
+            runOnUiThread(() -> authorize(false, reqId, account));
+        }
+
+        /** The signed-in Google accounts, as a JSON array of email addresses. */
+        @JavascriptInterface
+        public String getAccounts() {
+            return new org.json.JSONArray(accounts()).toString();
+        }
+
+        /** Forgets one account (the others stay signed in). */
+        @JavascriptInterface
+        public void removeAccount(final String account) {
+            List<String> all = accounts();
+            all.remove(account);
+            saveAccounts(all);
         }
 
         /** Turns coordinates into a place name using the device's geocoder. Answer: window.skreenPlace(id, {city, region, country} | null). */
@@ -569,12 +612,13 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String getAccount() {
-            return prefs.getString("account", "");
+            List<String> all = accounts();
+            return all.isEmpty() ? "" : all.get(0);
         }
 
         @JavascriptInterface
         public void signOut() {
-            prefs.edit().remove("account").apply();
+            prefs.edit().remove("account").remove("accounts").apply();
         }
 
         /** Opens the system's speech recognizer; the result comes back through window.skreenVoice(text). */

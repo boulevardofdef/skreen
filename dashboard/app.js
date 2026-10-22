@@ -13,7 +13,7 @@
     ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
     dayBrightness: 'system', nightBrightness: '3',
-    signedIn: false, calendarIds: [], taskListId: '', welcomed: false,
+    signedIn: false, calSel: {}, listSel: {}, addTo: '', welcomed: false,
   };
   const STORE_KEY = 'skreen-settings';
   const LEGACY_KEY = 'kitchen-dashboard-settings';
@@ -64,7 +64,7 @@
   // ─── State ─────────────────────────────────────────────────────────────────
 
   const state = {
-    events: [], tasks: [], weather: null,
+    events: [], tasks: [], lists: [], weather: null,
     lastSync: null, syncError: null,
     mutating: 0, lastMutation: 0,
     nightDismissedUntil: 0,
@@ -83,26 +83,93 @@
     pendingTokens.delete(id);
     if (token) p.resolve(token); else p.reject(new Error(err || 'no token'));
   };
-  const nativeToken = (method) => new Promise((resolve, reject) => {
+  const nativeToken = (method, arg) => new Promise((resolve, reject) => {
     const id = ++tokenSeq;
     pendingTokens.set(id, { resolve, reject });
-    try { NATIVE[method](id); } catch (e) { pendingTokens.delete(id); reject(e); }
+    try { if (arg === undefined) NATIVE[method](id); else NATIVE[method](id, arg); } catch (e) { pendingTokens.delete(id); reject(e); }
     setTimeout(() => { if (pendingTokens.has(id)) { pendingTokens.delete(id); reject(new Error('timed out')); } }, method === 'signIn' ? 300000 : 30000);
   });
-  if (NATIVE && NATIVE.getToken) Google.init(() => nativeToken('getToken'));
+  if (NATIVE && NATIVE.getToken) Google.init((acct) => (NATIVE.getTokenFor && acct ? nativeToken('getTokenFor', acct) : nativeToken('getToken')));
+
+  // ─── Accounts, calendars and lists (several accounts and lists are Skreen+) ─
+
+  const accountList = () => { try { return NATIVE && NATIVE.getAccounts ? JSON.parse(NATIVE.getAccounts()) : []; } catch (_) { return []; } };
+  const activeAccounts = () => { const all = accountList(); return hasPlus() ? all : all.slice(0, 1); };
+
+  // Older versions kept one flat list of calendar ids and one list id; move them under the first account.
+  (function migrateSelections() {
+    const first = accountList()[0];
+    if (!first || (!(cfg.calendarIds || []).length && !cfg.taskListId)) { if ('calendarIds' in cfg || 'taskListId' in cfg) { delete cfg.calendarIds; delete cfg.taskListId; saveSettings(); } return; }
+    cfg.calSel = cfg.calSel || {}; cfg.listSel = cfg.listSel || {};
+    if ((cfg.calendarIds || []).length) cfg.calSel[first] = cfg.calendarIds;
+    if (cfg.taskListId) cfg.listSel[first] = [cfg.taskListId];
+    delete cfg.calendarIds; delete cfg.taskListId;
+    saveSettings();
+  })();
+
+  // Which task lists are shown: per account, the ticked ones (just one without Skreen+), else Google's default.
+  async function listsFor(acct) {
+    let ids = (cfg.listSel && cfg.listSel[acct]) || [];
+    if (!hasPlus()) ids = ids.slice(0, 1);
+    return ids.length ? ids : [await Google.resolveList(acct, '')];
+  }
+  const listNameCache = new Map();   // account → { at, names }
+  async function listNames(acct) {
+    const hit = listNameCache.get(acct);
+    if (hit && Date.now() - hit.at < 10 * 60000) return hit.names;
+    const names = {};
+    for (const l of await Google.listTaskLists(acct)) names[l.id] = l.title;
+    listNameCache.set(acct, { at: Date.now(), names });
+    return names;
+  }
+  const taskKey = (a, l, id) => `${a}|${l}|${id}`;
+  const withRef = (t, a, l, name) => ({ ...t, rid: t.id, id: taskKey(a, l, t.id), a, l, ln: name || '' });
 
   // One interface, whichever source is in use.
   const backend = {
     async dashboard() {
       const other = Ics.events(cfg.ics, AGENDA_DAYS);   // never throws; one bad link just shows nothing
-      if (!usingGoogle()) return { events: await other, tasks: [] };
-      const [events, tasks] = await Promise.all([Google.events(cfg.calendarIds, AGENDA_DAYS), Google.tasks(cfg.taskListId)]);
-      return { events: events.concat(await other), tasks };
+      if (!usingGoogle()) return { events: await other, tasks: [], lists: [], errors: [] };
+      const perAccount = await Promise.allSettled(activeAccounts().map(async (a) => {
+        const calIds = (cfg.calSel && cfg.calSel[a]) || [];
+        const listIds = await listsFor(a);
+        const names = await listNames(a).catch(() => ({}));
+        const [events, ...taskSets] = await Promise.all([
+          Google.events(a, calIds, AGENDA_DAYS),
+          ...listIds.map((l) => Google.tasks(a, l)),
+        ]);
+        const lists = listIds.map((l) => ({ a, l, name: names[l] || '' }));
+        const tasks = taskSets.flatMap((set, k) => set.map((t) => withRef(t, a, listIds[k], lists[k].name)));
+        return { events, tasks, lists };
+      }));
+      const ok = perAccount.filter((r) => r.status === 'fulfilled').map((r) => r.value);
+      const errors = perAccount.filter((r) => r.status === 'rejected').map((r) => r.reason);
+      if (!ok.length && errors.length) throw errors[0];
+      // The same event can sit on several accounts' calendars; show it once.
+      const seen = new Set(), events = [];
+      for (const ev of ok.flatMap((r) => r.events)) {
+        const k = (ev.uid || ev.id) + '|' + ev.start;
+        if (!seen.has(k)) { seen.add(k); events.push(ev); }
+      }
+      const lists = ok.flatMap((r) => r.lists);
+      const tasks = ok.flatMap((r) => r.tasks);
+      if (lists.length > 1) tasks.forEach((t) => { t.tag = t.ln; });   // say which list each item is on
+      return { events: events.concat(await other), tasks, lists, errors };
     },
-    addTask: (title, who = []) => Google.addTask(cfg.taskListId, title, buildNotes(who)),
-    setNotes: (id, notes) => Google.setNotes(cfg.taskListId, id, notes),
-    setTitle: (id, title) => Google.setTitle(cfg.taskListId, id, title),
-    setDone: (id, done) => Google.setDone(cfg.taskListId, id, done),
+    // New items go to the chosen list, else the first one shown.
+    addTarget() {
+      const lists = state.lists || [];
+      return lists.find((x) => `${x.a}|${x.l}` === cfg.addTo) || lists[0] || null;
+    },
+    async addTask(title, who = []) {
+      const dest = this.addTarget();
+      if (!dest) throw new Error('no list');
+      const t = await Google.addTask(dest.a, dest.l, title, buildNotes(who));
+      return { ...withRef(t, dest.a, dest.l, dest.name), tag: (state.lists || []).length > 1 ? dest.name : '' };
+    },
+    setNotes: (t, notes) => Google.setNotes(t.a, t.l, t.rid, notes),
+    setTitle: (t, title) => Google.setTitle(t.a, t.l, t.rid, title),
+    setDone: (t, done) => Google.setDone(t.a, t.l, t.rid, done),
   };
 
   async function refreshData() {
@@ -116,10 +183,11 @@
     try {
       const data = await backend.dashboard();
       state.events = data.events;
+      state.lists = data.lists;
       // Don't clobber the list while a tap is still being saved.
       if (!state.mutating && Date.now() - state.lastMutation > 4000) state.tasks = decorateTasks(data.tasks);
       state.lastSync = new Date();
-      state.syncError = null;
+      state.syncError = (data.errors || []).length ? ((data.errors[0] instanceof Google.AuthError) ? 'auth' : 'partial') : null;
     } catch (err) {
       state.syncError = err instanceof Google.AuthError ? 'auth' : (err.message || String(err));
       console.warn('Sync failed', err);
@@ -421,7 +489,7 @@
     else if (!open.length) html += `<li class="task task-empty">${Icons.check}All caught up</li>`;
     html += open.map((t) => `
       <li class="task${t.pending ? ' pending' : ''}" data-id="${esc(t.id)}">
-        <span class="box">${Icons.check}</span><span class="body"><span class="label">${esc(t.title)}</span>${chipsHtml(t.who)}</span>
+        <span class="box">${Icons.check}</span><span class="body"><span class="label">${esc(t.title)}</span>${chipsHtml(t.who)}${t.tag ? `<span class="list-tag">${esc(t.tag)}</span>` : ''}</span>
       </li>`).join('');
     if (done.length) {
       html += '<li class="task-rule">Done · last 24h</li>';
@@ -446,7 +514,7 @@
     renderTasks();
     showToast(`Done: ${t.title}`, 'Undo', () => restoreTask(t));
     if (isDemo()) return persistDemo();
-    mutate(() => backend.setDone(t.id, true)).catch(() => {
+    mutate(() => backend.setDone(t, true)).catch(() => {
       t.done = false; t.completed = null; renderTasks();
       showToast('Couldn’t save — check your connection');
     });
@@ -458,7 +526,7 @@
     t.completed = null;
     renderTasks();
     if (isDemo()) return persistDemo();
-    mutate(() => backend.setDone(t.id, false)).catch(() => {
+    mutate(() => backend.setDone(t, false)).catch(() => {
       showToast('Couldn’t undo — check your connection');
     });
   }
@@ -505,7 +573,7 @@
     t.who = who; t.notes = notes;
     renderTasks();
     if (isDemo()) return persistDemo();
-    mutate(() => backend.setNotes(t.id, notes)).catch(() => {
+    mutate(() => backend.setNotes(t, notes)).catch(() => {
       t.who = prev.who; t.notes = prev.notes; renderTasks();
       showToast('Couldn’t save — check your connection');
     });
@@ -524,7 +592,7 @@
     t.title = title;
     renderTasks();
     if (isDemo()) return persistDemo();
-    mutate(() => backend.setTitle(t.id, title)).catch(() => {
+    mutate(() => backend.setTitle(t, title)).catch(() => {
       t.title = prev; renderTasks();
       showToast('Couldn’t save — check your connection');
     });
@@ -603,10 +671,18 @@
   }
   const addWho = whoPicker({ pills: $('whoPills'), box: $('whoNew'), input: $('whoInput'), addBtn: $('whoAdd') });
 
+  $('addToSel').addEventListener('change', (e) => { cfg.addTo = e.target.value; saveSettings(); });
   $('addBtn').addEventListener('click', () => {
     if (!usingGoogle() && !isDemo()) { showToast('Sign in with Google to use the to-do list'); return; }
     $('addInput').value = '';
     addWho.reset();
+    const lists = state.lists || [];
+    $('addToRow').hidden = lists.length < 2;
+    if (lists.length > 1) {
+      const dest = backend.addTarget();
+      const several = new Set(lists.map((x) => x.a)).size > 1;
+      $('addToSel').innerHTML = lists.map((x) => `<option value="${esc(x.a + '|' + x.l)}" ${dest && dest.a === x.a && dest.l === x.l ? 'selected' : ''}>${esc(x.name || 'List')}${several ? ' \u00b7 ' + esc(x.a) : ''}</option>`).join('');
+    }
     addSheet.showModal();
     setTimeout(() => $('addInput').focus(), 50);
   });
@@ -881,6 +957,10 @@
       el.classList.add('error');
       el.dataset.go = 'signin';
       el.innerHTML = '<span class="dot"></span>Google needs you to sign in again · <u>Sign in</u>';
+    } else if (!isDemo() && state.syncError === 'partial') {
+      el.classList.add('error');
+      el.dataset.go = 'fix';
+      el.innerHTML = '<span class="dot"></span>One of your Google accounts can’t be reached right now · <u>Help</u>';
     } else if (!isDemo() && state.syncError) {
       el.classList.add('error');
       el.dataset.go = 'fix';
@@ -1016,12 +1096,14 @@
     return true;
   }
 
-  function signOut() {
-    try { NATIVE.signOut(); } catch (_) {}
+  function removeAccount(acct) {
+    try { NATIVE.removeAccount(acct); } catch (_) {}
     Google.forgetCaches();
-    cfg.signedIn = false; cfg.calendarIds = []; cfg.taskListId = '';
+    if (cfg.calSel) delete cfg.calSel[acct];
+    if (cfg.listSel) delete cfg.listSel[acct];
+    if (!accountList().length) { try { NATIVE.signOut(); } catch (_) {} cfg.signedIn = false; cfg.addTo = ''; }
     saveSettings();
-    state.events = []; state.syncError = null;
+    state.events = []; state.tasks = []; state.lists = []; state.syncError = null;
     refreshData();
   }
 
@@ -1226,7 +1308,7 @@
     $('layoutField').classList.toggle('locked', !on);
     $('plusText').innerHTML = on
       ? '<b>Skreen+ is unlocked.</b> Thank you. It\u2019s yours for good.'
-      : 'One payment unlocks Skreen+: choose and arrange what\u2019s on your screen, with more on the way. Everything you see on the main screen today stays free.';
+      : 'One payment unlocks Skreen+: several Google accounts and to-do lists, your own layout, an always-on slideshow and more. Everything you see on the main screen today stays free.';
     $('plusBuy').hidden = on || !st.canBuy;
     $('plusBuy').textContent = st.price ? `Unlock Skreen+ \u00b7 ${st.price}` : 'Unlock Skreen+';
     $('plusForget').hidden = !(on && st.code);
@@ -1347,34 +1429,71 @@
     refreshAppSection();
   }
 
-  // Android app: show the account, the calendars to choose from, and the to-do list.
-  let calChoices = null, listChoice = null;
+  // Android app: the signed-in Google accounts, with the calendars and to-do lists to show from each.
+  // Several accounts and several lists are Skreen+; without it, the first account and one list.
+  let acctChoices = {};
   async function fillGoogleSection() {
-    calChoices = null; listChoice = null;
-    if (!canSignIn()) return;
-    const status = $('acctStatus'), calList = $('calList'), listSel = $('listSelect');
-    $('signInBtn').hidden = usingGoogle();
-    $('signOutBtn').hidden = !usingGoogle();
-    $('calBox').hidden = $('listBox').hidden = !usingGoogle();
-    if (!usingGoogle()) { status.textContent = 'Not signed in. Showing sample data.'; return; }
-    let who = '';
-    try { who = NATIVE.getAccount ? NATIVE.getAccount() : ''; } catch (_) {}
-    status.textContent = who ? `Signed in as ${who}` : 'Signed in';
-    calList.textContent = 'Loading…'; listSel.innerHTML = '';
-    try {
-      const [cals, lists] = await Promise.all([Google.listCalendars(true), Google.listTaskLists()]);
-      const chosen = new Set(Google.chosenCalendars(cals, cfg.calendarIds).map((c) => c.id));
-      calChoices = cals;
-      calList.innerHTML = cals.map((c, i) => `<label class="check"><input type="checkbox" data-i="${i}" ${chosen.has(c.id) ? 'checked' : ''}><i style="background:${esc(c.color)}"></i><span>${esc(c.name)}</span></label>`).join('');
-      const cur = cfg.taskListId || (lists.find((l) => l.title.toLowerCase() === 'household') || {}).id || '';
-      listChoice = lists;
-      listSel.innerHTML = lists.map((l) => `<option value="${esc(l.id)}" ${l.id === cur ? 'selected' : ''}>${esc(l.title)}</option>`).join('');
-    } catch (e) {
-      calList.textContent = 'Couldn’t load your calendars. Check your connection.';
+    acctChoices = {};
+    const box = $('acctBox');
+    if (!canSignIn()) { box.innerHTML = ''; return; }
+    const all = usingGoogle() ? accountList() : [];
+    const plus = hasPlus();
+    if (!all.length) {
+      box.innerHTML = '<div class="field"><span>Not signed in. Showing sample data.</span><div class="loc-row"><button type="button" class="btn ghost small" data-acct="add">Sign in with Google</button></div></div>';
+      return;
     }
+    box.innerHTML = all.map((a, i) => `<div class="acct" data-a="${esc(a)}">
+        <div class="acct-head"><b>${esc(a)}</b>${i > 0 && !plus ? '<em>needs Skreen+</em>' : ''}<button type="button" class="btn ghost small" data-acct="remove" data-who="${esc(a)}">${all.length === 1 ? 'Sign out' : 'Remove'}</button></div>
+        <div class="acct-body" ${i > 0 && !plus ? 'hidden' : ''}>Loading\u2026</div>
+      </div>`).join('') +
+      `<div class="loc-row"><button type="button" class="btn ghost small" data-acct="add">${plus ? 'Add another Google account' : 'Add another account \u00b7 Skreen+'}</button></div>
+       <label class="field" id="addToField" hidden><span>New to-dos go to</span><select id="addToPick"></select></label>`;
+    await Promise.all(all.map(async (a, i) => {
+      const body = box.querySelector(`.acct[data-a="${CSS.escape(a)}"] .acct-body`);
+      if (i > 0 && !plus) return;
+      try {
+        const [cals, lists] = await Promise.all([Google.listCalendars(a, true), Google.listTaskLists(a)]);
+        const chosenCals = new Set(Google.chosenCalendars(cals, (cfg.calSel || {})[a]).map((c) => c.id));
+        let chosenLists = ((cfg.listSel || {})[a] || []);
+        if (!chosenLists.length) chosenLists = [await Google.resolveList(a, '')];
+        if (!plus) chosenLists = chosenLists.slice(0, 1);
+        acctChoices[a] = { cals, lists };
+        const kind = plus ? 'checkbox' : 'radio';
+        body.innerHTML = `<span class="sub">Calendars to show</span><div class="checks">${cals.map((c) => `<label class="check"><input type="checkbox" data-cal="${esc(c.id)}" ${chosenCals.has(c.id) ? 'checked' : ''}><i style="background:${esc(c.color)}"></i><span>${esc(c.name)}</span></label>`).join('')}</div>
+          <span class="sub">${plus ? 'To-do lists to show' : 'To-do list'}</span><div class="checks">${lists.map((l) => `<label class="check"><input type="${kind}" name="list-${esc(a)}" data-list="${esc(l.id)}" ${chosenLists.includes(l.id) ? 'checked' : ''}><span>${esc(l.title)}</span></label>`).join('')}</div>`;
+      } catch (e) {
+        body.textContent = 'Couldn\u2019t load this account. Check your connection.';
+      }
+    }));
+    drawAddTo();
   }
-  $('signInBtn').addEventListener('click', async () => { if (await startSignIn()) fillGoogleSection(); });
-  $('signOutBtn').addEventListener('click', () => { signOut(); fillGoogleSection(); });
+  // Where new to-dos go, when more than one list is shown.
+  function drawAddTo() {
+    const picks = [];
+    $('acctBox').querySelectorAll('.acct').forEach((el) => {
+      el.querySelectorAll('input[data-list]:checked').forEach((inp) => {
+        const a = el.dataset.a, l = acctChoices[a] && acctChoices[a].lists.find((x) => x.id === inp.dataset.list);
+        picks.push({ v: `${a}|${inp.dataset.list}`, label: `${l ? l.title : 'List'}${accountList().length > 1 ? ' \u00b7 ' + a : ''}` });
+      });
+    });
+    const field = $('addToField');
+    if (!field) return;
+    field.hidden = picks.length < 2;
+    const cur = picks.some((p) => p.v === cfg.addTo) ? cfg.addTo : (picks[0] || {}).v;
+    $('addToPick').innerHTML = picks.map((p) => `<option value="${esc(p.v)}" ${p.v === cur ? 'selected' : ''}>${esc(p.label)}</option>`).join('');
+  }
+  $('acctBox').addEventListener('change', (e) => { if (e.target.matches('input[data-list]')) drawAddTo(); });
+  $('acctBox').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-acct]');
+    if (!b) return;
+    if (b.dataset.acct === 'add') {
+      if (usingGoogle() && !hasPlus() && accountList().length >= 1) { showToast('Several Google accounts are part of Skreen+'); return; }
+      if (await startSignIn()) fillGoogleSection();
+    } else if (b.dataset.acct === 'remove') {
+      removeAccount(b.dataset.who);
+      fillGoogleSection();
+    }
+  });
   $('gearBtn').addEventListener('click', openSettings);
   $('settingsCancel').addEventListener('click', () => settingsSheet.close());
   $('openGuide').addEventListener('click', () => { settingsSheet.close(); openGuide('start'); });
@@ -1425,11 +1544,15 @@
     if (draftLoc) Object.assign(cfg, draftLoc);
     cfg.ics = draftIcs;
     if (draftLayout && hasPlus()) cfg.layout = serializeLayout(draftLayout);
-    if (calChoices) {
-      cfg.calendarIds = Array.from($('calList').querySelectorAll('input:checked')).map((el) => calChoices[+el.dataset.i].id);
-      if (!cfg.calendarIds.length) cfg.calendarIds = calChoices.filter((c) => c.primary).map((c) => c.id);
-    }
-    if (listChoice && $('listSelect').value) cfg.taskListId = $('listSelect').value;
+    document.querySelectorAll('#acctBox .acct').forEach((el) => {
+      const acct = el.dataset.a;
+      if (!acctChoices[acct] || el.querySelector('.acct-body[hidden]')) return;
+      const cals = Array.from(el.querySelectorAll('input[data-cal]:checked')).map((x) => x.dataset.cal);
+      cfg.calSel = cfg.calSel || {}; cfg.listSel = cfg.listSel || {};
+      cfg.calSel[acct] = cals.length ? cals : acctChoices[acct].cals.filter((c) => c.primary).map((c) => c.id);
+      cfg.listSel[acct] = Array.from(el.querySelectorAll('input[data-list]:checked')).map((x) => x.dataset.list);
+    });
+    if ($('addToPick') && !$('addToField').hidden) cfg.addTo = $('addToPick').value;
     Google.forgetCaches();
     saveSettings();
     state.nightDismissedUntil = 0;
@@ -1538,7 +1661,12 @@
     document.querySelectorAll('[data-brand]').forEach((el) => { el.innerHTML = Icons.logo; });
     document.querySelectorAll('[data-plus-logo]').forEach((el) => { el.innerHTML = Icons.logoPlus; });
     applyLayout();
-    Plus.init(() => { applyLayout(); if (settingsSheet.open) drawPlusCard(); });
+    let plusWas = false;
+    Plus.init(() => {
+      applyLayout();
+      if (settingsSheet.open) { drawPlusCard(); fillGoogleSection(); }
+      if (hasPlus() !== plusWas) { plusWas = hasPlus(); refreshData(); }   // Plus decides which accounts and lists are shown
+    });
     if (cfg.lat == null) {
       // Until a location is chosen, try the device's location, then fall back to New York.
       Object.assign(cfg, { lat: 40.713, lon: -74.006, place: 'New York, NY' });

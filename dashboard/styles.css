@@ -582,3 +582,13 @@ body.native .field.native-only { display: flex; }
 .check .btn { margin-left: auto; }
 .credit a { color: var(--accent); }
 @media (orientation: portrait) and (max-width: 700px) { .ics-add { grid-template-columns: 1fr; } }
+
+.native-block { display: none; }
+body.native .native-block { display: block; }
+.acct { border: 1px solid var(--rule); padding: 0.7rem 0.8rem; margin-bottom: 0.8rem; }
+.acct-head { display: flex; align-items: center; gap: 0.6rem; }
+.acct-head b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font: 600 0.95rem/1.2 var(--mono); }
+.acct-head em { font: 600 0.72rem/1 var(--mono); font-style: normal; letter-spacing: 0.08em; color: var(--accent); text-transform: uppercase; }
+.acct-body { margin-top: 0.7rem; }
+.acct-body .sub { display: block; margin: 0.6rem 0 0.3rem; font: 500 0.8rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.list-tag { display: inline-block; margin-top: 0.35rem; font: 500 0.78rem/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--rule); padding: 0.2rem 0.4rem; }

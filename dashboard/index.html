@@ -123,6 +123,7 @@
         <input id="whoInput" type="text" autocomplete="off" placeholder="Name" maxlength="20">
         <button type="button" class="btn ghost small" id="whoAdd">Add person</button>
       </div>
+      <label class="who" id="addToRow" hidden><span class="who-label">List</span><select id="addToSel"></select></label>
       <p class="hint">Separate with commas to add several at once.</p>
       <div class="sheet-actions">
         <button type="button" class="btn ghost" id="addCancel">Cancel</button>
@@ -153,22 +154,8 @@
       </div>
 
       <div class="settings-scroll">
-        <div class="group native-only">Google account</div>
-        <div class="field native-only">
-          <span id="acctStatus">Not signed in</span>
-          <div class="loc-row">
-            <button type="button" class="btn ghost small" id="signInBtn">Sign in with Google</button>
-            <button type="button" class="btn ghost small" id="signOutBtn" hidden>Sign out</button>
-          </div>
-        </div>
-        <div class="field native-only" id="calBox" hidden>
-          <span>Calendars to show</span>
-          <div class="checks" id="calList"></div>
-        </div>
-        <label class="field native-only" id="listBox" hidden>
-          <span>To-do list</span>
-          <select id="listSelect"></select>
-        </label>
+        <div class="group native-only">Google accounts</div>
+        <div class="native-block" id="acctBox"></div>
 
         <div class="group">Other calendars</div>
         <div class="field">
