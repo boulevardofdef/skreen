@@ -42,6 +42,8 @@ function doGet(e) {
         return json_({ task: addTask_(String(p.title || '').trim(), String(p.notes || '')) });
       case 'setNotes':
         return json_({ ok: true, result: setNotes_(p.id, String(p.notes || '')) });
+      case 'setTitle':
+        return json_({ ok: true, result: setTitle_(p.id, String(p.title || '').trim()) });
       case 'completeTask':
         return json_({ ok: true, result: setTaskDone_(p.id, true) });
       case 'uncompleteTask':
@@ -175,6 +177,12 @@ function addTask_(title, notes) {
 function setNotes_(id, notes) {
   if (!id) throw new Error('Missing id');
   Tasks.Tasks.patch({ notes: notes ? notes.slice(0, 2000) : null }, taskListId_(), id);
+  return true;
+}
+
+function setTitle_(id, title) {
+  if (!id || !title) throw new Error('Missing id or title');
+  Tasks.Tasks.patch({ title: title.slice(0, 500) }, taskListId_(), id);
   return true;
 }
 

@@ -136,6 +136,10 @@
       if (usingGoogle()) return Google.setNotes(cfg.taskListId, id, notes);
       return api('setNotes', { id, notes });
     },
+    async setTitle(id, title) {
+      if (usingGoogle()) return Google.setTitle(cfg.taskListId, id, title);
+      return api('setTitle', { id, title });
+    },
     async setDone(id, done) {
       if (usingGoogle()) return Google.setDone(cfg.taskListId, id, done);
       return api(done ? 'completeTask' : 'uncompleteTask', { id });
@@ -309,6 +313,25 @@
   let eventTimer = null;
 
   // Calendar descriptions are often HTML; turn them into plain text (never into live markup).
+  // Escape text, and turn web addresses into links (opened outside the app).
+  function linkify(text) {
+    return esc(text).replace(/https?:\/\/[^\s<>"']+/g, (u) => {
+      const m = u.match(/[.,;:!?)\]]+$/);
+      const tail = m ? m[0] : '';
+      const url = tail ? u.slice(0, -tail.length) : u;
+      return `<a href="${url}" data-ext>${url}</a>${tail}`;
+    });
+  }
+  function openLink(e) {
+    const link = e.target.closest('a[data-ext]');
+    if (!link) return;
+    e.preventDefault();
+    const url = link.getAttribute('href').replace(/&amp;/g, '&');
+    if (NATIVE && NATIVE.openExternal && url.startsWith('https://')) NATIVE.openExternal(url);
+    else window.open(url, '_blank', 'noopener');
+  }
+  document.addEventListener('click', openLink);
+
   function plainText(html) {
     if (!html) return '';
     const withBreaks = String(html).replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|h\d)>/gi, '\n').replace(/<li[^>]*>/gi, '• ');
@@ -335,12 +358,12 @@
         : `${esc(fmtDate(ev.s, longDate))}, ${esc(fmtTime(ev.s))}<small>until ${esc(fmtDate(ev.e, { weekday: 'long', month: 'short', day: 'numeric' }))}, ${esc(fmtTime(ev.e))}</small>`;
     }
     const rows = [['When', when]];
-    if (ev.location) rows.push(['Where', esc(ev.location)]);
-    if (ev.meet && ev.meet !== ev.location) rows.push(['Video', esc(ev.meet)]);
+    if (ev.location) rows.push(['Where', linkify(ev.location)]);
+    if (ev.meet && ev.meet !== ev.location) rows.push(['Video', linkify(ev.meet)]);
     const cal = ev.calendarName || ev.calendar;
     if (cal) rows.push(['Calendar', `<i></i>${esc(cal)}`]);
     const notes = plainText(ev.description);
-    if (notes) rows.push(['Notes', esc(notes)]);
+    if (notes) rows.push(['Notes', linkify(notes)]);
 
     eventSheet.style.setProperty('--c', ev.color || '#ff5b2e');
     $('evTitle').textContent = ev.title;
@@ -505,10 +528,10 @@
 
   function openTask(t) {
     openTaskId = t.id;
-    $('tkTitle').textContent = t.title;
+    $('tkTitle').value = t.title;
     tkWho.reset(t.who || []);
     const rest = parseNotes(t.notes || '').rest.trim();
-    $('tkNotes').innerHTML = rest ? `<div class="ev-row"><b>Notes</b><div>${esc(rest)}</div></div>` : '';
+    $('tkNotes').innerHTML = rest ? `<div class="ev-row"><b>Notes</b><div>${linkify(rest)}</div></div>` : '';
     $('tkDone').textContent = t.done ? 'Restore' : 'Mark done';
     if (!taskSheet.open) taskSheet.showModal();
     clearTimeout(taskTimer);
@@ -536,10 +559,23 @@
     if (t.pending) { showToast('Still saving that one…'); return; }
     openTask(t);
   });
+  function saveTitle(t, title) {
+    const prev = t.title;
+    t.title = title;
+    renderTasks();
+    if (isDemo()) return persistDemo();
+    mutate(() => backend.setTitle(t.id, title)).catch(() => {
+      t.title = prev; renderTasks();
+      showToast('Couldn’t save — check your connection');
+    });
+  }
+
   $('tkSave').addEventListener('click', () => {
     tkWho.commit();
     const t = openedTask();
     if (t) {
+      const title = $('tkTitle').value.trim();
+      if (title && title !== t.title) saveTitle(t, title);
       const now = tkWho.names(), before = (t.who || []).map(nameKey).sort().join('|');
       if (now.map(nameKey).sort().join('|') !== before) saveWho(t, now);
     }

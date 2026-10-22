@@ -150,16 +150,17 @@ button { cursor: pointer; }
 .wx-summary .ico { font-size: 1.5rem; flex: none; color: var(--accent); }
 
 .wx-hours { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.wx-hour { display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem; padding-left: 0.5rem; border-left: 1px solid var(--rule); }
-.wx-hour:first-child { border-left: 0; padding-left: 0; }
+.wx-hours, .wx-days { margin-inline: -0.5rem; }
+.wx-hour { display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem; padding: 0 0.5rem; border-left: 1px solid var(--rule); }
+.wx-hour:first-child { border-left: 0; }
 .wx-hour .h { font: 500 0.82rem/1 var(--mono); color: var(--muted); text-transform: uppercase; white-space: nowrap; }
 .wx-hour .ico { font-size: 1.7rem; }
 .wx-hour .t { font-size: 1.25rem; font-weight: 700; }
 .wx-hour .pop { font: 600 0.8rem/1 var(--mono); color: var(--accent); min-height: 1em; }
 
 .wx-days { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 3px solid var(--ink); padding-top: 0.8rem; }
-.wx-day { display: flex; flex-direction: column; align-items: flex-start; gap: 0.35rem; padding-left: 0.5rem; border-left: 1px solid var(--rule); }
-.wx-day:first-child { border-left: 0; padding-left: 0; }
+.wx-day { display: flex; flex-direction: column; align-items: flex-start; gap: 0.35rem; padding: 0 0.5rem; border-left: 1px solid var(--rule); }
+.wx-day:first-child { border-left: 0; }
 .wx-day .d { font: 600 0.85rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .wx-day .ico { font-size: 2rem; }
 .wx-day .hi { display: block; font-size: 1.3rem; font-weight: 700; }
@@ -357,7 +358,10 @@ body.native .field.native-only { display: flex; }
 /* To-do item details; a bigger target for the check box */
 .task-sheet { width: min(40rem, 92vw); }
 .task-sheet h3 { font-size: 1.9rem; line-height: 1.15; margin: 0 0 0.4rem; overflow-wrap: anywhere; }
+.task-sheet .tk-title { width: 100%; font: 700 1.9rem/1.15 var(--display, inherit); color: inherit; background: transparent; border: 0; border-bottom: 1px dashed var(--rule); padding: 0 0 0.3rem; margin: 0 0 0.6rem; border-radius: 0; }
+.task-sheet .tk-title:focus { outline: 0; border-bottom: 1px solid var(--accent); }
 .task-sheet .ev-rows { margin-top: 1rem; }
+.ev-row a { color: var(--accent); text-decoration: underline; text-underline-offset: 0.18em; word-break: break-all; }
 .task-sheet .sheet-actions .btn:first-child { margin-right: auto; }
 .task .box { position: relative; }
 .task .box::after { content: ""; position: absolute; inset: -0.8rem; }
@@ -467,7 +471,7 @@ body.native .field.native-only { display: flex; }
 .sv-weather .hl { font: 500 max(1.6rem, 4vh)/1.2 var(--mono); color: var(--muted); }
 .sv-weather .rain { display: flex; align-items: center; gap: 1.2vh; font-size: max(1.6rem, 4vh); font-weight: 500; }
 .sv-weather .rain .ico { width: 1.2em; height: 1.2em; }
-.sv.p1.sv-weather, .sv.p2.sv-weather { justify-content: center; }
+.sv.p1.sv-weather, .sv.p2.sv-weather { justify-content: center; align-items: center; text-align: left; }
 .sv.p2.sv-weather { flex-direction: row-reverse; }
 
 .sv-list { gap: 0; }
