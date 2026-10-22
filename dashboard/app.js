@@ -1159,8 +1159,8 @@
       let rows = soon.map((e) => {
         const running = !e.allDay && e.s <= now;
         const when = e.allDay ? 'All day' : fmtTime(e.s, { small: true });
-        const day = e.s >= tomorrow && !e.allDay ? 'Tomorrow · ' : '';
-        return `<div class="row${running ? ' now' : ''}"><div class="rt">${when}</div><div class="rn">${esc(e.title)}<small>${esc(day)}${esc(e.location ? e.location.split('\n')[0] : e.calendar || '')}</small></div></div>`;
+        const sub = [e.s >= tomorrow && !e.allDay ? 'Tomorrow' : '', e.location ? e.location.split('\n')[0] : e.calendar || ''].filter(Boolean).join(' · ');
+        return `<div class="row${running ? ' now' : ''}"><div class="rt">${when}</div><div class="rn">${esc(e.title)}${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>`;
       }).join('');
       if (!rows) rows = '<div class="empty-big">Nothing on the calendar</div>';
       return `<div class="kicker">Next up</div><div class="sv-list">${rows}</div>`;
