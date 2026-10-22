@@ -48,22 +48,51 @@ const Weather = (() => {
   }
   const severity = (c) => (c >= 95 ? 5 : c >= 61 ? 4 : c >= 45 ? 3 : c === 3 ? 2 : c);
 
+  // MET gives no "feels like", so work it out the standard way (NWS wind chill and heat index).
+  function feelsLikeC(c, ms, rh) {
+    const f = c * 9 / 5 + 32, mph = ms * 2.237;
+    let out = f;
+    if (f <= 50 && mph > 3) {
+      const v = Math.pow(mph, 0.16);
+      out = 35.74 + 0.6215 * f - 35.75 * v + 0.4275 * f * v;
+    } else if (f >= 80 && rh >= 40) {
+      out = -42.379 + 2.04901523 * f + 10.14333127 * rh - 0.22475541 * f * rh - 0.00683783 * f * f
+        - 0.05481717 * rh * rh + 0.00122874 * f * f * rh + 0.00085282 * f * rh * rh - 0.00000199 * f * f * rh * rh;
+    }
+    return (out - 32) * 5 / 9;
+  }
+
+  // The forecast only looks forward, so remember today's extremes seen so far (on this device).
+  function rememberToday(dayKey, hiC, loC) {
+    let rec = { day: dayKey, hi: hiC, lo: loC };
+    try {
+      const old = JSON.parse(localStorage.getItem('skreen-wx-day') || 'null');
+      if (old && old.day === dayKey) rec = { day: dayKey, hi: Math.max(old.hi, hiC), lo: Math.min(old.lo, loC) };
+      localStorage.setItem('skreen-wx-day', JSON.stringify(rec));
+    } catch (_) {}
+    return rec;
+  }
+
   async function met(lat, lon, units) {
     const base = PROXY || 'https://api.met.no';
     const res = await fetch(`${base}/weatherapi/locationforecast/2.0/complete?lat=${(+lat).toFixed(3)}&lon=${(+lon).toFixed(3)}`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const ts = (await res.json()).properties.timeseries;
     const F = units === 'fahrenheit';
-    const temp = (c) => Math.round((F ? c * 9 / 5 + 32 : c) * 10) / 10;
+    const conv = (c) => (F ? c * 9 / 5 + 32 : c);
+    const temp = (c) => Math.round(conv(c) * 10) / 10;
     const wind = (ms) => Math.round(F ? ms * 2.237 : ms * 3.6);
 
     const hourly = { time: [], temperature_2m: [], precipitation_probability: [], weather_code: [], is_day: [] };
+    const rawC = [];
     for (const p of ts) {
       const next = p.data.next_1_hours;
       if (!next) continue;
       const sym = next.summary.symbol_code, pop = next.details && next.details.probability_of_precipitation;
+      const c = p.data.instant.details.air_temperature;
       hourly.time.push(isoHour(new Date(p.time)));
-      hourly.temperature_2m.push(temp(p.data.instant.details.air_temperature));
+      hourly.temperature_2m.push(temp(c));
+      rawC.push(c);
       hourly.precipitation_probability.push(pop == null ? null : Math.round(pop));
       hourly.weather_code.push(wmo(sym));
       hourly.is_day.push(isDay(sym, new Date(p.time)));
@@ -72,54 +101,45 @@ const Weather = (() => {
     const first = ts[0].data, d0 = first.instant.details;
     const symNow = (first.next_1_hours || first.next_6_hours).summary.symbol_code;
     const current = {
-      temperature_2m: temp(d0.air_temperature), apparent_temperature: temp(d0.air_temperature),
+      temperature_2m: temp(d0.air_temperature),
+      apparent_temperature: temp(feelsLikeC(d0.air_temperature, d0.wind_speed || 0, d0.relative_humidity || 50)),
       weather_code: wmo(symNow), is_day: isDay(symNow, new Date()),
       relative_humidity_2m: d0.relative_humidity, wind_speed_10m: wind(d0.wind_speed),
     };
 
+    // Per-day extremes (in °C): hourly points where we have them, widened by the 6-hour blocks' own max/min.
     const days = new Map();
+    const day = (k) => { if (!days.has(k)) days.set(k, { hi: -Infinity, lo: Infinity, pop: null, codes: [], six: [] }); return days.get(k); };
     hourly.time.forEach((t, i) => {
-      const k = t.slice(0, 10), day = days.get(k) || { hi: -Infinity, lo: Infinity, pop: null, codes: [] };
-      day.hi = Math.max(day.hi, hourly.temperature_2m[i]); day.lo = Math.min(day.lo, hourly.temperature_2m[i]);
+      const d = day(t.slice(0, 10));
+      d.hi = Math.max(d.hi, rawC[i]); d.lo = Math.min(d.lo, rawC[i]);
       const p = hourly.precipitation_probability[i];
-      if (p != null) day.pop = Math.max(day.pop ?? 0, p);
+      if (p != null) d.pop = Math.max(d.pop ?? 0, p);
       const h = +t.slice(11, 13);
-      if (h >= 7 && h <= 21) day.codes.push(hourly.weather_code[i]);
-      days.set(k, day);
+      if (h >= 7 && h <= 21) d.codes.push(hourly.weather_code[i]);
     });
-    const keys = [...days.keys()].slice(0, 6);
-    const daily = { time: keys, weather_code: [], temperature_2m_max: [], temperature_2m_min: [], precipitation_probability_max: [] };
-    // The hourly series runs out after ~2.5 days, so fill later days from the 6-hourly points.
-    const six = new Map();
     for (const p of ts) {
       const n = p.data.next_6_hours;
       if (!n) continue;
-      const k = isoHour(new Date(p.time)).slice(0, 10), v = six.get(k) || { t: [], codes: [], pop: null };
-      v.t.push(p.data.instant.details.air_temperature);
-      v.codes.push(wmo(n.summary.symbol_code));
-      const pp = n.details && n.details.probability_of_precipitation;
-      if (pp != null) v.pop = Math.max(v.pop ?? 0, pp);
-      six.set(k, v);
+      const d = day(isoHour(new Date(p.time)).slice(0, 10)), det = n.details || {};
+      const hi = det.air_temperature_max != null ? det.air_temperature_max : p.data.instant.details.air_temperature;
+      const lo = det.air_temperature_min != null ? det.air_temperature_min : p.data.instant.details.air_temperature;
+      d.hi = Math.max(d.hi, hi); d.lo = Math.min(d.lo, lo);
+      d.six.push(wmo(n.summary.symbol_code));
+      if (det.probability_of_precipitation != null) d.pop = Math.max(d.pop ?? 0, det.probability_of_precipitation);
     }
-    for (const t of [...six.keys()]) if (!keys.includes(t) && keys.length < 6) keys.push(t);
-    keys.sort();
+    const keys = [...days.keys()].sort().slice(0, 6);
+    const today = keys[0];
+    const mem = rememberToday(today, days.get(today).hi, days.get(today).lo);
+    days.get(today).hi = mem.hi; days.get(today).lo = mem.lo;
+
+    const daily = { time: keys, weather_code: [], temperature_2m_max: [], temperature_2m_min: [], precipitation_probability_max: [] };
     for (const k of keys) {
-      const day = days.get(k), s = six.get(k);
-      if (day && day.codes.length) {
-        daily.temperature_2m_max.push(Math.round(day.hi)); daily.temperature_2m_min.push(Math.round(day.lo));
-        daily.precipitation_probability_max.push(day.pop);
-        daily.weather_code.push(day.codes.reduce((a, b) => (severity(b) > severity(a) ? b : a)));
-      } else if (s) {
-        const all = s.t.map((c) => (F ? c * 9 / 5 + 32 : c));
-        daily.temperature_2m_max.push(Math.round(Math.max(...all))); daily.temperature_2m_min.push(Math.round(Math.min(...all)));
-        daily.precipitation_probability_max.push(s.pop);
-        daily.weather_code.push(s.codes.reduce((a, b) => (severity(b) > severity(a) ? b : a)));
-      } else {
-        daily.temperature_2m_max.push(null); daily.temperature_2m_min.push(null);
-        daily.precipitation_probability_max.push(null); daily.weather_code.push(3);
-      }
+      const d = days.get(k), codes = d.codes.length ? d.codes : d.six;
+      daily.temperature_2m_max.push(Math.round(conv(d.hi))); daily.temperature_2m_min.push(Math.round(conv(d.lo)));
+      daily.precipitation_probability_max.push(d.pop);
+      daily.weather_code.push(codes.length ? codes.reduce((a, b) => (severity(b) > severity(a) ? b : a)) : 3);
     }
-    daily.time = keys;
     return { current, hourly, daily, provider: 'met' };
   }
 
