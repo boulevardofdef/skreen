@@ -66,6 +66,11 @@
       <p class="news-credit">Wikipedia &middot; In the news &middot; CC BY-SA</p>
     </section>
 
+    <section class="w col meals" data-w="meals">
+      <div class="col-head"><span>Dinners</span><span class="place" id="mealsHint"></span></div>
+      <div class="scroll meal-list" id="mealList"></div>
+    </section>
+
     <section class="w w-photos" data-w="photos">
       <div class="photo-frame" id="photoFrame"><div class="pf" id="pfA"></div><div class="pf" id="pfB"></div><div class="pf-note" id="photoNote"></div></div>
     </section>
@@ -130,6 +135,22 @@
     <div class="alarm-actions">
       <button type="button" class="btn ghost" id="alarmMore">+5 more minutes</button>
       <button type="button" class="btn primary" id="alarmStop">Stop</button>
+    </div>
+  </dialog>
+
+  <!-- Dinner planner -->
+  <dialog class="sheet meal-sheet" id="mealSheet">
+    <div class="brand-row sm" data-brand></div>
+    <h3 id="mealDay"></h3>
+    <p class="hint" id="mealHint">What's for dinner?</p>
+    <div class="add-row">
+      <input id="mealInput" type="text" autocomplete="off" enterkeyhint="done" placeholder="e.g. Tacos" maxlength="120">
+      <button type="button" class="mic" id="mealMic" aria-label="Speak"></button>
+    </div>
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="mealClear">Clear</button>
+      <button type="button" class="btn ghost" id="mealCancel">Cancel</button>
+      <button type="button" class="btn primary" id="mealSave">Save</button>
     </div>
   </dialog>
 
@@ -212,6 +233,11 @@
       <div class="settings-scroll">
         <div class="group native-only">Google accounts</div>
         <div class="native-block" id="acctBox"></div>
+
+        <div class="group native-only">Dinners <span class="plus-chip" data-plus-logo></span></div>
+        <div class="native-block" id="mealField">
+          <label class="field"><span>Dinner planner list <em>(a Google Tasks list, one dinner per day by due date)</em></span><select id="mealPick"></select></label>
+        </div>
 
         <div class="group">Other calendars</div>
         <div class="field">

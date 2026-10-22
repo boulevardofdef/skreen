@@ -84,6 +84,7 @@ window.Guide = (() => {
   <li><b>Several Google accounts</b>, and several calendars and to-do lists from each, shown together.</li>
   <li><b>Your own layout.</b> Show or hide the clock, weather, schedule and to-do list, and put them in any order.</li>
   <li><b>Photos.</b> A slideshow from a Google Drive folder, on the main screen and in the big-screen tour.</li>
+  <li><b>Dinner planner.</b> What's for dinner each day this week, kept in a Google Tasks list. Add it under Settings → Layout. <button class="btn ghost small" data-go="dinners">How it works →</button></li>
   <li><b>In the news.</b> A short list of today's top stories from Wikipedia's front page, as a widget and in the big-screen tour. Add it under Settings → Layout.</li>
   <li><b>Always-on slideshow.</b> The big-screen tour can run all the time instead of every few minutes.</li>
 </ul>
@@ -103,6 +104,19 @@ window.Guide = (() => {
   <li><b>When one finishes</b> the whole screen turns orange and the tablet plays its alarm tone until you tap <b>Stop</b> (or <b>+5 more minutes</b>). The sound uses the tablet's <i>alarm</i> volume, so turn that up in the tablet's sound settings.</li>
   <li>Timers carry on if Skreen restarts or reloads itself.</li>
 </ul>`
+    },
+    {
+      id: 'dinners', title: 'Dinner planner',
+      html: `
+<h1>Dinner planner</h1>
+<p class="lede">Skreen+: the week's dinners on the wall, kept in a Google Tasks list so you can also plan from your phone.</p>
+<ol>
+  <li>In the <b>Google Tasks</b> app (or the Tasks panel beside Gmail), make a new list called <b>Dinners</b>.</li>
+  <li>In Skreen, open <b>Settings → Dinners</b> and choose that list, then <b>Settings → Layout</b> and tick <b>Dinners</b>.</li>
+  <li><b>Plan from the wall:</b> tap a day, type or say the meal, and Save. Tap again to change it or Clear it.</li>
+  <li><b>Plan from your phone:</b> add a task to the Dinners list and give it a <b>date</b>. The task name is the meal and the date is the day it's for.</li>
+</ol>
+<div class="note">Keep Dinners separate from your everyday to-do list. Each dinner is a task with a date, so if you also show that list as your to-do list the dinners would appear there too.</div>`
     },
     {
       id: 'look', title: 'Backgrounds',

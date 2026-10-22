@@ -9,7 +9,7 @@
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage',
     showcaseMinutes: '5', pixelShift: '1',
-    layout: 'clock,weather,agenda,todo', photoFolder: '', photoSeconds: '30',
+    layout: 'clock,weather,agenda,todo', photoFolder: '', photoSeconds: '30', mealList: '',
     ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
     dayBrightness: 'system', nightBrightness: '3',
@@ -261,6 +261,7 @@
       lastMinute = now.getMinutes();
       renderAgenda();
       renderTasks();           // retires checked-off items after 24 hours
+      if (mealsShown()) { drawMeals(); if (now.getHours() === 0 && now.getMinutes() === 5) refreshMeals(); }
       applyBackground();       // new day → new background
       updateNight(now);
       nudgeLayout(now);
@@ -1049,9 +1050,9 @@
 
   // ─── Big-screen tour (burn-in protection) ──────────────────────────────────
 
-  const TOUR_ALL = { time: 'clock', weather: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news' };
+  const TOUR_ALL = { time: 'clock', weather: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news', meals: 'meals' };
   let TOUR = Object.keys(TOUR_ALL);
-  const tourViews = () => Object.keys(TOUR_ALL).filter((v) => visibleWidgets().includes(TOUR_ALL[v]) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (!['agenda', 'todo'].includes(v) || state.loaded));
+  const tourViews = () => Object.keys(TOUR_ALL).filter((v) => visibleWidgets().includes(TOUR_ALL[v]) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (!['agenda', 'todo'].includes(v) || state.loaded));
   const tour = { on: false, i: 0, cycle: 0, timer: null, last: Date.now() };
 
   // Skreen+: the tour can run all the time. A tap ends it for two minutes, then it resumes.
@@ -1121,6 +1122,13 @@
   $('showcase').addEventListener('click', endTour);
 
   function tourHtml(name) {
+    if (name === 'meals') {
+      const rows = mealDays().slice(0, 5).map(({ date, d, i }) => {
+        const items = mealState.byDate[date] || [];
+        return `<div class="row${i === 0 ? ' now' : ''}"><div class="rt">${esc(i === 0 ? 'Tonight' : fmtDate(d, { weekday: 'short' }))}</div><div class="rn">${items.length ? esc(items.map((m) => m.title).join(' + ')) : '<span class="sv-none">\u2014</span>'}</div></div>`;
+      }).join('');
+      return `<div class="kicker">Dinner this week</div><div class="sv-list">${rows}</div>`;
+    }
     if (name === 'news') {
       const rows = News.current.slice(0, 4).map((s) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(s.text)}</div></div>`).join('');
       return `<div class="kicker">In the news</div><div class="sv-list sv-news">${rows}</div>`;
@@ -1517,8 +1525,8 @@
   // cfg.layout is the order, with hidden widgets prefixed "-": "agenda,todo,-weather,clock".
   // Clock and weather sit in one column when they're next to each other.
 
-  const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos (Skreen+)', news: 'In the news (Skreen+)' };
-  const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92, photos: 1.15, news: 1.1 };
+  const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos (Skreen+)', news: 'In the news (Skreen+)', meals: 'Dinners (Skreen+)' };
+  const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92, photos: 1.15, news: 1.1, meals: 1.1 };
   const hasPlus = () => Plus.active();
 
   function parseLayout(str) {
@@ -1527,7 +1535,7 @@
       const off = raw.trim().startsWith('-'), id = raw.trim().replace(/^-/, '');
       if (WIDGETS[id] && !seen.has(id)) { seen.add(id); out.push({ id, on: !off }); }
     }
-    for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: id !== 'photos' && id !== 'news' });   // the Plus widgets start hidden
+    for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: !['photos', 'news', 'meals'].includes(id) });   // the Plus widgets start hidden
     if (!out.some((w) => w.on)) out.forEach((w) => { w.on = true; });
     return out;
   }
@@ -1559,6 +1567,7 @@
     dash.style.setProperty('--cols', lanes.map((l) => `minmax(0, ${LAYOUT_FR[l.kind]}fr)`).join(' '));
     if (typeof syncPhotos === 'function') syncPhotos();
     if (typeof syncNews === 'function') syncNews();
+    if (typeof refreshMeals === 'function') { drawMeals(); refreshMeals(); }
   }
 
   // ─── Photos widget (Skreen+) ────────────────────────────────────────────────
@@ -1627,6 +1636,129 @@
     drawNews();
     try { await News.stories(force); } catch (_) { /* keep what we have; try again at the next refresh */ }
     drawNews();
+  }
+
+  // ─── Dinner planner (Skreen+) ───────────────────────────────────────────────
+  // One Google Tasks list holds the dinners: each task is a meal and its due date is the day it's for.
+
+  const mealsShown = () => hasPlus() && visibleWidgets().includes('meals');
+  const ymdOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const mealTarget = () => { const [a, l] = String(cfg.mealList || '').split('|'); return a && l && accountList().includes(a) ? { a, l } : null; };
+  const mealState = { byDate: {}, ready: false, error: '' };
+
+  function mealDays() {
+    const today = startOfDay(new Date());
+    return Array.from({ length: 7 }, (_, i) => { const d = addDays(today, i); return { date: ymdOf(d), d, i }; });
+  }
+  function drawMeals() {
+    const box = $('mealList');
+    if (!mealsShown() && !tour.on) return;
+    if (!isDemo() && !mealTarget()) {
+      $('mealsHint').textContent = '';
+      box.innerHTML = `<button type="button" class="sk-cta" data-meal-setup>${canSignIn() ? 'Choose a Google Tasks list for dinners in Settings' : 'Dinners need the Android app and Google sign-in'}</button>`;
+      return;
+    }
+    if (!mealState.ready) { box.innerHTML = mealDays().map(() => `<div class="meal skeleton"><ul>${[1].map(() => `<li>${sk(40, 1.3)}</li>`).join('')}</ul></div>`).join(''); return; }
+    $('mealsHint').textContent = mealState.error ? 'Offline' : '';
+    box.innerHTML = mealDays().map(({ date, d, i }) => {
+      const items = mealState.byDate[date] || [];
+      const name = i === 0 ? 'Tonight' : i === 1 ? 'Tomorrow' : fmtDate(d, { weekday: 'long' });
+      const text = items.map((m) => `<span class="${m.done ? 'done' : ''}">${esc(m.title)}</span>`).join('<span class="sep"> + </span>');
+      return `<button type="button" class="meal${i === 0 ? ' today' : ''}${items.length ? '' : ' empty'}" data-date="${date}"><span class="meal-day">${esc(name)}</span><span class="meal-what">${items.length ? text : 'Plan dinner'}</span></button>`;
+    }).join('');
+  }
+
+  async function refreshMeals() {
+    if (!mealsShown()) return;
+    if (isDemo()) {
+      const sample = ['Tacos', 'Sheet-pan chicken', 'Pasta night', 'Leftovers', 'Pizza & movie', 'Grilled salmon', 'Soup and bread'];
+      mealState.byDate = {};
+      mealDays().forEach(({ date }, i) => { mealState.byDate[date] = [{ id: 'd' + i, title: sample[i], done: false }]; });
+      mealState.ready = true; mealState.error = '';
+      drawMeals();
+      return;
+    }
+    const t = mealTarget();
+    if (!t) { drawMeals(); return; }
+    try {
+      const days = mealDays();
+      const items = await Google.mealTasks(t.a, t.l, days[0].date, days[6].date);
+      mealState.byDate = {};
+      items.forEach((m) => { (mealState.byDate[m.date] = mealState.byDate[m.date] || []).push(m); });
+      mealState.ready = true; mealState.error = '';
+    } catch (err) {
+      mealState.error = err.message || 'failed';
+    }
+    drawMeals();
+  }
+
+  let mealEditing = null;   // { date, first }
+  function openMeal(date) {
+    const d = mealDays().find((x) => x.date === date);
+    if (!d) return;
+    const items = mealState.byDate[date] || [];
+    mealEditing = { date, first: items[0] || null };
+    $('mealDay').textContent = d.i === 0 ? 'Tonight' : d.i === 1 ? 'Tomorrow' : fmtDate(d.d, { weekday: 'long', month: 'short', day: 'numeric' });
+    $('mealHint').textContent = items.length > 1 ? `Also planned: ${items.slice(1).map((m) => m.title).join(', ')}` : 'What\u2019s for dinner?';
+    $('mealInput').value = items[0] ? items[0].title : '';
+    $('mealClear').hidden = !items[0];
+    $('mealSheet').showModal();
+    setTimeout(() => $('mealInput').focus(), 50);
+  }
+  async function saveMeal(clear) {
+    if (!mealEditing) return;
+    const { date, first } = mealEditing, text = $('mealInput').value.trim(), t = mealTarget();
+    $('mealSheet').close();
+    if (!clear && !text) return;
+    if (isDemo()) {
+      if (clear) delete mealState.byDate[date];
+      else mealState.byDate[date] = [{ id: 'd', title: text, done: false }];
+      drawMeals();
+      return;
+    }
+    if (!t) return;
+    const before = JSON.stringify(mealState.byDate);
+    // Show the change straight away; put it back if Google says no.
+    if (clear) { const rest = (mealState.byDate[date] || []).slice(1); if (rest.length) mealState.byDate[date] = rest; else delete mealState.byDate[date]; }
+    else if (first) mealState.byDate[date] = [{ ...first, title: text }, ...(mealState.byDate[date] || []).slice(1)];
+    else mealState.byDate[date] = [{ id: 'tmp', title: text, done: false }];
+    drawMeals();
+    try {
+      if (clear) await Google.deleteTask(t.a, t.l, first.id);
+      else if (first) await Google.setTitle(t.a, t.l, first.id, text);
+      else await Google.addMeal(t.a, t.l, text, date);
+      refreshMeals();
+    } catch (_) {
+      mealState.byDate = JSON.parse(before);
+      drawMeals();
+      showToast('Couldn\u2019t save that dinner \u2014 check your connection');
+    }
+  }
+  $('mealList').addEventListener('click', (e) => {
+    if (e.target.closest('[data-meal-setup]')) { if (canSignIn()) openSettings(); return; }
+    const b = e.target.closest('[data-date]');
+    if (b && (isDemo() || mealTarget())) openMeal(b.dataset.date);
+  });
+  $('mealSave').addEventListener('click', () => saveMeal(false));
+  $('mealClear').addEventListener('click', () => saveMeal(true));
+  $('mealCancel').addEventListener('click', () => $('mealSheet').close());
+  $('mealInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveMeal(false); } });
+  $('mealMic').innerHTML = Icons.mic;
+  if (NATIVE && NATIVE.startVoice) {
+    $('mealMic').addEventListener('click', () => { voiceSink = (text) => { $('mealInput').value = capFirst(text); }; NATIVE.startVoice(); });
+  } else if (!SR) {
+    $('mealMic').hidden = true;
+  } else {
+    let mrec = null;
+    $('mealMic').addEventListener('click', () => {
+      if (mrec) { mrec.stop(); return; }
+      mrec = new SR(); mrec.lang = navigator.language || 'en-US';
+      mrec.onresult = (e) => { $('mealInput').value = capFirst(Array.from(e.results).map((r) => r[0].transcript).join(' ')); };
+      mrec.onend = () => { mrec = null; $('mealMic').classList.remove('listening'); };
+      mrec.onerror = mrec.onend;
+      $('mealMic').classList.add('listening');
+      mrec.start();
+    });
   }
 
   // The editor in Settings: a tick to show/hide and arrows to reorder (no dragging on a wall display).
@@ -1810,6 +1942,17 @@
       }
     }));
     drawAddTo();
+    drawMealPick(all);
+  }
+  // The dinner planner's list: any Google Tasks list on a signed-in account.
+  function drawMealPick(all) {
+    const sel = $('mealPick');
+    const opts = [];
+    all.forEach((a) => { const c = acctChoices[a]; if (c) c.lists.forEach((l) => opts.push({ v: `${a}|${l.id}`, label: `${l.title}${all.length > 1 ? ' \u00b7 ' + a : ''}` })); });
+    // Offer a list that already looks like a dinner list as the default.
+    const guess = opts.find((o) => /dinner|meal/i.test(o.label));
+    const cur = cfg.mealList || (guess ? guess.v : '');
+    sel.innerHTML = '<option value="">Not set</option>' + opts.map((o) => `<option value="${esc(o.v)}" ${o.v === cur ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
   }
   // Where new to-dos go, when more than one list is shown.
   function drawAddTo() {
@@ -1898,6 +2041,7 @@
       cfg.listSel[acct] = Array.from(el.querySelectorAll('input[data-list]:checked')).map((x) => x.dataset.list);
     });
     if ($('addToPick') && !$('addToField').hidden) cfg.addTo = $('addToPick').value;
+    if ($('mealPick') && $('mealPick').options.length > 1 && hasPlus()) cfg.mealList = $('mealPick').value;
     Google.forgetCaches();
     saveSettings();
     state.nightDismissedUntil = 0;
@@ -2036,6 +2180,7 @@
     setTimeout(checkSiteVersion, 60000); setInterval(checkSiteVersion, SITE_CHECK_MS);
     if (canUpdate()) { setTimeout(backgroundUpdateCheck, 20000); setInterval(backgroundUpdateCheck, UPDATE_CHECK_MS); }
     setInterval(() => syncNews(true), 30 * 60000);
+    setInterval(refreshMeals, 10 * 60000);
     setInterval(refreshData, REFRESH_DATA_MS);
     setInterval(refreshWeather, REFRESH_WEATHER_MS);
     if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname !== 'appassets.androidplatform.net') navigator.serviceWorker.register('sw.js').catch(() => {});

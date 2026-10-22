@@ -123,7 +123,21 @@ window.Google = (() => {
   const setTitle = (acct, listId, id, title) => patch(acct, listId, id, { title: String(title).slice(0, 500) });
   const setDone = (acct, listId, id, done) => patch(acct, listId, id, done ? { status: 'completed' } : { status: 'needsAction', completed: null });
 
+  // Dinner planner: tasks whose due date falls in [from, to] (YYYY-MM-DD). Google keeps a task's due
+  // date as midnight UTC of that day, so the date part is the day itself.
+  async function mealTasks(acct, listId, from, to) {
+    const base = `${TASKS}/lists/${encodeURIComponent(listId)}/tasks`;
+    const q = new URLSearchParams({ showCompleted: 'true', showHidden: 'true', maxResults: '100', dueMin: `${from}T00:00:00.000Z`, dueMax: `${to}T23:59:59.000Z`, fields: 'items(id,title,due,status,parent)' });
+    const res = await call(acct, `${base}?${q}`);
+    return (res.items || []).filter((t) => t.title && t.due && !t.parent).map((t) => ({ id: t.id, title: t.title, date: t.due.slice(0, 10), done: t.status === 'completed' }));
+  }
+  async function addMeal(acct, listId, title, date) {
+    const t = await call(acct, `${TASKS}/lists/${encodeURIComponent(listId)}/tasks`, { method: 'POST', body: JSON.stringify({ title: title.slice(0, 500), due: `${date}T00:00:00.000Z` }) });
+    return { id: t.id, title: t.title, date, done: false };
+  }
+  const deleteTask = (acct, listId, id) => call(acct, taskUrl(listId, id), { method: 'DELETE' }).then(() => true);
+
   const forgetCaches = () => { calCache.clear(); defaultList.clear(); };
 
-  return { init, AuthError, listCalendars, listTaskLists, resolveList, events, tasks, addTask, setDone, setNotes, setTitle, forgetCaches, chosenCalendars };
+  return { init, AuthError, listCalendars, listTaskLists, resolveList, events, tasks, addTask, setDone, setNotes, setTitle, mealTasks, addMeal, deleteTask, forgetCaches, chosenCalendars };
 })();
