@@ -62,8 +62,10 @@ Weather: `weather.js` supports MET Norway (free for commercial products; deploy 
 
 ## Custom domain (skreen.fyi)
 
-1. Ship an APK that trusts `skreen.fyi` first (done in `MainActivity.isSkreenDomain`). An older APK would open the redirect in the browser instead of the app.
-2. Cloudflare DNS for `skreen.fyi`, all set to **DNS only** (grey cloud): four `A` records for `@` pointing to `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`; a `CNAME` for `www` pointing to `boulevardofdef.github.io`. (Check GitHub's current Pages docs for the addresses.)
-3. GitHub repo Settings → Pages → Custom domain: `skreen.fyi`, save, wait for the DNS check, then tick **Enforce HTTPS**.
-4. Later: point the APK's start URL at `https://skreen.fyi/` (`SKREEN_START_URL` in `android.yml`). Settings saved in the page (location, layout, Plus code) are per web address, so they reset when the address changes.
-5. Use `https://skreen.fyi/privacy.html` for Google verification and the store listings; verify the domain in Google Search Console.
+The app lives at `https://app.skreen.fyi/`; the bare `skreen.fyi` is reserved for a marketing site (host it separately, for example on Cloudflare Pages). The Android app trusts only `app.skreen.fyi` with its native bridge.
+
+1. Cloudflare DNS for `skreen.fyi`, set to **DNS only** (grey cloud): a `CNAME` named `app` pointing to `boulevardofdef.github.io`.
+2. GitHub repo Settings \u2192 Pages \u2192 Custom domain: `app.skreen.fyi`, save, wait for the DNS check, then tick **Enforce HTTPS**.
+3. Old four `A` records and the `www` CNAME (pointing at GitHub) are no longer needed once the marketing site has a host; point the bare domain there instead.
+4. `SKREEN_START_URL` in `android.yml` points the APK at `https://app.skreen.fyi/`. Settings saved in the page (location, layout, Plus code) are per web address, so they reset when the address changes.
+5. Marketing site should carry the privacy policy at `https://skreen.fyi/privacy` (or keep `https://app.skreen.fyi/privacy.html`) for Google verification and the store listings; verify the domain in Google Search Console.

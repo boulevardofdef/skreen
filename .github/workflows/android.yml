@@ -35,7 +35,7 @@ jobs:
           gradle-version: '8.9'
 
       - name: Point the app at the live site (custom domain)
-        run: echo "SKREEN_START_URL=https://skreen.fyi/" >> "$GITHUB_ENV"
+        run: echo "SKREEN_START_URL=https://app.skreen.fyi/" >> "$GITHUB_ENV"
 
       - name: Build release APK
         working-directory: android

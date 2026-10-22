@@ -214,9 +214,13 @@ public class MainActivity extends Activity {
         return HOST.equals(host) || (remoteHost != null && remoteHost.equals(host)) || isSkreenDomain(host);
     }
 
-    /** Skreen's own domain. GitHub redirects the old github.io address here once the custom domain is on. */
+    /**
+     * The app's own address. GitHub redirects the old github.io address here once the custom
+     * domain is on. Only this host gets the native bridge (it can hand out Google tokens); the
+     * bare skreen.fyi is kept free for a marketing site and is deliberately not trusted.
+     */
     private static boolean isSkreenDomain(String host) {
-        return "skreen.fyi".equals(host) || "www.skreen.fyi".equals(host);
+        return "app.skreen.fyi".equals(host);
     }
 
     /** The live site couldn't be reached: show the bundled copy until the network is back. */
