@@ -44,6 +44,7 @@
   // Present only inside the Skreen Android app.
   const NATIVE = window.SkreenNative || null;
   if (NATIVE) document.body.classList.add('native');
+  try { if (NATIVE && NATIVE.isStoreBuild && NATIVE.isStoreBuild()) document.body.classList.add('store'); } catch (_) {}   // Play build: Google Play does the updating
 
   const $ = (id) => document.getElementById(id);
   const clockHtml = (hm) => hm.replace(':', '<span class="colon">:</span>');

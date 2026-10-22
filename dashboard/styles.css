@@ -604,3 +604,5 @@ body.native .native-block { display: block; }
 .sv.sv-photos { padding: 0; }
 .sv-photo { position: absolute; inset: 0; background-size: cover; background-position: center; }
 #photoField.locked { opacity: 0.4; pointer-events: none; }
+
+body.store .updater { display: none !important; }
