@@ -696,12 +696,22 @@
     } catch (err) { console.warn('Weather failed', err); }
   }
 
+  // TEST TOGGLE (remove before launch): tap the temperature to switch weather providers.
+  $('wxTemp').addEventListener('click', async () => {
+    const next = Weather.testCycle(state.weather && state.weather.provider);
+    showToast(`Weather: ${next === 'met' ? 'MET Norway' : 'Open-Meteo'}\u2026`);
+    try {
+      state.weather = await Weather.forecast(cfg.lat, cfg.lon, cfg.units);
+      renderWeather();
+    } catch (err) { showToast(`${next === 'met' ? 'MET Norway' : 'Open-Meteo'} failed`); }
+  });
+
   function renderWeather() {
     const w = state.weather;
     if (!w) return;
     const c = w.current, d = w.daily, h = w.hourly;
     const now = Icons.weather(c.weather_code, c.is_day);
-    $('wxPlace').textContent = cfg.place || '';
+    $('wxPlace').textContent = (cfg.place || '') + (w.provider ? ` \u00b7 ${w.provider === 'met' ? 'MET' : 'OM'}` : '');   // provider tag: TEST TOGGLE, remove before launch
     $('wxIcon').innerHTML = now.svg;
     $('wxTemp').textContent = Math.round(c.temperature_2m) + '°';
     $('wxCond').textContent = now.label;

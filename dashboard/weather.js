@@ -24,7 +24,7 @@ const Weather = (() => {
     });
     const res = await fetch(u);
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
+    return { ...(await res.json()), provider: 'openmeteo' };
   }
 
   // MET symbol names → the WMO codes the icons use.
@@ -143,12 +143,24 @@ const Weather = (() => {
     return { current, hourly, daily, provider: 'met' };
   }
 
+  // TEST TOGGLE (remove before launch): tap the temperature to force one provider.
+  const TEST_KEY = 'skreen-wx-test';
+  const testGet = () => { try { return localStorage.getItem(TEST_KEY) || ''; } catch (_) { return ''; } };
+  function testCycle(current) {
+    const next = current === 'met' ? 'openmeteo' : 'met';
+    try { localStorage.setItem(TEST_KEY, next); } catch (_) {}
+    return next;
+  }
+
   async function forecast(lat, lon, units) {
+    const forced = testGet();
+    if (forced === 'met') return met(lat, lon, units);
+    if (forced === 'openmeteo') return openMeteo(lat, lon, units);
     if (PROXY) {
       try { return await met(lat, lon, units); } catch (e) { console.warn('MET weather failed, falling back', e); }
     }
     return openMeteo(lat, lon, units);
   }
 
-  return { forecast, met, openMeteo, wmo };
+  return { forecast, met, openMeteo, wmo, testCycle };
 })();
