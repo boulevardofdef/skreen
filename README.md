@@ -12,6 +12,7 @@ A wall display for an always-on Android tablet: **Google Calendar**, a **househo
 
 - **Schedule.** What's left today, then the next few days. **Tap any event for the full details** (complete title, time and duration, full location, video link, calendar and notes). The event in progress is a solid orange block with a progress bar; one starting within the hour gets a countdown. All-day events become tags, declined events are hidden.
 - **To-do list.** Tap to check off. **Checked items stay on screen, struck through, for 24 hours**, then vanish; tap one to bring it back. Add items with the big button, by voice, or from your phone via Google Tasks.
+- **Layout.** Show, hide and reorder the clock, weather, schedule and to-do list (Settings → Layout; this is the first Skreen Plus feature, gated by `hasPlus()` in `app.js`, currently on for everyone).
 - **Weather.** Now, the next 6 hours, 5 days, and a plain-English rain outlook. MET Norway (via the small proxy in `worker/`) with Open-Meteo as fallback; no keys.
 - **Typefaces.** Five to choose from in Settings (Bricolage, Fraunces, Archivo, Space Grotesk, Big Shoulders), self-hosted and previewed live.
 - **Backgrounds.** Nine soft, dark colour-gradient backgrounds with gentle contrast, one per day, or pin your favourite. No lines or patterns, so text always reads cleanly.

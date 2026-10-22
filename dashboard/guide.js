@@ -62,6 +62,7 @@ window.Guide = (() => {
 <h1>Backgrounds</h1>
 <p class="lede">Soft, dark colour fields that change every day, so the wall never feels stale and the text stays easy to read.</p>
 <p>Skreen rotates through these, one per day. To pin one, go to <b>Settings → Background</b>. You can also change the <b>Typeface</b> there: five options, from the default through an editorial serif to a tall poster face, previewed live behind the settings sheet.</p>
+<p>Under <b>Settings → Layout</b> you can hide things you don't need (say, the schedule, to give the to-do list the room) and move them around with the arrows. The big-screen tour skips anything you've hidden.</p>
 <div class="swatches" id="swatches"></div>`
     },
     {

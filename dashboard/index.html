@@ -20,41 +20,40 @@
   </div>
 
   <main class="dash" id="dash">
-    <!-- Time & weather -->
-    <section class="hero">
+    <!-- Widgets. applyLayout() in app.js arranges these into columns (Skreen Plus). -->
+    <section class="w w-clock" data-w="clock">
       <div class="clock-block">
         <div class="clock"><span id="time">--:--</span><span id="ampm" class="ampm"></span></div>
         <div class="date" id="date"></div>
       </div>
-
-      <div class="weather" id="weather">
-        <div class="col-head"><span>Weather</span><span class="place" id="wxPlace"></span></div>
-        <div class="wx-now">
-          <span class="wx-icon" id="wxIcon"></span>
-          <div class="wx-temp" id="wxTemp">--°</div>
-          <div class="wx-desc">
-            <div class="wx-cond" id="wxCond">Loading…</div>
-            <div class="wx-sub" id="wxSub"></div>
-          </div>
-        </div>
-        <div class="wx-summary" id="wxSummary"></div>
-        <div class="wx-hours" id="wxHours"></div>
-        <div class="wx-days" id="wxDays"></div>
-      </div>
     </section>
 
-    <!-- Calendar -->
-    <section class="col agenda">
+    <section class="w weather w-weather" data-w="weather" id="weather">
+      <div class="col-head"><span>Weather</span><span class="place" id="wxPlace"></span></div>
+      <div class="wx-now">
+        <span class="wx-icon" id="wxIcon"></span>
+        <div class="wx-temp" id="wxTemp">--°</div>
+        <div class="wx-desc">
+          <div class="wx-cond" id="wxCond">Loading…</div>
+          <div class="wx-sub" id="wxSub"></div>
+        </div>
+      </div>
+      <div class="wx-summary" id="wxSummary"></div>
+      <div class="wx-hours" id="wxHours"></div>
+      <div class="wx-days" id="wxDays"></div>
+    </section>
+
+    <section class="w col agenda" data-w="agenda">
       <div class="col-head"><span>Schedule</span></div>
       <div class="scroll" id="agenda"></div>
     </section>
 
-    <!-- To-do -->
-    <section class="col todo">
+    <section class="w col todo" data-w="todo">
       <div class="col-head"><span>To-do</span><span class="count" id="taskCount"></span></div>
       <ul class="scroll tasks" id="tasks"></ul>
       <button class="add-btn" id="addBtn" type="button"><span id="addIcon"></span>Add to list</button>
     </section>
+    <div id="shelf" hidden></div>
   </main>
 
   <button class="status" id="status" type="button" hidden></button>
@@ -201,6 +200,12 @@
             <select name="units"><option value="fahrenheit">°F</option><option value="celsius">°C</option></select></label>
           <label class="field"><span>Clock</span>
             <select name="clock"><option value="12">12-hour</option><option value="24">24-hour</option></select></label>
+        </div>
+
+        <div class="group">Layout <em class="plus">Skreen Plus</em></div>
+        <div class="field">
+          <span>Show, hide and reorder what's on the screen</span>
+          <div class="layout-list" id="layoutList"></div>
         </div>
 
         <div class="group">Look</div>

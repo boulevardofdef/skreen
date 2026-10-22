@@ -10,6 +10,7 @@
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage',
     showcaseMinutes: '5', pixelShift: '1',
+    layout: 'clock,weather,agenda,todo',
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
     dayBrightness: 'system', nightBrightness: '3',
     signedIn: false, calendarIds: [], taskListId: '', welcomed: false,
@@ -761,7 +762,9 @@
 
   // ─── Big-screen tour (burn-in protection) ──────────────────────────────────
 
-  const TOUR = ['time', 'weather', 'agenda', 'todo'];
+  const TOUR_ALL = { time: 'clock', weather: 'weather', agenda: 'agenda', todo: 'todo' };
+  let TOUR = Object.keys(TOUR_ALL);
+  const tourViews = () => Object.keys(TOUR_ALL).filter((v) => visibleWidgets().includes(TOUR_ALL[v]));
   const tour = { on: false, i: 0, cycle: 0, timer: null, last: Date.now() };
 
   function maybeStartTour(now = new Date()) {
@@ -772,6 +775,7 @@
   const dialogOpen = () => !!document.querySelector('dialog[open]') || !$('guide').hidden;
 
   function startTour() {
+    TOUR = tourViews();
     tour.on = true; tour.i = 0; tour.cycle++;
     const box = $('showcase');
     box.hidden = false;
@@ -1203,6 +1207,79 @@
     $('wxPlace').textContent = name;
   }
 
+
+  // ─── Layout (Skreen Plus: show, hide and reorder the widgets) ──────────────
+  // cfg.layout is the order, with hidden widgets prefixed "-": "agenda,todo,-weather,clock".
+  // Clock and weather sit in one column when they're next to each other.
+
+  const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list' };
+  const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92 };
+  // Paid feature. Until billing exists everyone has it; free builds will return false here.
+  const hasPlus = () => true;
+
+  function parseLayout(str) {
+    const seen = new Set(), out = [];
+    for (const raw of String(str || '').split(',')) {
+      const off = raw.trim().startsWith('-'), id = raw.trim().replace(/^-/, '');
+      if (WIDGETS[id] && !seen.has(id)) { seen.add(id); out.push({ id, on: !off }); }
+    }
+    for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: true });
+    if (!out.some((w) => w.on)) out.forEach((w) => { w.on = true; });
+    return out;
+  }
+  const serializeLayout = (items) => items.map((w) => (w.on ? '' : '-') + w.id).join(',');
+  const activeLayout = () => parseLayout(hasPlus() ? cfg.layout : DEFAULTS.layout);
+  const visibleWidgets = () => activeLayout().filter((w) => w.on).map((w) => w.id);
+
+  function applyLayout() {
+    const dash = $('dash'), shelf = $('shelf');
+    const items = activeLayout();
+    const els = {};
+    dash.querySelectorAll('[data-w]').forEach((el) => { els[el.dataset.w] = el; });
+    dash.querySelectorAll('.lane').forEach((l) => l.remove());
+    items.filter((w) => !w.on).forEach((w) => shelf.appendChild(els[w.id]));
+    const lanes = [];
+    const vis = items.filter((w) => w.on).map((w) => w.id);
+    for (let i = 0; i < vis.length; i++) {
+      const id = vis[i], next = vis[i + 1];
+      const pair = (id === 'clock' && next === 'weather') || (id === 'weather' && next === 'clock');
+      lanes.push(pair ? { kind: 'pair', ids: [id, next] } : { kind: id, ids: [id] });
+      if (pair) i++;
+    }
+    for (const l of lanes) {
+      const lane = document.createElement('div');
+      lane.className = 'lane' + (l.kind === 'pair' ? ' pair' : '');
+      l.ids.forEach((id) => lane.appendChild(els[id]));
+      dash.insertBefore(lane, shelf);
+    }
+    dash.style.setProperty('--cols', lanes.map((l) => `minmax(0, ${LAYOUT_FR[l.kind]}fr)`).join(' '));
+  }
+
+  // The editor in Settings: a tick to show/hide and arrows to reorder (no dragging on a wall display).
+  let draftLayout = null;
+  function drawLayoutEditor() {
+    const box = $('layoutList');
+    box.innerHTML = draftLayout.map((w, i) => `<div class="layout-row${w.on ? '' : ' off'}">
+      <label class="check"><input type="checkbox" data-i="${i}" ${w.on ? 'checked' : ''}> ${esc(WIDGETS[w.id])}</label>
+      <button type="button" class="btn ghost small" data-up="${i}" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>↑</button>
+      <button type="button" class="btn ghost small" data-down="${i}" aria-label="Move down" ${i === draftLayout.length - 1 ? 'disabled' : ''}>↓</button></div>`).join('');
+  }
+  $('layoutList').addEventListener('click', (e) => {
+    const up = e.target.closest('[data-up]'), down = e.target.closest('[data-down]');
+    const i = up ? +up.dataset.up : down ? +down.dataset.down : -1;
+    if (i < 0) return;
+    const j = up ? i - 1 : i + 1;
+    [draftLayout[i], draftLayout[j]] = [draftLayout[j], draftLayout[i]];
+    drawLayoutEditor();
+  });
+  $('layoutList').addEventListener('change', (e) => {
+    const i = +e.target.dataset.i, w = draftLayout[i];
+    if (!w) return;
+    if (!e.target.checked && draftLayout.filter((x) => x.on).length === 1) { e.target.checked = true; showToast('Keep at least one thing on screen'); return; }
+    w.on = e.target.checked;
+    drawLayoutEditor();
+  });
+
   // ─── Settings sheet ────────────────────────────────────────────────────────
 
   const settingsSheet = $('settingsSheet'), form = $('settingsForm');
@@ -1235,6 +1312,8 @@
     fillBackgroundOptions();
     fillTimeOptions();
     for (const el of form.elements) if (el.name && el.name in cfg) el.value = cfg[el.name] ?? '';
+    draftLayout = parseLayout(cfg.layout);
+    drawLayoutEditor();
     draftLoc = cfg.lat != null ? { lat: cfg.lat, lon: cfg.lon, place: cfg.place } : null;
     $('locCurrent').textContent = draftLoc ? `✓ ${draftLoc.place}` : 'No location set';
     $('locResults').innerHTML = '';
@@ -1334,6 +1413,7 @@
   form.addEventListener('submit', () => {
     for (const el of form.elements) if (el.name && el.name in cfg) cfg[el.name] = el.value.trim();
     if (draftLoc) Object.assign(cfg, draftLoc);
+    if (draftLayout) cfg.layout = serializeLayout(draftLayout);
     if (calChoices) {
       cfg.calendarIds = Array.from($('calList').querySelectorAll('input:checked')).map((el) => calChoices[+el.dataset.i].id);
       if (!cfg.calendarIds.length) cfg.calendarIds = calChoices.filter((c) => c.primary).map((c) => c.id);
@@ -1345,6 +1425,7 @@
     state.bgKey = '';
     tour.last = Date.now();
     lastMinute = -1;
+    applyLayout();
     nudgeLayout(new Date());
     applyBrightness();
     refreshData();
@@ -1444,6 +1525,7 @@
 
   function boot() {
     document.querySelectorAll('[data-brand]').forEach((el) => { el.innerHTML = Icons.logo; });
+    applyLayout();
     if (cfg.lat == null) {
       // Until a location is chosen, try the device's location, then fall back to New York.
       Object.assign(cfg, { lat: 40.713, lon: -74.006, place: 'New York, NY' });

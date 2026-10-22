@@ -99,12 +99,15 @@ button { cursor: pointer; }
   position: relative; z-index: 1;
   height: 100vh; height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(0, 1.06fr) minmax(0, 1.3fr) minmax(0, 0.92fr);
+  grid-template-columns: var(--cols, minmax(0, 1.06fr) minmax(0, 1.3fr) minmax(0, 0.92fr));
   padding: 2rem 2.2rem 2.4rem;
   transition: transform 6s ease-in-out;
 }
-.col { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 0 1.8rem; border-left: 1px solid var(--rule); }
-.col:last-child { padding-right: 0; }
+.lane { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 0 1.8rem; border-left: 1px solid var(--rule); container-type: inline-size; }
+.lane:first-child { padding-left: 0; border-left: 0; }
+.lane:last-child { padding-right: 0; }
+.lane.pair { justify-content: space-between; }
+.col { min-width: 0; min-height: 0; flex: 1; display: flex; flex-direction: column; }
 
 .col-head {
   display: flex; align-items: baseline; gap: 0.8rem;
@@ -125,7 +128,6 @@ button { cursor: pointer; }
 
 /* ─── Hero: clock & weather ──────────────────────────────────────────────── */
 
-.hero { min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: space-between; padding-right: 1.8rem; container-type: inline-size; }
 
 .clock {
   display: flex; align-items: baseline; gap: 0.5rem; white-space: nowrap;
@@ -512,10 +514,10 @@ body.native .field.native-only { display: flex; }
 
 @media (orientation: portrait) {
   :root { font-size: clamp(11px, min(2.1vw, 1.35vh), 30px); }
-  .dash { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); grid-template-rows: auto minmax(0, 1fr); padding: 1.8rem 1.8rem 2.4rem; }
-  .hero { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 2.4rem; padding: 0 0 1.6rem; }
-  .weather { flex: 1; max-width: 34rem; }
-  .col:nth-of-type(2) { border-left: 0; padding-left: 0; }
+  .dash { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto minmax(0, 1fr); padding: 1.8rem 1.8rem 2.4rem; }
+  .lane.pair { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 2.4rem; padding: 0 0 1.6rem; border-left: 0; }
+  .lane.pair .weather { flex: 1; max-width: 34rem; }
+  .lane:not(.pair) { padding: 0 1rem; }
   .status { left: 4.6rem; }
   .gear { left: 1.8rem; }
   .guide { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
@@ -532,3 +534,12 @@ body.native .field.native-only { display: flex; }
 .guide-nav .brand-logo { font-size: 1.9rem; margin-bottom: 0.4rem; }
 .welcome .brand-logo { font-size: 1.8rem; }
 .settings .credit { margin: -0.4rem 0 0.6rem; font: 400 0.8rem/1.4 var(--mono); color: var(--faint); }
+
+/* ─── Layout editor (Settings) ───────────────────────────────────────────── */
+.plus { font-style: normal; margin-left: 0.6rem; padding: 0.15rem 0.45rem; background: var(--accent); color: #0e0d0b; letter-spacing: 0.1em; }
+.layout-list { display: flex; flex-direction: column; border: 1px solid var(--rule); }
+.layout-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem 0.35rem 0.8rem; border-top: 1px solid var(--rule); }
+.layout-row:first-child { border-top: 0; }
+.layout-row .check { border-top: 0; padding: 0.5rem 0; font-size: 1.05rem; }
+.layout-row.off label { opacity: 0.45; }
+.layout-row .btn { min-width: 2.6rem; padding: 0.35rem 0.6rem; }
