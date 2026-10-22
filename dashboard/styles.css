@@ -549,3 +549,25 @@ body.native .field.native-only { display: flex; }
 .plus-card .adv { margin-top: 0.8rem; }
 .plus-card.on { border-color: var(--accent); }
 #layoutField.locked .layout-list { opacity: 0.4; pointer-events: none; }
+
+/* ─── Phones (portrait): one column, scrolling ───────────────────────────── */
+@media (orientation: portrait) and (max-width: 700px) {
+  :root { font-size: 16px; }
+  html, body { height: auto; min-height: 100%; overflow-x: hidden; overflow-y: auto; }
+  .dash { display: flex; flex-direction: column; height: auto; min-height: 100dvh; padding: 1.4rem 1.1rem 4.6rem; }
+  .lane, .lane:not(.pair) { flex: none; padding: 0; border: 0; margin-bottom: 1.8rem; }
+  .lane.pair { flex-direction: column; align-items: stretch; gap: 1.6rem; justify-content: flex-start; }
+  .lane.pair .weather { max-width: none; flex: none; }
+  .col { flex: none; }
+  .scroll { overflow: visible; flex: none; -webkit-mask-image: none; mask-image: none; }
+  .clock { font-size: min(7.5rem, 30vw); }
+  .wx-hour, .wx-day { padding: 0 0.35rem; }
+  .wx-hours, .wx-days { margin-inline: -0.35rem; }
+  .wx-temp { font-size: 4rem; }
+  .sheet { width: 94vw; max-width: 94vw; max-height: 92dvh; }
+  .settings-scroll { max-height: 62dvh; }
+  .field-grid { grid-template-columns: 1fr; }
+  .ev-row { grid-template-columns: 4.6rem minmax(0, 1fr); gap: 0.7rem; }
+  .gear { left: 1rem; }
+  .status { left: 3.4rem; }
+}

@@ -3,7 +3,7 @@
 A tiny Cloudflare Worker (free tier) in front of MET Norway's forecast API. It adds the identifying
 `User-Agent` MET requires, caches for 15 minutes, and allows only the one forecast endpoint.
 
-1. Edit `CONTACT` in `index.js` to include a real contact email (MET's terms ask for it).
+1. `CONTACT` in `index.js` already carries the contact email MET asks for.
 2. `npm i -g wrangler && wrangler login && wrangler deploy` from this folder.
 3. Put the printed `https://skreen-weather.<you>.workers.dev` address into `PROXY` at the top of
    `dashboard/weather.js`, commit, and the site starts using MET Norway. Open-Meteo stays as the fallback.

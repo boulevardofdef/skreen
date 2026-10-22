@@ -1,7 +1,7 @@
 // Skreen weather proxy (Cloudflare Worker, free tier).
 // MET Norway requires every request to identify the app and a contact address,
 // and asks clients to cache. Browsers can't set User-Agent, so this does both.
-const CONTACT = 'Skreen/1.0 (+https://github.com/boulevardofdef/skreen; set-your-contact-email-here)';
+const CONTACT = 'Skreen/1.0 (+https://github.com/boulevardofdef/skreen; tiszenkel@gmail.com)';
 const ALLOWED_PATH = '/weatherapi/locationforecast/2.0/complete';
 const CACHE_SECONDS = 900;
 
