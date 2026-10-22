@@ -1721,8 +1721,8 @@
       try {
         photo.items = source === 'mine' ? Photos.mine() : await Photos.art();
         photo.source = source; photo.listedAt = Date.now(); photo.order = []; photo.i = -1;
-      } catch (_) {
-        note.textContent = 'Couldn\u2019t load the pictures right now.';
+      } catch (err) {
+        note.textContent = `Couldn\u2019t load the pictures right now (${(err && err.message) || 'no connection'}).`;
         photo.timer = setTimeout(() => syncPhotos(true), 3 * 60000);
         return;
       }
