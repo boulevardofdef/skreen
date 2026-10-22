@@ -804,7 +804,21 @@
     v.className = `sv sv-${name} p${(tour.cycle + tour.i) % 3}`;
     v.innerHTML = tourHtml(name);
     body.appendChild(v);
+    fitToWidth(v.querySelector('.big'), v.clientWidth * 0.88);
     tour.timer = setTimeout(() => { tour.i++; if (tour.i >= TOUR.length) endTour(); else showTourView(); }, TOUR_VIEW_MS);
+  }
+
+  // Big type is sized from the screen, but some devices draw the font wider than expected.
+  // Measure it and shrink to fit rather than trust the maths (also once fonts finish loading).
+  function fitToWidth(el, maxPx) {
+    if (!el) return;
+    const fit = () => {
+      el.style.fontSize = '';
+      const w = el.scrollWidth;
+      if (w > maxPx) el.style.fontSize = (parseFloat(getComputedStyle(el).fontSize) * maxPx / w).toFixed(1) + 'px';
+    };
+    fit();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
   }
 
   function endTour() {
@@ -870,6 +884,7 @@
   function renderNight(now) {
     const { hm, ap } = timeParts(now);
     $('nightTime').innerHTML = `${clockHtml(hm)}${ap ? `<span class="ampm">${ap}</span>` : ''}`;
+    fitToWidth($('nightTime'), window.innerWidth * 0.9);
     $('nightDate').textContent = fmtDate(now, { weekday: 'long', month: 'long', day: 'numeric' });
     const upcoming = state.events.map(normalizeEvent).filter((ev) => !ev.allDay && ev.s > now).sort((a, b) => a.s - b.s)[0];
     if (upcoming) {
