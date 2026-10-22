@@ -642,3 +642,37 @@ body.has-timers .dash { padding-top: 5.6rem; }
 .alarm .btn { border-color: #0e0d0b; color: #0e0d0b; font-size: 1.4rem; padding: 1.2rem 2.2rem; }
 .alarm .btn.primary { background: #0e0d0b; color: var(--accent); }
 @media (orientation: portrait) and (max-width: 700px) { .timer-bar { left: 1rem; right: 1rem; } body.has-timers .dash { padding-top: 5rem; } .timer-presets { grid-template-columns: repeat(3, 1fr); } }
+
+/* ─── Skeletons ──────────────────────────────────────────────────────────── */
+.sk { display: block; background: rgba(243, 238, 227, 0.1); }
+.skeleton:not(.still) .sk { background-image: linear-gradient(90deg, rgba(243, 238, 227, 0.07) 0%, rgba(243, 238, 227, 0.17) 50%, rgba(243, 238, 227, 0.07) 100%); background-size: 220% 100%; animation: shimmer 1.8s linear infinite; }
+@keyframes shimmer { from { background-position: 220% 0; } to { background-position: -220% 0; } }
+.skeleton ul { list-style: none; margin: 0; padding: 0; }
+.sk-day { padding: 1.1rem 0 0.9rem; }
+.sk-card { display: grid; grid-template-columns: 5.2rem 1fr; gap: 1.2rem; padding: 1rem 0; border-top: 1px solid var(--rule); }
+.sk-when, .sk-what { display: flex; flex-direction: column; gap: 0.6rem; }
+.sk-what i[style*="width:0%"] { display: none; }
+.sk-task { display: flex; align-items: center; gap: 1.2rem; padding: 1.1rem 0; border-bottom: 1px solid var(--rule); }
+.sk-task .sk:last-child { flex: none; }
+.sk-box { width: 1.9rem; height: 1.9rem; flex: none; }
+.sk-cta { display: block; width: 100%; margin: 0 0 0.9rem; padding: 0.9rem 1rem; border: 1px solid var(--rule); background: transparent; color: var(--ink); font: 600 0.95rem/1.2 var(--mono); letter-spacing: 0.06em; text-align: left; }
+.sk-cta::after { content: " \2192"; color: var(--accent); }
+.wx-skel { display: none; }
+#weather.is-loading > :not(.col-head):not(.wx-skel) { display: none; }
+#weather.is-loading .wx-skel { display: flex; flex-direction: column; gap: 1.1rem; }
+.wx-skel .row { display: flex; align-items: center; gap: 1rem; }
+.wx-skel .grid6, .wx-skel .grid5 { display: grid; gap: 0.6rem; }
+.wx-skel .grid6 { grid-template-columns: repeat(6, 1fr); }
+.wx-skel .grid5 { grid-template-columns: repeat(5, 1fr); }
+.wx-skel .col { display: flex; flex-direction: column; gap: 0.5rem; padding: 0; border: 0; }
+.wx-skel .skeleton .sk, .wx-skel .sk { background-image: linear-gradient(90deg, rgba(243, 238, 227, 0.07) 0%, rgba(243, 238, 227, 0.17) 50%, rgba(243, 238, 227, 0.07) 100%); background-size: 220% 100%; animation: shimmer 1.8s linear infinite; }
+
+/* In the news (Skreen+) */
+.news-list { list-style: none; margin: 0; padding: 0; }
+.news-item { padding: 1rem 0; border-top: 1px solid var(--rule); font-size: 1.25rem; line-height: 1.3; font-weight: 500; }
+.news-item:first-child { border-top: 0; }
+.news-item a { color: inherit; text-decoration: none; }
+.news-empty { color: var(--muted); font-size: 1rem; }
+.news-credit { margin: 0.6rem 0 0; font: 400 0.72rem/1.3 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+.sv-news .row { align-items: flex-start; }
+.sv-news .rn { font-size: max(2rem, 4.6vh); line-height: 1.15; font-weight: 600; }

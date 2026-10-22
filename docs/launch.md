@@ -82,4 +82,4 @@ The app lives at `https://app.skreen.fyi/`; the bare `skreen.fyi` is reserved fo
 
 ## The relay (Cloudflare Worker)
 
-`worker/index.js` serves forecasts, city search and place names, and fetches published calendar links (`/ics`). **Redeploy it** (paste the file into the Cloudflare editor, Deploy) whenever it changes. It keeps nothing except short-lived cache entries (calendar links are cached under a hash, not the link).
+`worker/index.js` serves forecasts, city search and place names, fetches published calendar links (`/ics`), and the Wikipedia "In the news" list (`/news`, CC BY-SA: keep the credit under the widget). **Redeploy it** (paste the file into the Cloudflare editor, Deploy) whenever it changes. It keeps nothing except short-lived cache entries (calendar links are cached under a hash, not the link).

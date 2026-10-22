@@ -31,7 +31,10 @@
   // Where the data comes from: Google sign-in in the app, or sample data.
   const canSignIn = () => !!(window.SkreenNative && window.SkreenNative.signIn);
   const usingGoogle = () => canSignIn() && !!cfg.signedIn;
-  const isDemo = () => !usingGoogle() && !(cfg.ics && cfg.ics.length);
+  const noSource = () => !usingGoogle() && !(cfg.ics && cfg.ics.length);
+  // Nothing is connected yet: show an empty skeleton, never made-up data. (Add ?demo to the address to see sample data, for screenshots.)
+  const DEV_DEMO = new URLSearchParams(location.search).has('demo');
+  const isDemo = () => DEV_DEMO && noSource();
 
 
   const REFRESH_DATA_MS = 2 * 60 * 1000;
@@ -65,7 +68,7 @@
   // ─── State ─────────────────────────────────────────────────────────────────
 
   const state = {
-    events: [], tasks: [], lists: [], weather: null,
+    events: [], tasks: [], lists: [], weather: null, loaded: false,
     lastSync: null, syncError: null,
     mutating: 0, lastMutation: 0,
     nightDismissedUntil: 0,
@@ -186,6 +189,12 @@
       state.events = demoEvents();
       state.tasks = decorateTasks(demoTasks.load());
       state.lastSync = new Date();
+      state.loaded = true;
+      renderAll();
+      return;
+    }
+    if (noSource()) {
+      state.events = []; state.tasks = []; state.lists = []; state.loaded = false;
       renderAll();
       return;
     }
@@ -196,6 +205,7 @@
       // Don't clobber the list while a tap is still being saved.
       if (!state.mutating && Date.now() - state.lastMutation > 4000) state.tasks = decorateTasks(data.tasks);
       state.lastSync = new Date();
+      state.loaded = true;
       state.syncError = (data.errors || []).length ? ((data.errors[0] instanceof Google.AuthError) ? 'auth' : 'partial') : null;
     } catch (err) {
       state.syncError = err instanceof Google.AuthError ? 'auth' : (err.message || String(err));
@@ -281,6 +291,27 @@
     targets.forEach((el) => { el.style.transform = t; });
   }
 
+
+  // ─── Skeletons: grey placeholders while data loads, or until something is connected ───
+
+  const skeletonOn = () => !isDemo() && (noSource() || !state.loaded);
+  const sk = (w, h = 1) => `<i class="sk" style="width:${w}%;height:${h}rem"></i>`;
+  function skeletonAgenda() {
+    const card = (a, b, c) => `<div class="sk-card"><div class="sk-when">${sk(80, 1.2)}${sk(55, 0.9)}</div><div class="sk-what">${sk(a, 1.3)}${sk(b, 1.3)}${sk(c, 0.9)}</div></div>`;
+    const cta = noSource() ? `<button type="button" class="sk-cta">${canSignIn() ? 'Sign in with Google to see your day' : 'Add a calendar link in Settings to see your day'}</button>` : '';
+    return `<div class="skeleton${noSource() ? ' still' : ''}" aria-hidden="${noSource() ? 'false' : 'true'}">${cta}<div class="sk-day">${sk(30, 1)}</div>${card(78, 52, 40)}${card(66, 0, 34)}${card(84, 60, 44)}${card(58, 0, 30)}</div>`;
+  }
+  function skeletonTasks() {
+    const row = (w) => `<li class="sk-task"><i class="sk sk-box"></i>${sk(w, 1.3)}</li>`;
+    const cta = noSource() && canSignIn() ? '<li><button type="button" class="sk-cta">Sign in to see your to-do list</button></li>' : '';
+    return `<li class="skeleton${noSource() ? ' still' : ''}" aria-hidden="${noSource() ? 'false' : 'true'}"><ul>${cta}${[72, 54, 80, 46, 64].map(row).join('')}</ul></li>`;
+  }
+  const syncWeatherSkeleton = () => $('weather').classList.toggle('is-loading', !state.weather);
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.sk-cta')) return;
+    if (canSignIn()) startSignIn(); else openSettings();
+  });
+
   // ─── Agenda ────────────────────────────────────────────────────────────────
 
   const normalizeEvent = (e) => (e.allDay ? { ...e, s: parseDate(e.start), e: parseDate(e.end) } : { ...e, s: new Date(e.start), e: new Date(e.end) });
@@ -290,6 +321,7 @@
 
   function renderAgenda() {
     const el = $('agenda');
+    if (skeletonOn()) { agendaIndex = new Map(); el.innerHTML = skeletonAgenda(); return; }
     agendaIndex = new Map();
     const now = new Date();
     const today = startOfDay(now);
@@ -491,6 +523,7 @@
   }
 
   function renderTasks() {
+    if (skeletonOn()) { $('taskCount').textContent = ''; $('tasks').innerHTML = skeletonTasks(); return; }
     const { open, done } = taskGroups();
     $('taskCount').textContent = open.length || '';
     let html = '';
@@ -747,6 +780,7 @@
 
   function renderWeather() {
     const w = state.weather;
+    syncWeatherSkeleton();
     if (!w) return;
     const c = w.current, d = w.daily, h = w.hourly;
     const now = Icons.weather(c.weather_code, c.is_day);
@@ -1008,9 +1042,9 @@
 
   // ─── Big-screen tour (burn-in protection) ──────────────────────────────────
 
-  const TOUR_ALL = { time: 'clock', weather: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos' };
+  const TOUR_ALL = { time: 'clock', weather: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news' };
   let TOUR = Object.keys(TOUR_ALL);
-  const tourViews = () => Object.keys(TOUR_ALL).filter((v) => visibleWidgets().includes(TOUR_ALL[v]) && (v !== 'photos' || (photosShown() && photo.current)));
+  const tourViews = () => Object.keys(TOUR_ALL).filter((v) => visibleWidgets().includes(TOUR_ALL[v]) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (!['agenda', 'todo'].includes(v) || state.loaded));
   const tour = { on: false, i: 0, cycle: 0, timer: null, last: Date.now() };
 
   // Skreen+: the tour can run all the time. A tap ends it for two minutes, then it resumes.
@@ -1078,6 +1112,10 @@
   $('showcase').addEventListener('click', endTour);
 
   function tourHtml(name) {
+    if (name === 'news') {
+      const rows = News.current.slice(0, 4).map((s) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(s.text)}</div></div>`).join('');
+      return `<div class="kicker">In the news</div><div class="sv-list sv-news">${rows}</div>`;
+    }
     if (name === 'photos') return `<div class="sv-photo" style="background-image:url('${photo.current}')"></div>`;
     const now = new Date();
     if (name === 'time') {
@@ -1180,10 +1218,13 @@
       el.dataset.go = 'update';
       el.innerHTML = `<span class="dot"></span>Skreen ${esc(state.update.name)} is available · <u>Install update</u>`;
     } else if (isDemo()) {
+      el.innerHTML = '<span class="dot"></span>Sample data (demo)';
+      el.dataset.go = 'none';
+    } else if (noSource()) {
       el.dataset.go = canSignIn() ? 'signin' : 'start';
       el.innerHTML = canSignIn()
-        ? '<span class="dot"></span>Showing sample data · <u>Sign in with Google →</u>'
-        : '<span class="dot"></span>Showing sample data · <u>Set up Skreen →</u>';
+        ? '<span class="dot"></span>Not connected · <u>Sign in with Google →</u>'
+        : '<span class="dot"></span>Not connected · <u>Set up Skreen →</u>';
     } else if (!usingGoogle() && canSignIn()) {
       el.dataset.go = 'signin';
       el.innerHTML = '<span class="dot"></span>Showing your calendar links · <u>Sign in with Google for a to-do list →</u>';
@@ -1320,7 +1361,7 @@
   $('welcomeSignIn').addEventListener('click', () => { startSignIn(); });
   $('welcomeLater').addEventListener('click', () => { cfg.welcomed = true; saveSettings(); welcome.close(); });
   function maybeWelcome() {
-    if (canSignIn() && isDemo() && !cfg.welcomed) welcome.showModal();
+    if (canSignIn() && noSource() && !cfg.welcomed) welcome.showModal();
   }
 
   // ─── Setup guide ───────────────────────────────────────────────────────────
@@ -1467,8 +1508,8 @@
   // cfg.layout is the order, with hidden widgets prefixed "-": "agenda,todo,-weather,clock".
   // Clock and weather sit in one column when they're next to each other.
 
-  const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos (Skreen+)' };
-  const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92, photos: 1.15 };
+  const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos (Skreen+)', news: 'In the news (Skreen+)' };
+  const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92, photos: 1.15, news: 1.1 };
   const hasPlus = () => Plus.active();
 
   function parseLayout(str) {
@@ -1477,7 +1518,7 @@
       const off = raw.trim().startsWith('-'), id = raw.trim().replace(/^-/, '');
       if (WIDGETS[id] && !seen.has(id)) { seen.add(id); out.push({ id, on: !off }); }
     }
-    for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: id !== 'photos' });   // photos start hidden
+    for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: id !== 'photos' && id !== 'news' });   // the Plus widgets start hidden
     if (!out.some((w) => w.on)) out.forEach((w) => { w.on = true; });
     return out;
   }
@@ -1508,6 +1549,7 @@
     }
     dash.style.setProperty('--cols', lanes.map((l) => `minmax(0, ${LAYOUT_FR[l.kind]}fr)`).join(' '));
     if (typeof syncPhotos === 'function') syncPhotos();
+    if (typeof syncNews === 'function') syncNews();
   }
 
   // ─── Photos widget (Skreen+) ────────────────────────────────────────────────
@@ -1560,6 +1602,22 @@
       }
     }
     nextPhoto();
+  }
+
+  // ─── In the news widget (Skreen+) ───────────────────────────────────────────
+
+  const newsShown = () => hasPlus() && visibleWidgets().includes('news');
+  function drawNews() {
+    const list = News.current;
+    $('newsList').innerHTML = list.length
+      ? list.map((s) => `<li class="news-item"><a ${s.url ? `href="${esc(s.url)}" data-ext` : ''}>${esc(s.text)}</a></li>`).join('')
+      : '<li class="news-item news-empty">Loading the news\u2026</li>';
+  }
+  async function syncNews(force = false) {
+    if (!newsShown() && !(force && newsShown())) return;
+    drawNews();
+    try { await News.stories(force); } catch (_) { /* keep what we have; try again at the next refresh */ }
+    drawNews();
   }
 
   // The editor in Settings: a tick to show/hide and arrows to reorder (no dragging on a wall display).
@@ -1957,6 +2015,7 @@
         }, () => {}, { timeout: 15000 });
       }
     }
+    syncWeatherSkeleton();
     tick();
     timerLoop();
     refreshData();
@@ -1967,6 +2026,7 @@
     maybeWelcome();
     setTimeout(checkSiteVersion, 60000); setInterval(checkSiteVersion, SITE_CHECK_MS);
     if (canUpdate()) { setTimeout(backgroundUpdateCheck, 20000); setInterval(backgroundUpdateCheck, UPDATE_CHECK_MS); }
+    setInterval(() => syncNews(true), 30 * 60000);
     setInterval(refreshData, REFRESH_DATA_MS);
     setInterval(refreshWeather, REFRESH_WEATHER_MS);
     if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname !== 'appassets.androidplatform.net') navigator.serviceWorker.register('sw.js').catch(() => {});

@@ -41,6 +41,12 @@
       <div class="wx-summary" id="wxSummary"></div>
       <div class="wx-hours" id="wxHours"></div>
       <div class="wx-days" id="wxDays"></div>
+      <div class="wx-skel" aria-hidden="true">
+        <div class="row"><i class="sk" style="width:4.6rem;height:4.6rem"></i><i class="sk" style="width:8.5rem;height:4.4rem"></i><div class="col"><i class="sk" style="width:6rem;height:1.4rem"></i><i class="sk" style="width:7.5rem;height:1rem"></i></div></div>
+        <i class="sk" style="width:80%;height:1.3rem"></i>
+        <div class="grid6"><i class="sk" style="height:5.2rem"></i><i class="sk" style="height:5.2rem"></i><i class="sk" style="height:5.2rem"></i><i class="sk" style="height:5.2rem"></i><i class="sk" style="height:5.2rem"></i><i class="sk" style="height:5.2rem"></i></div>
+        <div class="grid5"><i class="sk" style="height:6.4rem"></i><i class="sk" style="height:6.4rem"></i><i class="sk" style="height:6.4rem"></i><i class="sk" style="height:6.4rem"></i><i class="sk" style="height:6.4rem"></i></div>
+      </div>
     </section>
 
     <section class="w col agenda" data-w="agenda">
@@ -53,6 +59,12 @@
       <ul class="scroll tasks" id="tasks"></ul>
       <button class="add-btn" id="addBtn" type="button"><span id="addIcon"></span>Add to list</button>
     </section>
+    <section class="w col news" data-w="news">
+      <div class="col-head"><span>In the news</span></div>
+      <ul class="scroll news-list" id="newsList"></ul>
+      <p class="news-credit">Wikipedia &middot; In the news &middot; CC BY-SA</p>
+    </section>
+
     <section class="w w-photos" data-w="photos">
       <div class="photo-frame" id="photoFrame"><div class="pf" id="pfA"></div><div class="pf" id="pfB"></div><div class="pf-note" id="photoNote"></div></div>
     </section>
@@ -224,7 +236,7 @@
           <div class="loc-current" id="locCurrent"></div>
           <div class="loc-results" id="locResults"></div>
         </div>
-        <p class="credit">Forecasts from MET Norway. Place data © OpenStreetMap contributors.</p>
+        <p class="credit">Forecasts from MET Norway. Place data © OpenStreetMap contributors. News from Wikipedia (CC BY-SA).</p>
 
         <div class="field-grid">
           <label class="field"><span>Temperature</span>
@@ -344,6 +356,7 @@
   <script src="vendor/ical.min.js?v=dev"></script>
   <script src="ics.js?v=dev"></script>
   <script src="photos.js?v=dev"></script>
+  <script src="news.js?v=dev"></script>
   <script src="backgrounds.js?v=dev"></script>
   <script src="guide.js?v=dev"></script>
   <script src="app.js?v=dev"></script>

@@ -3,6 +3,7 @@
 //   /geocode?q=…                               → city / ZIP search (OpenStreetMap Nominatim)
 //   /reverse?lat=…&lon=…                       → coordinates to a place name
 //   /ics?u=<https calendar link>               → fetches a published calendar (ICS) for the browser
+//   /news                                      → today's "In the news" stories from Wikipedia (CC BY-SA)
 // The services we call want every request to identify the app and a contact address, and ask
 // clients to cache. Browsers can't set User-Agent, so this does both, and stores nothing else.
 const CONTACT = 'Skreen/1.0 (+https://github.com/boulevardofdef/skreen; tiszenkel@gmail.com)';
@@ -78,6 +79,29 @@ export default {
         fetch(`${NOMINATIM}/reverse?format=jsonv2&addressdetails=1&zoom=10&accept-language=en&lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}`, { headers: { 'User-Agent': CONTACT } }));
       if (!res) return json({ error: 'upstream' }, 502);
       return json(place(await res.json()), 200, { 'Cache-Control': 'public, max-age=86400' });
+    }
+
+    if (url.pathname === '/news') {
+      // Wikipedia's featured feed carries the "In the news" box: a few current stories, each with links.
+      const entities = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+      const plain = (html) => html.replace(/<[^>]+>/g, '').replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (m, e) => {
+        if (e[0] === '#') return String.fromCodePoint(e[1].toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10));
+        return entities[e.toLowerCase()] ?? m;
+      }).replace(/\s*\(pictured\)/gi, '').replace(/\s+/g, ' ').trim();
+      for (let back = 0; back < 2; back++) {
+        const d = new Date(Date.now() - back * 86400000);
+        const day = `${d.getUTCFullYear()}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(d.getUTCDate()).padStart(2, '0')}`;
+        const res = await cached(ctx, 'n/' + day, 1800, () =>
+          fetch(`https://en.wikipedia.org/api/rest_v1/feed/featured/${day}`, { headers: { 'User-Agent': CONTACT, Accept: 'application/json' } }));
+        if (!res) continue;
+        const stories = ((await res.json()).news || []).map((n) => {
+          const link = (n.links || []).find((l) => l.content_urls && l.content_urls.desktop) || (n.links || [])[0];
+          const page = link && ((link.content_urls && link.content_urls.desktop && link.content_urls.desktop.page) || `https://en.wikipedia.org/wiki/${encodeURIComponent(link.title)}`);
+          return { text: plain(n.story || ''), url: page || '' };
+        }).filter((s) => s.text).slice(0, 8);
+        if (stories.length) return json({ stories }, 200, { 'Cache-Control': 'public, max-age=900' });
+      }
+      return json({ error: 'upstream' }, 502);
     }
 
     if (url.pathname === '/ics') {

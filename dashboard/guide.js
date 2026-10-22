@@ -84,6 +84,7 @@ window.Guide = (() => {
   <li><b>Several Google accounts</b>, and several calendars and to-do lists from each, shown together.</li>
   <li><b>Your own layout.</b> Show or hide the clock, weather, schedule and to-do list, and put them in any order.</li>
   <li><b>Photos.</b> A slideshow from a Google Drive folder, on the main screen and in the big-screen tour.</li>
+  <li><b>In the news.</b> A short list of today's top stories from Wikipedia's front page, as a widget and in the big-screen tour. Add it under Settings → Layout.</li>
   <li><b>Always-on slideshow.</b> The big-screen tour can run all the time instead of every few minutes.</li>
 </ul>
 <h2>Buying and restoring</h2>
