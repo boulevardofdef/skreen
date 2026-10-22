@@ -722,18 +722,25 @@
   const tourViews = () => Object.keys(TOUR_ALL).filter((v) => visibleWidgets().includes(TOUR_ALL[v]));
   const tour = { on: false, i: 0, cycle: 0, timer: null, last: Date.now() };
 
+  // Skreen+: the tour can run all the time. A tap ends it for two minutes, then it resumes.
+  const alwaysTour = () => cfg.showcaseMinutes === 'always' && hasPlus();
+
   function maybeStartTour(now = new Date()) {
-    const mins = Number(cfg.showcaseMinutes);
+    const mins = alwaysTour() ? 2 : Number(cfg.showcaseMinutes);
     if (!mins || tour.on || refresh.on || isNight(now) || dialogOpen()) return;
     if (now.getTime() - tour.last >= mins * 60000) startTour();
   }
   const dialogOpen = () => !!document.querySelector('dialog[open]') || !$('guide').hidden;
 
   function startTour() {
+    tour.on = true;
+    $('showcase').hidden = false;
+    beginTourCycle();
+  }
+
+  function beginTourCycle() {
     TOUR = tourViews();
-    tour.on = true; tour.i = 0; tour.cycle++;
-    const box = $('showcase');
-    box.hidden = false;
+    tour.i = 0; tour.cycle++;
     const bar = $('showBar');
     bar.style.transition = 'none'; bar.style.width = '0';
     void bar.offsetWidth;
@@ -750,7 +757,12 @@
     v.innerHTML = tourHtml(name);
     body.appendChild(v);
     fitToWidth(v.querySelector('.big'), v.clientWidth * 0.88);
-    tour.timer = setTimeout(() => { tour.i++; if (tour.i >= TOUR.length) endTour(); else showTourView(); }, TOUR_VIEW_MS);
+    tour.timer = setTimeout(() => {
+      tour.i++;
+      if (tour.i < TOUR.length) showTourView();
+      else if (alwaysTour() && !isNight(new Date()) && !dialogOpen()) beginTourCycle();   // Skreen+: straight into the next round
+      else endTour();
+    }, TOUR_VIEW_MS);
   }
 
   // Big type is sized from the screen, but some devices draw the font wider than expected.
@@ -1277,6 +1289,9 @@
     fillBackgroundOptions();
     fillTimeOptions();
     for (const el of form.elements) if (el.name && el.name in cfg) el.value = cfg[el.name] ?? '';
+    const tourSel = form.elements.showcaseMinutes;
+    tourSel.querySelector('option[value="always"]').disabled = !hasPlus();
+    if (!hasPlus() && tourSel.value === 'always') tourSel.value = '5';
     draftLayout = parseLayout(cfg.layout);
     drawLayoutEditor();
     drawPlusCard();
