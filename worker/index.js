@@ -135,7 +135,8 @@ export default {
             artist: plain(i.extmetadata && i.extmetadata.Artist && i.extmetadata.Artist.value),
             image: i.thumburl,
           })).filter((a) => a.title.length < 120);
-        notes.push(`${n}: ${pages.length} files, ${items.length} usable`);
+        const withInfo = pages.filter((p) => p.imageinfo && p.imageinfo[0]).length;
+        notes.push(`${n}: ${pages.length} files, ${withInfo} with info, ${items.length} usable${items.length ? '' : ' - first: ' + JSON.stringify(pages[0] || {}).slice(0, 500)}`);
         if (items.length >= 5) {
           for (let k = items.length - 1; k > 0; k--) { const j2 = (k * 7 + dayN) % (k + 1); [items[k], items[j2]] = [items[j2], items[k]]; }
           return json({ items: items.slice(0, 80) }, 200, { 'Cache-Control': 'public, max-age=3600' });
