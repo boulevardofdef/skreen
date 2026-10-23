@@ -161,7 +161,7 @@ window.Guide = (() => {
   <li><b>Moving backgrounds.</b> The background colours drift slowly, and change daily.</li>
 </ul>
 <h2>If you see a faint ghost image</h2>
-<p>A faint outline of something that used to be on the skreen (a home screen, an old app) is usually <b>temporary image retention</b>. Showing the skreen varied content clears it, and Skreen's tour and night mode help. For a stubborn one, open <b>Settings → Skreen care → Refresh skreen</b>: it washes the whole skreen slowly through white, black, red, green and blue for five minutes. Tap anywhere to stop. On an OLED panel, long-standing ghosts can be permanent burn-in, which no software can undo.</p>
+<p>A faint outline of something that used to be on the skreen (a home screen, an old app) is usually <b>temporary image retention</b>. Showing the skreen varied content clears it, and Skreen's tour and night mode help. On an OLED panel, long-standing ghosts can be permanent burn-in, which no software can undo.</p>
 <h2>What you can do</h2>
 <ul>
   <li><b>Lower the brightness.</b> This is the single biggest help, and a wall display doesn't need to be bright. In the Android app, set it under Settings → Brightness (daytime and night levels). </li>

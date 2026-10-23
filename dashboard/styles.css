@@ -495,10 +495,6 @@ body.native .field.native-only { display: flex; }
 .show-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 0.6vh; background: rgba(243, 238, 227, 0.1); }
 .show-bar i { display: block; height: 100%; width: 0; background: var(--accent); }
 
-/* ─── Screen refresh (clears faint ghost images) ─────────────────────────── */
-
-.refresh { position: fixed; inset: 0; z-index: 80; background: #000; transition: background-color 2.5s linear; }
-.refresh[hidden] { display: none; }
 
 /* ─── Night mode ─────────────────────────────────────────────────────────── */
 

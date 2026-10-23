@@ -10,7 +10,7 @@ const Photos = (() => {
   async function art() {
     const res = await fetch(`${Weather.relay}/art`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    return ((await res.json()).items || []).map((a) => ({ url: a.image, caption: [a.title, a.artist].filter(Boolean).join(' · '), art: true, fallback: a.small }));
+    return ((await res.json()).items || []).map((a) => ({ url: a.image, caption: [a.title, a.artist].filter(Boolean).join(' · '), art: true, fallback: a.small || a.image.replace('/full/1686,/', '/full/843,/') }));
   }
 
   function mine() {

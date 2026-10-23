@@ -1060,7 +1060,7 @@
 
   function maybeStartTour(now = new Date()) {
     const mins = alwaysTour() ? 2 : Number(cfg.showcaseMinutes);
-    if (!mins || tour.on || refresh.on || isNight(now) || dialogOpen()) return;
+    if (!mins || tour.on || isNight(now) || dialogOpen()) return;
     if (now.getTime() - tour.last >= mins * 60000) startTour();
   }
   const dialogOpen = () => !!document.querySelector('dialog[open]') || !$('guide').hidden;
@@ -1439,36 +1439,6 @@
   });
   $('guideClose').addEventListener('click', closeGuide);
 
-  // ─── Screen refresh ────────────────────────────────────────────────────────
-  // Slowly washes the whole screen through white, red, green, blue and black. Showing every
-  // pixel a range of colours for a few minutes helps clear temporary "ghost" images.
-
-  const REFRESH_COLORS = ['#ffffff', '#000000', '#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000'];
-  const refresh = { on: false, timer: null, i: 0, started: 0 };
-  function startRefresh() {
-    if (refresh.on) return;
-    refresh.on = true; refresh.i = 0; refresh.started = Date.now();
-    if (tour.on) endTour();
-    settingsSheet.close();
-    const el = $('refresh');
-    el.hidden = false;
-    const step = () => {
-      el.style.backgroundColor = REFRESH_COLORS[refresh.i % REFRESH_COLORS.length];
-      refresh.i++;
-      if (Date.now() - refresh.started > 5 * 60000) { stopRefresh(); return; }
-      refresh.timer = setTimeout(step, 6000);
-    };
-    step();
-  }
-  function stopRefresh() {
-    clearTimeout(refresh.timer);
-    refresh.on = false;
-    $('refresh').hidden = true;
-    tour.last = Date.now();
-  }
-  $('refresh').addEventListener('click', stopRefresh);
-  $('refreshBtn').addEventListener('click', startRefresh);
-
   // ─── Place names ───────────────────────────────────────────────────────────
   // "Current location" is not much use on a wall; say where it actually is.
 
@@ -1670,7 +1640,7 @@
   setInterval(() => {
     const secs = Number(cfg.pageSeconds);
     if (pager.count < 2 || !secs || pager.dragging) return;
-    if (tour.on || refresh.on || dialogOpen() || !$('night').hidden || alarm.on) return;
+    if (tour.on || dialogOpen() || !$('night').hidden || alarm.on) return;
     if (Date.now() - pager.changedAt < secs * 1000) return;
     setPage(pager.index + 1);
   }, 1000);
@@ -1686,6 +1656,7 @@
 
   function showPhoto(item, then) {
     const img = new Image();
+    img.referrerPolicy = 'no-referrer';
     img.onload = () => {
       const back = photo.front === 'A' ? $('pfB') : $('pfA'), front = photo.front === 'A' ? $('pfA') : $('pfB');
       back.style.backgroundImage = `url("${img.src}")`;
@@ -2366,14 +2337,13 @@
   }
   function quietEnough() {
     const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
-    return !dialogOpen() && !tour.on && !refresh.on && !state.mutating && !typing && !timers.length &&
+    return !dialogOpen() && !tour.on && !state.mutating && !typing && !timers.length &&
       !$('toast').classList.contains('show') && Date.now() - lastTouch > QUIET_MS;
   }
   function maybeSelfReload() { if (newerSite && quietEnough()) location.reload(); }
 
   // Android back button: close whatever is open, never leave the app.
   window.skreenBack = () => {
-    if (refresh.on) { stopRefresh(); return true; }
     if (tour.on) { endTour(); return true; }
     if (!guide.hidden) { closeGuide(); return true; }
     const open = document.querySelector('dialog[open]');
