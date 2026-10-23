@@ -133,7 +133,7 @@ button { cursor: pointer; }
 .clock {
   display: flex; align-items: baseline; gap: 0.5rem; white-space: nowrap;
   font-size: calc(min(10.5rem, 33cqi) * var(--scale)); line-height: 0.86; font-weight: 700; font-stretch: var(--stretch);
-  letter-spacing: -0.03em; margin-left: -0.04em;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums; font-variation-settings: "opsz" 96;
 }
 .colon { display: inline-block; margin: 0 0.045em; transform: translateY(-0.04em); }
