@@ -519,7 +519,7 @@ body.native .field.native-only { display: flex; }
   .lane.pair { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 2.4rem; padding: 0 0 1.6rem; border-left: 0; }
   .lane.pair .weather { flex: 1; max-width: 34rem; }
   .lane:not(.pair) { padding: 0 1rem; }
-  .status { left: 4.6rem; }
+  .status { left: 7.6rem; }
   .gear { left: 1.8rem; }
   .guide { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .guide-nav { flex-direction: row; flex-wrap: wrap; padding: 1rem 1.4rem; border-right: 0; border-bottom: 1px solid var(--rule); }
