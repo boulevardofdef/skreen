@@ -1962,7 +1962,7 @@
     $('layoutField').classList.toggle('locked', !on);
     $('photoField').classList.toggle('locked', !on);
     const tourSel = form.elements.showcaseMinutes;
-    tourSel.querySelector('option[value="always"]').disabled = !on;
+    ['mealField', 'shopField'].forEach((id) => $(id).classList.toggle('locked', !on));
     if (!on && tourSel.value === 'always') tourSel.value = '5';
     $('plusText').innerHTML = on
       ? '<b>Skreen+ is unlocked.</b> Thank you. It\u2019s yours for good.'
@@ -1973,6 +1973,30 @@
     $('plusCodeBox').hidden = on;
   }
   $('plusBuy').addEventListener('click', () => Plus.buy());
+
+  // A free user tried a Skreen+ option: say so, and offer to unlock it. (A toast would sit behind Settings.)
+  function offerPlus(why) {
+    if (hasPlus()) return;
+    const st = Plus.state;
+    $('plusWhy').textContent = why;
+    $('plusSheetBuy').hidden = !st.canBuy;
+    $('plusSheetBuy').textContent = st.price ? `Unlock Skreen+ \u00b7 ${st.price}` : 'Unlock Skreen+';
+    $('plusSheet').showModal();
+  }
+  $('plusSheetClose').addEventListener('click', () => $('plusSheet').close());
+  $('plusSheetBuy').addEventListener('click', () => { $('plusSheet').close(); Plus.buy(); });
+  $('plusSheetCode').addEventListener('click', () => {
+    $('plusSheet').close();
+    $('plusCodeBox').open = true;
+    $('plusCard').scrollIntoView({ block: 'center' });
+    setTimeout(() => $('plusCode').focus(), 50);
+  });
+  const PLUS_FIELDS = { layoutField: 'Choosing and arranging your own layout is part of Skreen+.', photoField: 'The photo slideshow is part of Skreen+.', mealField: 'The dinner planner is part of Skreen+.', shopField: 'The shopping list is part of Skreen+.' };
+  Object.entries(PLUS_FIELDS).forEach(([id, why]) => {
+    $(id).addEventListener('click', (e) => { if (!hasPlus()) { e.preventDefault(); e.stopPropagation(); offerPlus(why); } }, true);
+    $(id).addEventListener('focusin', (e) => { if (!hasPlus()) { e.target.blur(); offerPlus(why); } });
+  });
+
   $('plusForget').addEventListener('click', () => Plus.forgetCode());
   // The code field fixes itself as you type: capital letters, the SKR- start and the hyphens are added for you.
   const formatCode = (raw) => {
@@ -2023,6 +2047,9 @@
   // ─── Settings sheet ────────────────────────────────────────────────────────
 
   const settingsSheet = $('settingsSheet'), form = $('settingsForm');
+  form.elements.showcaseMinutes.addEventListener('change', (e) => {
+    if (e.target.value === 'always' && !hasPlus()) { e.target.value = '5'; offerPlus('An always-on slideshow is part of Skreen+.'); }
+  });
 
   // ─── Other calendars (published links) ─────────────────────────────────────
 
@@ -2086,7 +2113,6 @@
     fillTimeOptions();
     for (const el of form.elements) if (el.name && el.name in cfg) el.value = cfg[el.name] ?? '';
     const tourSel = form.elements.showcaseMinutes;
-    tourSel.querySelector('option[value="always"]').disabled = !hasPlus();
     if (!hasPlus() && tourSel.value === 'always') tourSel.value = '5';
     drawPhotoSettings(true);
     draftIcs = (cfg.ics || []).map((c) => ({ ...c }));
@@ -2182,7 +2208,7 @@
     const b = e.target.closest('[data-acct]');
     if (!b) return;
     if (b.dataset.acct === 'add') {
-      if (usingGoogle() && !hasPlus() && accountList().length >= 1) { showToast('Several Google accounts are part of Skreen+'); return; }
+      if (usingGoogle() && !hasPlus() && accountList().length >= 1) { offerPlus('Using several Google accounts is part of Skreen+.'); return; }
       if (await startSignIn()) fillGoogleSection();
     } else if (b.dataset.acct === 'remove') {
       removeAccount(b.dataset.who);
