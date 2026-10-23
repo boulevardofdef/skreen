@@ -129,7 +129,7 @@ export default {
           if (!res) { notes.push(`${n}: upstream refused`); continue; }
           pages = Object.values(((await res.json()).query || {}).pages || {});
         } catch (e) { notes.push(`${n}: ${e.message}`); continue; }
-        const items = pages.map((p) => ({ p, i: (p.imageinfo || [])[0] })).filter(({ i }) => i && i.thumburl && /\.(jpe?g|png)$/i.test(p.title || '') && i.width >= 1000 && i.width * i.height < 120e6)
+        const items = pages.map((p) => ({ p, i: (p.imageinfo || [])[0] })).filter(({ p, i }) => i && i.thumburl && /\.(jpe?g|png)$/i.test(p.title || '') && i.width >= 1000 && i.width * i.height < 120e6)
           .map(({ p, i }) => ({
             title: plain((i.extmetadata && i.extmetadata.ObjectName && i.extmetadata.ObjectName.value) || String(p.title || '').replace(/^File:/, '').replace(/\.[a-z]+$/i, '').replace(/_/g, ' ')),
             artist: plain(i.extmetadata && i.extmetadata.Artist && i.extmetadata.Artist.value),
