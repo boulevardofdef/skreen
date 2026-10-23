@@ -4,6 +4,7 @@
 //   /reverse?lat=…&lon=…                       → coordinates to a place name
 //   /ics?u=<https calendar link>               → fetches a published calendar (ICS) for the browser
 //   /news                                      → today's "In the news" stories from Wikipedia (CC BY-SA)
+//   /radio?q=…                                 → internet radio stations (radio-browser.info) to search and play
 //   /art                                       → public-domain paintings (Wikimedia Commons) for the photo slideshow
 // The services we call want every request to identify the app and a contact address, and ask
 // clients to cache. Browsers can't set User-Agent, so this does both, and stores nothing else.
@@ -143,6 +144,21 @@ export default {
         }
       }
       return json({ error: 'upstream', notes }, 502);
+    }
+
+    if (url.pathname === '/radio') {
+      // Internet radio stations from the community directory radio-browser.info: search by name, or the
+      // most-listened stations when there is no search. Only https streams (the app can't play plain http).
+      const q = (url.searchParams.get('q') || '').trim().slice(0, 60);
+      const api = 'https://de1.api.radio-browser.info/json/stations/' + (q
+        ? `search?name=${encodeURIComponent(q)}&limit=60&hidebroken=true&order=clickcount&reverse=true`
+        : 'topclick/60');
+      const res = await cached(ctx, `r/${q.toLowerCase()}`, 3600, () => fetch(api, { headers: { 'User-Agent': CONTACT, Accept: 'application/json' } }));
+      if (!res) return json({ error: 'upstream' }, 502);
+      const items = ((await res.json()) || []).filter((s) => /^https:\/\//.test(s.url_resolved || '')).map((s) => ({
+        name: String(s.name || '').trim().slice(0, 80), url: s.url_resolved, where: [s.state, s.country].filter(Boolean).join(', '), tags: String(s.tags || '').split(',').slice(0, 3).join(', '),
+      })).filter((s) => s.name).slice(0, 25);
+      return json({ items }, 200, { 'Cache-Control': 'public, max-age=600' });
     }
 
     if (url.pathname === '/ics') {

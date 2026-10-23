@@ -37,5 +37,17 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- Lets the Now playing panel see and control the tablet's music app (the user grants this
+             under Settings > Notification access). Skreen reads no notifications. -->
+        <service
+            android:name=".NowPlayingService"
+            android:exported="true"
+            android:label="Skreen"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

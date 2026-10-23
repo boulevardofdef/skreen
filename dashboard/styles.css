@@ -260,7 +260,7 @@ button { cursor: pointer; }
 /* ─── Chrome ─────────────────────────────────────────────────────────────── */
 
 .status {
-  position: fixed; left: 7.3rem; bottom: 0.55rem; z-index: 2;
+  position: fixed; left: 9.6rem; bottom: 0.55rem; z-index: 2;
   display: flex; align-items: center; gap: 0.55rem; padding: 0.3rem 0.6rem 0.3rem 0; border: 0; background: none;
   font: 500 0.82rem/1 var(--mono); color: var(--muted); letter-spacing: 0.02em;
 }
@@ -276,6 +276,8 @@ button { cursor: pointer; }
 }
 .gear:active { background: var(--ink); color: var(--bg); }
 .timer-btn { left: 4.5rem; }
+.music-btn { left: 6.8rem; }
+.music-btn.on { border-color: var(--accent); color: var(--accent); }
 
 .toast {
   position: fixed; left: 50%; bottom: 1.8rem; z-index: 60; transform: translate(-50%, 220%); visibility: hidden;
@@ -571,7 +573,8 @@ body.native .field.native-only { display: flex; }
   .ev-row { grid-template-columns: 4.6rem minmax(0, 1fr); gap: 0.7rem; }
   .gear { left: 1rem; }
   .timer-btn { left: 3.3rem; }
-  .status { left: 5.7rem; }
+  .music-btn { left: 5.6rem; }
+  .status { left: 8rem; }
 }
 
 /* Skreen+ : the logo with a gold plus, used wherever something is a Plus feature */
@@ -729,3 +732,30 @@ body.timer-inline .wx-days { display: none; }
 
 /* Lists scroll up and down only, so a sideways swipe always reaches the pager. */
 .pager .scroll, .pager .tasks { touch-action: pan-y; }
+
+/* ─── Music (now playing + radio) ───────────────────────────────────────── */
+.music-sheet { width: min(40rem, 94vw); }
+.music-now { margin: 0.4rem 0 1rem; }
+.np { display: grid; grid-template-columns: 7.5rem 1fr; gap: 1.2rem; align-items: center; }
+.np-art { width: 7.5rem; height: 7.5rem; background: var(--wash) center / cover no-repeat; border: 1px solid var(--rule); display: grid; place-items: center; font-size: 2.6rem; color: var(--faint); }
+.np-art svg { width: 2.6rem; height: 2.6rem; }
+.np-title { font-size: 1.5rem; font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; }
+.np-artist { margin-top: 0.25rem; font-size: 1.1rem; color: var(--muted); overflow-wrap: anywhere; }
+.np-app { margin-top: 0.3rem; font: 600 0.75rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.np-controls { display: flex; gap: 0.8rem; margin-top: 0.8rem; }
+.np-controls button { width: 3.4rem; height: 3.4rem; border: 1px solid var(--rule); background: transparent; color: var(--ink); display: grid; place-items: center; padding: 0; }
+.np-controls button svg { width: 1.5rem; height: 1.5rem; }
+.np-controls button.main { background: var(--ink); color: var(--bg); }
+.np-controls button:disabled { opacity: 0.3; }
+.np-setup { border: 1px solid var(--rule); padding: 0.9rem 1rem; font-size: 1rem; line-height: 1.45; }
+.np-setup p { margin: 0 0 0.7rem; }
+.music-radio { border-top: 1px solid var(--rule); padding-top: 0.8rem; }
+.music-radio .sub { font: 600 0.78rem/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+.radio-playing { display: flex; align-items: center; gap: 0.8rem; justify-content: space-between; margin: 0.6rem 0; padding: 0.6rem 0.8rem; border: 1px solid var(--accent); }
+.radio-playing b { font-size: 1.15rem; min-width: 0; overflow-wrap: anywhere; }
+.radio-list { max-height: 36vh; overflow: auto; margin-top: 0.4rem; }
+.radio-item { display: block; width: 100%; text-align: left; background: transparent; border: 0; border-top: 1px solid var(--rule); color: var(--ink); padding: 0.7rem 0; }
+.radio-item b { display: block; font-size: 1.15rem; }
+.radio-item span { font: 400 0.85rem/1.3 var(--mono); color: var(--muted); }
+.radio-item:active { background: var(--wash); }
+.radio-note { color: var(--muted); padding: 0.8rem 0; }

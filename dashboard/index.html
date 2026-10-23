@@ -87,6 +87,7 @@
   <button class="status" id="status" type="button" hidden></button>
   <button class="gear" id="gearBtn" type="button" aria-label="Settings"></button>
   <button class="gear timer-btn" id="timerBtn" type="button" aria-label="Timers"></button>
+  <button class="gear music-btn" id="musicBtn" type="button" aria-label="Music"></button>
   <div class="timer-bar" id="timerBar" hidden></div>
 
   <!-- Showcase: big, one thing at a time -->
@@ -104,6 +105,25 @@
       <div class="night-next" id="nightNext"></div>
     </div>
   </div>
+
+  <!-- Music -->
+  <dialog class="sheet music-sheet" id="musicSheet">
+    <div class="brand-row sm" data-brand></div>
+    <h3>Music</h3>
+    <div class="music-now" id="musicNow"></div>
+    <div class="music-radio">
+      <div class="sub">Radio</div>
+      <div class="add-row">
+        <input id="radioQ" type="search" autocomplete="off" enterkeyhint="search" placeholder="Search stations, e.g. jazz or BBC" maxlength="60">
+        <button type="button" class="mic" id="radioMic" aria-label="Speak"></button>
+      </div>
+      <div class="radio-playing" id="radioPlaying" hidden></div>
+      <div class="radio-list" id="radioList"></div>
+    </div>
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="musicClose">Close</button>
+    </div>
+  </dialog>
 
   <!-- Timers -->
   <dialog class="sheet timer-sheet" id="timerSheet">

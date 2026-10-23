@@ -285,7 +285,7 @@
 
   // Slide the whole layout a few pixels, slowly, so no edge stays on the same pixels.
   function nudgeLayout(now) {
-    const targets = [$('dash'), $('gearBtn'), $('timerBtn'), $('timerBar'), $('status')];
+    const targets = [$('dash'), $('gearBtn'), $('timerBtn'), $('musicBtn'), $('timerBar'), $('status')];
     if (cfg.pixelShift !== '1') { targets.forEach((el) => { el.style.transform = ''; }); return; }
     const m = Math.floor(now.getTime() / 60000);
     const t = `translate(${Math.round(Math.sin(m / 11) * 7)}px, ${Math.round(Math.cos(m / 13) * 5)}px)`;
@@ -1047,6 +1047,112 @@
     document.body.dataset.bg = art.id;
     $('bgArt').style.background = art.css;
   }
+
+  // ─── Music: what's playing on the tablet (Android) and internet radio ──────
+  // Now playing and the buttons come from Android's media sessions, so they work with Spotify, YouTube
+  // Music and any other music app. Radio is searched through the relay and played by Skreen itself.
+
+  const music = { np: null, art: '', artKey: '', audio: null, station: null, results: [], searched: null };
+  const hasMediaNative = () => !!(NATIVE && NATIVE.nowPlaying);
+  const DEMO_NP = { access: true, active: true, playing: true, title: 'Dreams', artist: 'Fleetwood Mac', album: 'Rumours', app: 'Spotify', canPrev: true, canNext: true };
+
+  function readNow() {
+    if (!hasMediaNative()) { music.np = isDemo() ? DEMO_NP : null; return; }
+    try {
+      const np = JSON.parse(NATIVE.nowPlaying());
+      if (np.key !== music.artKey) { music.artKey = np.key || ''; music.art = np.key ? (NATIVE.nowPlayingArt() || '') : ''; }
+      music.np = np;
+    } catch (_) { music.np = null; }
+  }
+  function updateMusicBtn() {
+    $('musicBtn').classList.toggle('on', !!((music.np && music.np.playing && !isDemo()) || music.audio));
+  }
+  function renderNow() {
+    const box = $('musicNow'), np = music.np;
+    if (!hasMediaNative() && !isDemo()) {
+      box.innerHTML = '<div class="np-setup"><p>Skreen can show and control what your music app is playing (Spotify, YouTube Music and others) in its Android app. The radio below works everywhere.</p></div>';
+    } else if (!np || !np.access) {
+      box.innerHTML = '<div class="np-setup"><p>To show what’s playing, and give you play, pause and skip buttons, Skreen needs Android’s <b>Notification access</b>. Skreen reads no notifications; it only sees the music player.</p><button type="button" class="btn primary small" data-music-access>Allow in Android settings</button></div>';
+    } else if (!np.active) {
+      box.innerHTML = '<div class="np-setup"><p>Nothing is playing. Start music in your music app (or cast from your phone) and it will show up here with its controls.</p></div>';
+    } else {
+      box.innerHTML = `<div class="np"><div class="np-art" ${music.art ? `style="background-image:url('${music.art}')"` : ''}>${music.art ? '' : Icons.music}</div>
+        <div><div class="np-title">${esc(np.title || 'Playing')}</div><div class="np-artist">${esc(np.artist)}</div><div class="np-app">${esc(np.app)}</div>
+        <div class="np-controls"><button type="button" data-media="prev" aria-label="Previous" ${np.canPrev ? '' : 'disabled'}>${Icons.prev}</button><button type="button" class="main" data-media="toggle" aria-label="${np.playing ? 'Pause' : 'Play'}">${np.playing ? Icons.pause : Icons.play}</button><button type="button" data-media="next" aria-label="Next" ${np.canNext ? '' : 'disabled'}>${Icons.next}</button></div></div></div>`;
+    }
+  }
+  function renderRadioPlaying() {
+    const box = $('radioPlaying');
+    box.hidden = !music.station;
+    if (music.station) box.innerHTML = `<b>${esc(music.station.name)}</b><button type="button" class="btn ghost small" data-radio-stop>Stop</button>`;
+  }
+  function renderRadioList(note) {
+    const list = $('radioList');
+    if (note) { list.innerHTML = `<div class="radio-note">${esc(note)}</div>`; return; }
+    list.innerHTML = music.results.length
+      ? music.results.map((r, i) => `<button type="button" class="radio-item" data-station="${i}"><b>${esc(r.name)}</b><span>${esc([r.where, r.tags].filter(Boolean).join(' · '))}</span></button>`).join('')
+      : '<div class="radio-note">No stations found. Try another word.</div>';
+  }
+  async function searchRadio(q) {
+    q = String(q || '').trim();
+    music.searched = q;
+    renderRadioList('Searching…');
+    try {
+      const res = await fetch(`${Weather.relay}/radio?q=${encodeURIComponent(q)}`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (music.searched !== q) return;   // a newer search is under way
+      music.results = data.items || [];
+      renderRadioList();
+    } catch (_) {
+      if (music.searched === q) renderRadioList('Couldn’t reach the radio directory. Check your connection.');
+    }
+  }
+  function stopRadio() {
+    if (music.audio) { try { music.audio.pause(); music.audio.removeAttribute('src'); music.audio.load(); } catch (_) {} }
+    music.audio = null; music.station = null;
+    renderRadioPlaying(); updateMusicBtn();
+  }
+  function playStation(st) {
+    stopRadio();
+    const a = new Audio(st.url);
+    a.onerror = () => { if (music.audio === a) { stopRadio(); showToast('That station won’t play right now'); } };
+    music.audio = a; music.station = st;
+    renderRadioPlaying(); updateMusicBtn();
+    a.play().catch(() => { if (music.audio === a) { stopRadio(); showToast('That station won’t play right now'); } });
+  }
+  function openMusic() {
+    readNow(); renderNow(); renderRadioPlaying(); updateMusicBtn();
+    if (!music.results.length) searchRadio(''); else renderRadioList();
+    if (!$('musicSheet').open) $('musicSheet').showModal();
+  }
+  $('musicBtn').innerHTML = Icons.music;
+  $('radioMic').innerHTML = Icons.mic;
+  $('musicBtn').addEventListener('click', openMusic);
+  $('musicClose').addEventListener('click', () => $('musicSheet').close());
+  $('musicSheet').addEventListener('click', (e) => { if (e.target === $('musicSheet')) $('musicSheet').close(); });
+  $('musicNow').addEventListener('click', (e) => {
+    if (e.target.closest('[data-music-access]')) { try { NATIVE.openMediaAccess(); } catch (_) {} return; }
+    const b = e.target.closest('[data-media]');
+    if (!b || !hasMediaNative()) return;
+    try { NATIVE.mediaControl(b.dataset.media); } catch (_) {}
+    setTimeout(() => { readNow(); renderNow(); updateMusicBtn(); }, 500);
+  });
+  $('radioPlaying').addEventListener('click', (e) => { if (e.target.closest('[data-radio-stop]')) stopRadio(); });
+  $('radioList').addEventListener('click', (e) => { const b = e.target.closest('[data-station]'); if (b && music.results[+b.dataset.station]) playStation(music.results[+b.dataset.station]); });
+  let radioTimer = null;
+  $('radioQ').addEventListener('input', () => { clearTimeout(radioTimer); radioTimer = setTimeout(() => searchRadio($('radioQ').value), 600); });
+  $('radioQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(radioTimer); searchRadio($('radioQ').value); } });
+  if (NATIVE && NATIVE.startVoice) $('radioMic').addEventListener('click', () => { voiceSink = (text) => { $('radioQ').value = text; searchRadio(text); }; NATIVE.startVoice(); });
+  else $('radioMic').hidden = true;
+  let musicTick = 0;
+  setInterval(() => {
+    musicTick++;
+    const open = $('musicSheet').open;
+    if (!open && musicTick % 5) return;   // every 3 seconds while the panel is open, otherwise every 15
+    readNow(); updateMusicBtn();
+    if (open) renderNow();
+  }, 3000);
 
   // ─── Big-screen tour (burn-in protection) ──────────────────────────────────
 

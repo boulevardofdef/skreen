@@ -597,6 +597,29 @@ public class MainActivity extends Activity {
             });
         }
 
+        /** Now playing: whether the user has allowed it, what is playing, its cover, and the buttons. */
+        @JavascriptInterface
+        public boolean hasMediaAccess() { return NowPlaying.hasAccess(MainActivity.this); }
+
+        @JavascriptInterface
+        public String nowPlaying() { return NowPlaying.json(MainActivity.this); }
+
+        @JavascriptInterface
+        public String nowPlayingArt() { return NowPlaying.art(MainActivity.this); }
+
+        @JavascriptInterface
+        public void mediaControl(final String cmd) { NowPlaying.control(MainActivity.this, cmd); }
+
+        /** Opens Android's own "Notification access" list, where the user switches Skreen on. */
+        @JavascriptInterface
+        public void openMediaAccess() {
+            runOnUiThread(() -> {
+                try {
+                    startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+                } catch (ActivityNotFoundException ignored) { }
+            });
+        }
+
         /** Lets the user pick a Google account, then asks Google for permission. Answer: window.skreenToken. */
         @JavascriptInterface
         public void signIn(final int reqId) {
