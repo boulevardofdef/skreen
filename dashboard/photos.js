@@ -1,7 +1,7 @@
 // Photos (Skreen+): a slideshow of either
 //   • "My photos": pictures chosen with Android's own photo picker (which includes Google Photos) and
 //     kept, shrunk, in the app's private storage on the tablet, or
-//   • "Art gallery": public-domain paintings from the Art Institute of Chicago (CC0), through the relay.
+//   • "Art gallery": public-domain paintings from Wikimedia Commons, through the relay.
 const Photos = (() => {
   const LOCAL = 'https://appassets.androidplatform.net/skreen-photos/';
 
@@ -10,7 +10,7 @@ const Photos = (() => {
   async function art() {
     const res = await fetch(`${Weather.relay}/art`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    return ((await res.json()).items || []).map((a) => ({ url: a.image, caption: [a.title, a.artist].filter(Boolean).join(' · '), art: true, fallback: a.small || a.image.replace('/full/1686,/', '/full/843,/') }));
+    return ((await res.json()).items || []).map((a) => ({ url: a.image, caption: [a.title, a.artist].filter(Boolean).join(' · '), art: true }));
   }
 
   function mine() {

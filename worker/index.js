@@ -4,7 +4,7 @@
 //   /reverse?lat=…&lon=…                       → coordinates to a place name
 //   /ics?u=<https calendar link>               → fetches a published calendar (ICS) for the browser
 //   /news                                      → today's "In the news" stories from Wikipedia (CC BY-SA)
-//   /art                                       → public-domain paintings (Wikimedia Commons, else the Art Institute of Chicago) for the photo slideshow
+//   /art                                       → public-domain paintings (Wikimedia Commons) for the photo slideshow
 // The services we call want every request to identify the app and a contact address, and ask
 // clients to cache. Browsers can't set User-Agent, so this does both, and stores nothing else.
 const CONTACT = 'Skreen/1.0 (+https://github.com/boulevardofdef/skreen; tiszenkel@gmail.com)';
@@ -108,39 +108,40 @@ export default {
     if (url.pathname === '/art') {
       // Public-domain paintings from the Art Institute of Chicago's open API (CC0). Which hundred we offer
       // changes daily; each picture is served by their image service at a size that suits a wall display.
-      // Wikimedia Commons first: its pictures load straight into the app. The Art Institute's image server
-      // sits behind a bot check that stops a tablet's browser view, so it is only a last resort.
-      const commons = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&iiprop=url|extmetadata|size&iiextmetadatafilter=Artist|ObjectName&iiurlwidth=1600&gsrnamespace=6&gcmnamespace=6&gcmtype=file';
+      // Paintings from Wikimedia Commons: public domain, and the pictures load straight into the app
+      // (the Art Institute's image server sits behind a bot check that blocks a tablet's browser view).
+      const commons = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&iiprop=url|extmetadata|size&iiextmetadatafilter=Artist|ObjectName&iiurlwidth=1600';
       const dayN = Math.floor(Date.now() / 86400000);
-      const cats = ['Featured_pictures_of_paintings', 'Quality_images_of_paintings', 'Featured_pictures_of_paintings'];
+      const find = (term) => `&generator=search&gsrnamespace=6&gsrlimit=100&gsrsearch=${encodeURIComponent(term)}`;
+      const members = (cat) => `&generator=categorymembers&gcmtitle=Category:${cat}&gcmtype=file&gcmlimit=100`;
+      const attempts = [
+        members('Featured_pictures_of_paintings'),
+        find('incategory:"Featured pictures on Wikimedia Commons" painting filetype:bitmap'),
+        find('"Google Art Project" painting filetype:bitmap'),
+        members('Quality_images_of_paintings'),
+      ];
       const plain = (h) => String(h || '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
-      for (const [n, cat] of cats.entries()) {
-        const q = `${commons}&generator=categorymembers&gcmtitle=Category:${cat}&gcmlimit=${n === 1 ? 60 : 100}`;
-        const res = await cached(ctx, `c/${dayN}/${n}`, 86400, () => fetch(q, { headers: { 'User-Agent': CONTACT, Accept: 'application/json' } })).catch(() => null);
-        if (!res) continue;
-        const pages = Object.values(((await res.json()).query || {}).pages || {});
-        const items = pages.map((p) => ({ p, i: (p.imageinfo || [])[0] })).filter(({ i }) => i && i.thumburl && /\.(jpe?g|png)$/i.test(i.url || '') && i.width >= 1000 && i.width < 12000 && i.width * i.height < 120e6)
+      const notes = [];
+      for (const [n, part] of attempts.entries()) {
+        let pages = [];
+        try {
+          const res = await cached(ctx, `c2/${dayN}/${n}`, 86400, () => fetch(commons + part, { headers: { 'User-Agent': CONTACT, Accept: 'application/json' } }));
+          if (!res) { notes.push(`${n}: upstream refused`); continue; }
+          pages = Object.values(((await res.json()).query || {}).pages || {});
+        } catch (e) { notes.push(`${n}: ${e.message}`); continue; }
+        const items = pages.map((p) => ({ p, i: (p.imageinfo || [])[0] })).filter(({ i }) => i && i.thumburl && /\.(jpe?g|png)$/i.test(i.url || '') && i.width >= 1000 && i.width * i.height < 120e6)
           .map(({ p, i }) => ({
             title: plain((i.extmetadata && i.extmetadata.ObjectName && i.extmetadata.ObjectName.value) || String(p.title || '').replace(/^File:/, '').replace(/\.[a-z]+$/i, '').replace(/_/g, ' ')),
             artist: plain(i.extmetadata && i.extmetadata.Artist && i.extmetadata.Artist.value),
             image: i.thumburl,
           })).filter((a) => a.title.length < 120);
-        if (items.length >= 5) { for (let k = items.length - 1; k > 0; k--) { const j = (k * 7 + dayN) % (k + 1); [items[k], items[j]] = [items[j], items[k]]; } return json({ items: items.slice(0, 80) }, 200, { 'Cache-Control': 'public, max-age=3600' }); }
+        notes.push(`${n}: ${pages.length} files, ${items.length} usable`);
+        if (items.length >= 5) {
+          for (let k = items.length - 1; k > 0; k--) { const j2 = (k * 7 + dayN) % (k + 1); [items[k], items[j2]] = [items[j2], items[k]]; }
+          return json({ items: items.slice(0, 80) }, 200, { 'Cache-Control': 'public, max-age=3600' });
+        }
       }
-      const base = 'https://api.artic.edu/api/v1/artworks/search?query[term][is_public_domain]=true&limit=100&fields=id,title,artist_title,image_id';
-      const day = Math.floor(Date.now() / 86400000);
-      const attempts = [`${base}&query[term][artwork_type_title]=Painting&page=${1 + (day % 6)}`, `${base}&query[term][artwork_type_title]=Painting&page=1`, `${base}&page=1`];
-      for (const [n, q] of attempts.entries()) {
-        const res = await cached(ctx, `a/${day}/${n}`, 86400, () => fetch(q, { headers: { 'User-Agent': CONTACT, 'AIC-User-Agent': CONTACT, Accept: 'application/json' } }));
-        if (!res) continue;
-        const items = ((await res.json()).data || []).filter((a) => a.image_id).map((a) => ({
-          title: a.title || '', artist: a.artist_title || '',
-          image: `https://www.artic.edu/iiif/2/${a.image_id}/full/1686,/0/default.jpg`,
-          small: `https://www.artic.edu/iiif/2/${a.image_id}/full/843,/0/default.jpg`,
-        }));
-        if (items.length >= 5) return json({ items }, 200, { 'Cache-Control': 'public, max-age=3600' });
-      }
-      return json({ error: 'upstream' }, 502);
+      return json({ error: 'upstream', notes }, 502);
     }
 
     if (url.pathname === '/ics') {
