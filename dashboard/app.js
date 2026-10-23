@@ -1674,7 +1674,7 @@
 
   function nextPhoto(failures = 0) {
     clearTimeout(photo.timer);
-    if (!photo.items.length || failures > 5) { $('photoNote').textContent = photo.items.length ? 'Couldn\u2019t load the pictures right now.' : ''; return; }
+    if (!photo.items.length || failures > 5) { $('photoNote').textContent = photo.items.length ? `Couldn\u2019t load the pictures right now (${photo.items.length} listed, e.g. ${(photo.order[photo.i] || photo.items[0]).url.replace(/^https?:\/\//, '').slice(0, 40)}).` : ''; return; }
     if (photo.i + 1 >= photo.order.length) { photo.order = Photos.shuffled(photo.items); photo.i = -1; }
     const item = photo.order[++photo.i];
     showPhoto(item, (ok) => {
