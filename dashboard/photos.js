@@ -8,7 +8,7 @@ const Photos = (() => {
   const nativeOK = () => !!(window.SkreenNative && window.SkreenNative.pickPhotos);
 
   async function art() {
-    const res = await fetch(`${Weather.relay}/art`);
+    const res = await fetch(`${Weather.relay}/art?v=2`, { cache: 'no-cache' });   // v=2: skip the old list the tablet may have kept
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return ((await res.json()).items || []).map((a) => ({ url: a.image, caption: [a.title, a.artist].filter(Boolean).join(' · '), art: true }));
   }
