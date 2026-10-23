@@ -1330,7 +1330,7 @@
     if (!canUpdate()) return;
     let name = '';
     try { name = NATIVE.getVersionName ? NATIVE.getVersionName() : ''; } catch (_) {}
-    $('appVersion').textContent = `Skreen app ${name || 'build ' + NATIVE.getVersion()}`;
+    $('appVersion').textContent = `Skreen app ${name || 'build ' + NATIVE.getVersion()} \u00b7 site ${loadedStamp || 'dev'}`;
     $('installUpdate').hidden = !state.update;
     $('installUpdate').disabled = !!state.updating;
     if (state.update) $('updateResult').textContent = `${state.update.name} is available${state.update.notes ? ': ' + state.update.notes : ''}`;
