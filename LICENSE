@@ -1,0 +1,11 @@
+Copyright (c) 2026 Skreen. All rights reserved.
+
+This source code is published so that people can see how Skreen works. It is not
+open source. You may not copy, modify, redistribute, sublicense or sell this code,
+or use it to make a competing product, without written permission from the
+copyright holder.
+
+The Skreen name, logo and the Skreen+ unlock system are not licensed for any use.
+
+Third-party components in this repository (for example dashboard/vendor/ical.min.js,
+ical.js, under the Mozilla Public License 2.0) remain under their own licenses.

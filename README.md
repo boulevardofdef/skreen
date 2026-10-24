@@ -72,3 +72,7 @@ Open that on the tablet in Chrome, allow *install unknown apps* when asked, and 
 | `android/` | The Android app (bundles `dashboard/`) |
 | `.github/workflows/pages.yml` | Publishes `dashboard/` to GitHub Pages |
 | `.github/workflows/android.yml` | Builds `Skreen.apk` and publishes it to the latest release |
+
+## License
+
+All rights reserved. The code is public so you can see how Skreen works; see `LICENSE`.

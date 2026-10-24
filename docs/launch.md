@@ -82,3 +82,11 @@ The app lives at `https://app.skreen.fyi/`; the bare `skreen.fyi` is reserved fo
 ## The relay (Cloudflare Worker)
 
 `worker/index.js` serves forecasts, city search and place names, public-domain art (`/art`), fetches published calendar links (`/ics`), and the Wikipedia "In the news" list (`/news`, CC BY-SA: keep the credit under the widget). **Redeploy it** (paste the file into the Cloudflare editor, Deploy) whenever it changes. It keeps nothing except short-lived cache entries (calendar links are cached under a hash, not the link).
+
+## Play Console: notification access (Now playing)
+
+The Android app declares a notification listener service (`NowPlayingService`) so the Music panel can show and control the tablet's music app. Play asks you to justify this. Suggested wording for the declaration:
+
+> Skreen is a wall display. The Music panel shows what the user's music app (Spotify, YouTube Music, etc.) is currently playing, with play/pause/skip buttons. It uses the notification-listener permission only to obtain the active media session (title, artist, cover art, transport controls). It does not read, store, or transmit notification content, and nothing leaves the device. The permission is optional: the user grants it in Android settings and the rest of the app works without it.
+
+Data safety form: no data collected or shared for the Music panel. Radio search sends the user's search words to the Skreen relay and on to radio-browser.info; declare it as "search history is not stored" (the relay keeps nothing but a short cache). The privacy policy (dashboard/privacy.html) already describes both.
