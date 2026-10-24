@@ -122,8 +122,7 @@ button { cursor: pointer; }
 
 .scroll {
   flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6rem), transparent);
-          mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6rem), transparent);
+  /* No fade-out mask at the bottom: on the tablet it made the last line fuzzy and flickery. */
 }
 .scroll::-webkit-scrollbar { display: none; }
 
