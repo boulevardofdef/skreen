@@ -277,7 +277,7 @@ button { cursor: pointer; }
 .gear:active { background: var(--ink); color: var(--bg); }
 .timer-btn { left: 4.5rem; }
 .music-btn { left: 6.8rem; }
-.music-btn.on { border-color: var(--accent); color: var(--accent); }
+.gear.on { border-color: var(--accent); color: var(--accent); }
 
 .toast {
   position: fixed; left: 50%; bottom: 1.8rem; z-index: 60; transform: translate(-50%, 220%); visibility: hidden;

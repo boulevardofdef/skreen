@@ -1145,6 +1145,14 @@
   $('radioQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(radioTimer); searchRadio($('radioQ').value); } });
   if (NATIVE && NATIVE.startVoice) $('radioMic').addEventListener('click', () => { voiceSink = (text) => { $('radioQ').value = text; searchRadio(text); }; NATIVE.startVoice(); });
   else $('radioMic').hidden = true;
+  // The three corner buttons light up the same way while what they open is active.
+  function syncCornerButtons() {
+    $('timerBtn').classList.toggle('on', timers.length > 0);
+    $('gearBtn').classList.toggle('on', $('settingsSheet').open);
+  }
+  syncCornerButtons();
+  ['settingsSheet'].forEach((id) => { $(id).addEventListener('close', syncCornerButtons); $(id).addEventListener('toggle', syncCornerButtons); });
+  new MutationObserver(syncCornerButtons).observe($('settingsSheet'), { attributes: true, attributeFilter: ['open'] });
   let musicTick = 0;
   setInterval(() => {
     musicTick++;
@@ -1153,6 +1161,7 @@
     readNow(); updateMusicBtn();
     if (open) renderNow();
   }, 3000);
+  setInterval(syncCornerButtons, 1000);   // timers start and finish from several places
 
   // ─── Big-screen tour (burn-in protection) ──────────────────────────────────
 
