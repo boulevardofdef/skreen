@@ -1,0 +1,7 @@
+{
+  // Publishes the marketing site (the /site folder) to Cloudflare as static files.
+  // Cloudflare's Git connection runs `npx wrangler deploy` and reads this.
+  "name": "skreen-site",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./site" }
+}
