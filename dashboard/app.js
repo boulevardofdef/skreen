@@ -264,6 +264,7 @@
       if (mealsShown()) { drawMeals(); if (now.getHours() === 0 && now.getMinutes() === 5) refreshMeals(); }
       applyBackground();       // new day → new background
       updateNight(now);
+      updateShowNow();
       nudgeLayout(now);
       applyBrightness(now);
       maybeSelfReload();
@@ -1224,6 +1225,10 @@
   // Always-on slideshow: what's playing sits in the corner of every slide (the timers already do). A radio station
   // or song shows its name; the music slide itself doesn't need the extra strip.
   function updateShowNow() {
+    // The time is always on screen in the always-on slideshow (the clock slide shows it big already).
+    const clk = $('showClock'), showClk = tour.on && alwaysTour() && TOUR[tour.i] !== 'time';
+    clk.hidden = !showClk;
+    if (showClk) { const { hm, ap } = timeParts(new Date()); clk.innerHTML = `${hm}${ap ? `<small>${ap}</small>` : ''}`; }
     const el = $('showNow');
     const on = tour.on && alwaysTour() && musicPlaying() && TOUR[tour.i] !== 'music';
     el.hidden = !on;

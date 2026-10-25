@@ -775,3 +775,7 @@ body.timer-inline .wx-days { display: none; }
 .sn-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #alwaysOpts { margin-top: 0.8rem; }
 .sv.p0.sv-music { align-items: flex-start; text-align: left; }
+
+.show-clock { position: absolute; right: 2.2rem; bottom: 1.4rem; z-index: 3; font: 700 max(2rem, 4.6vh)/1 var(--mono); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--ink); text-shadow: 0 0 0.6rem rgba(0, 0, 0, 0.7); }
+.show-clock small { font-size: 0.45em; letter-spacing: 0.04em; color: var(--accent); margin-left: 0.25em; }
+.show-clock[hidden] { display: none; }
