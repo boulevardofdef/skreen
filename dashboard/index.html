@@ -113,6 +113,15 @@
     <div class="brand-row sm" data-brand></div>
     <h3>Music</h3>
     <div class="music-now" id="musicNow"></div>
+    <div class="song-search" id="songSearch" hidden>
+      <div class="sub">Play a song</div>
+      <div class="add-row">
+        <input id="songQ" type="text" autocomplete="off" enterkeyhint="search" placeholder="Song or artist, e.g. Dreams Fleetwood Mac" maxlength="80">
+        <button type="button" class="mic" id="songMic" aria-label="Speak"></button>
+        <button type="button" class="btn ghost small" id="songGo">Play</button>
+      </div>
+      <p class="hint">Asks the music app that's already running. It keeps playing in the background.</p>
+    </div>
     <div class="music-radio">
       <div class="sub">Radio</div>
       <div class="add-row">

@@ -29,6 +29,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- "Set a timer" requests from a voice assistant or any app can be handled by Skreen. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SET_TIMER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
             <!-- Lets you choose Skreen as the tablet's Home app: it then opens at boot
                  and the Home button always returns to it. Entirely optional. -->
             <intent-filter>

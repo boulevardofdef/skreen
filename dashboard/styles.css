@@ -768,7 +768,7 @@ body.timer-inline .wx-days { display: none; }
 .sv-musictext { min-width: 0; }
 .sv-musictext .mt { font-size: max(2.6rem, 8vh); font-weight: 800; line-height: 1.02; letter-spacing: -0.025em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .sv-musictext .ma { margin-top: 1.6vh; font: 500 max(1.6rem, 4vh)/1.2 var(--mono); color: var(--muted); }
-.show-now { position: absolute; left: 2.2rem; bottom: 1.6rem; z-index: 3; display: flex; align-items: center; gap: 0.8rem; max-width: 60vw; padding: 0.5rem 0.9rem 0.5rem 0.5rem; background: rgba(0, 0, 0, 0.55); border: 1px solid var(--rule); font: 500 1rem/1.2 var(--mono); }
+.show-now { position: absolute; left: 2.2rem; bottom: 1.6rem; z-index: 3; display: flex; align-items: center; gap: 0.8rem; max-width: 62vw; padding: 0.5rem 0.6rem 0.5rem 0.5rem; background: rgba(0, 0, 0, 0.55); border: 1px solid var(--rule); font: 500 1rem/1.2 var(--mono); }
 .show-now[hidden] { display: none; }
 .sn-art { width: 2.6rem; height: 2.6rem; flex: none; background: var(--wash) center / cover no-repeat; display: grid; place-items: center; color: var(--faint); }
 .sn-art svg { width: 1.4rem; height: 1.4rem; }
@@ -779,3 +779,18 @@ body.timer-inline .wx-days { display: none; }
 .show-clock { position: absolute; right: 2.2rem; bottom: 1.4rem; z-index: 3; font: 700 max(2rem, 4.6vh)/1 var(--mono); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--ink); text-shadow: 0 0 0.6rem rgba(0, 0, 0, 0.7); }
 .show-clock small { font-size: 0.45em; letter-spacing: 0.04em; color: var(--accent); margin-left: 0.25em; }
 .show-clock[hidden] { display: none; }
+
+.sn-text { display: flex; flex-direction: column; min-width: 0; gap: 0.2rem; }
+.sn-text b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sn-text i { font-style: normal; color: var(--muted); font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sn-controls { display: flex; gap: 0.4rem; margin-left: 0.4rem; }
+.sn-controls button { width: 2.8rem; height: 2.8rem; border: 1px solid var(--rule); background: transparent; color: var(--ink); display: grid; place-items: center; padding: 0; }
+.sn-controls button svg { width: 1.2rem; height: 1.2rem; }
+.sn-controls button:disabled { opacity: 0.3; }
+.show-clock { display: flex; align-items: center; gap: 1.4rem; }
+.sc-wx { display: flex; align-items: center; gap: 0.5rem; }
+.sc-wx svg { width: 1.2em; height: 1.2em; color: var(--accent); }
+.sc-wx b { font-weight: 700; }
+.song-search { border-top: 1px solid var(--rule); padding: 0.8rem 0; }
+.song-search .sub { font: 600 0.78rem/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+.song-search .hint { margin: 0.4rem 0 0; font-size: 0.85rem; color: var(--faint); }

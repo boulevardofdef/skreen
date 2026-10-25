@@ -109,6 +109,14 @@ final class NowPlaying {
         }
     }
 
+    /** Asks the music app that has a session to search for the words and play the best match. */
+    static boolean search(Context c, String query) {
+        MediaController mc = pick(c);
+        if (mc == null || query == null || query.trim().isEmpty()) return false;
+        mc.getTransportControls().playFromSearch(query.trim(), new android.os.Bundle());
+        return true;
+    }
+
     private static String appName(Context c, String pkg) {
         try {
             PackageManager pm = c.getPackageManager();

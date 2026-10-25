@@ -27,6 +27,7 @@ import android.net.Network;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.AlarmClock;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.speech.RecognizerIntent;
@@ -97,6 +98,8 @@ public class MainActivity extends Activity {
             new Scope("https://www.googleapis.com/auth/tasks"));
 
     private WebView web;
+    private boolean pageLoaded = false;
+    private String pendingJs = null;   // a voice-assistant request that arrived before the page was ready
     private SharedPreferences prefs;
     private int pendingAuthRequest = 0;
     private String remoteUrl = "";
@@ -171,6 +174,17 @@ public class MainActivity extends Activity {
 
         web.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                pageLoaded = false;
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                pageLoaded = true;
+                if (pendingJs != null) { view.evaluateJavascript(pendingJs, null); pendingJs = null; }
+            }
+
+            @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 return assetLoader.shouldInterceptRequest(request.getUrl());
             }
@@ -225,6 +239,24 @@ public class MainActivity extends Activity {
 
         web.loadUrl(remoteUrl.isEmpty() ? BUNDLED_URL : remoteUrl);
         watchNetwork();
+        handleIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIntent(intent);
+    }
+
+    /** "Hey Google, set a timer": a timer request arrives as an intent; hand it to the page, which runs it itself. */
+    private void handleIntent(Intent intent) {
+        if (intent == null || !AlarmClock.ACTION_SET_TIMER.equals(intent.getAction())) return;
+        int seconds = intent.getIntExtra(AlarmClock.EXTRA_LENGTH, 0);
+        if (seconds <= 0) return;
+        String label = intent.getStringExtra(AlarmClock.EXTRA_MESSAGE);
+        String js = "window.skreenSetTimer && window.skreenSetTimer(" + (seconds * 1000L) + "," + JSONObject.quote(label == null ? "" : label) + ")";
+        if (web != null && pageLoaded) web.evaluateJavascript(js, null); else pendingJs = js;
     }
 
     /** Only our own pages may run with the native bridge; everything else opens in the browser. */
@@ -609,6 +641,10 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void mediaControl(final String cmd) { NowPlaying.control(MainActivity.this, cmd); }
+
+        /** Asks the active music app to search for a song and play it (what a voice assistant would do). */
+        @JavascriptInterface
+        public boolean mediaSearch(final String query) { return NowPlaying.search(MainActivity.this, query); }
 
         /** Opens Android's own "Notification access" list, where the user switches Skreen on. */
         @JavascriptInterface

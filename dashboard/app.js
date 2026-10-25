@@ -933,6 +933,8 @@
   });
   $('alarmSheet').addEventListener('cancel', (e) => e.preventDefault());   // Escape/back must not silently drop the alarm
 
+  // "Hey Google, set a timer": the Android app hands the request over here.
+  window.skreenSetTimer = (ms, label) => { if (ms > 0) addTimer(ms, label || ''); };
   function addTimer(ms, label) {
     if (timers.length >= MAX_TIMERS) { showToast('That’s the most timers Skreen can run'); return false; }
     timers.push({ id: Math.random().toString(36).slice(2, 8), label: (label || '').trim().slice(0, 20), end: Date.now() + ms, dur: ms });
@@ -1070,6 +1072,7 @@
   }
   function renderNow() {
     const box = $('musicNow'), np = music.np;
+    $('songSearch').hidden = !(hasMediaNative() && np && np.access && np.active);
     if (!hasMediaNative() && !isDemo()) {
       box.innerHTML = '<div class="np-setup"><p>Skreen can show and control what your music app is playing (Spotify, YouTube Music and others) in its Android app. The radio below works everywhere.</p></div>';
     } else if (!np || !np.access) {
@@ -1142,6 +1145,20 @@
   $('radioPlaying').addEventListener('click', (e) => { if (e.target.closest('[data-radio-stop]')) stopRadio(); });
   $('radioList').addEventListener('click', (e) => { const b = e.target.closest('[data-station]'); if (b && music.results[+b.dataset.station]) playStation(music.results[+b.dataset.station]); });
   let radioTimer = null;
+  // Ask the music app that's already running to search for a song and play it (it plays in the background).
+  function songSearch() {
+    const q = $('songQ').value.trim();
+    if (!q) return;
+    let ok = false;
+    try { ok = NATIVE.mediaSearch(q); } catch (_) {}
+    showToast(ok ? `Asking ${(music.np && music.np.app) || 'your music app'} to play \u201c${q}\u201d\u2026` : 'Start your music app first, then try again');
+    if (ok) { $('songQ').value = ''; setTimeout(() => { readNow(); renderNow(); }, 1500); }
+  }
+  $('songGo').addEventListener('click', songSearch);
+  $('songQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); songSearch(); } });
+  $('songMic').innerHTML = Icons.mic;
+  if (NATIVE && NATIVE.startVoice) $('songMic').addEventListener('click', () => { voiceSink = (text) => { $('songQ').value = text; songSearch(); }; NATIVE.startVoice(); });
+  else $('songMic').hidden = true;
   $('radioQ').addEventListener('input', () => { clearTimeout(radioTimer); radioTimer = setTimeout(() => searchRadio($('radioQ').value), 600); });
   $('radioQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(radioTimer); searchRadio($('radioQ').value); } });
   if (NATIVE && NATIVE.startVoice) $('radioMic').addEventListener('click', () => { voiceSink = (text) => { $('radioQ').value = text; searchRadio(text); }; NATIVE.startVoice(); });
@@ -1225,20 +1242,46 @@
   // Always-on slideshow: what's playing sits in the corner of every slide (the timers already do). A radio station
   // or song shows its name; the music slide itself doesn't need the extra strip.
   function updateShowNow() {
-    // The time is always on screen in the always-on slideshow (the clock slide shows it big already).
-    const clk = $('showClock'), showClk = tour.on && alwaysTour() && TOUR[tour.i] !== 'time';
-    clk.hidden = !showClk;
-    if (showClk) { const { hm, ap } = timeParts(new Date()); clk.innerHTML = `${hm}${ap ? `<small>${ap}</small>` : ''}`; }
+    const on = tour.on && alwaysTour();
+    // Weather and time stay in the corner of every slide (the big Weather and Clock slides show them already).
+    const corner = $('showClock'), view = TOUR[tour.i];
+    const wxOn = on && view !== 'weather' && state.weather, clkOn = on && view !== 'time';
+    corner.hidden = !(wxOn || clkOn);
+    if (!corner.hidden) {
+      let html = '';
+      if (wxOn) { const c = state.weather.current, info = Icons.weather(c.weather_code, c.is_day); html += `<span class="sc-wx">${info.svg}<b>${Math.round(c.temperature_2m)}°</b></span>`; }
+      if (clkOn) { const { hm, ap } = timeParts(new Date()); html += `<span class="sc-time">${hm}${ap ? `<small>${ap}</small>` : ''}</span>`; }
+      corner.innerHTML = html;
+    }
+    // A small player with its controls, while music is on (the Music slide has the big one).
     const el = $('showNow');
-    const on = tour.on && alwaysTour() && musicPlaying() && TOUR[tour.i] !== 'music';
-    el.hidden = !on;
-    if (!on) return;
-    const np = music.np && music.np.playing ? music.np : null;
-    const line = np ? [np.title, np.artist].filter(Boolean).join(' \u2014 ') : (music.station ? music.station.name : '');
-    el.innerHTML = `<span class="sn-art" ${np && music.art ? `style="background-image:url('${music.art}')"` : ''}>${np && music.art ? '' : Icons.music}</span><span class="sn-text">${esc(line)}</span>`;
+    const np = music.np && music.np.active ? music.np : null;
+    const player = on && view !== 'music' && (np || music.audio);
+    el.hidden = !player;
+    if (!player) return;
+    const title = np ? (np.title || 'Playing') : music.station.name;
+    const sub = np ? [np.artist, np.app].filter(Boolean).join(' · ') : 'Internet radio';
+    const art = np && music.art ? `style="background-image:url('${music.art}')"` : '';
+    const controls = np
+      ? `<span class="sn-controls"><button type="button" data-media="prev" aria-label="Previous" ${np.canPrev ? '' : 'disabled'}>${Icons.prev}</button><button type="button" data-media="toggle" aria-label="${np.playing ? 'Pause' : 'Play'}">${np.playing ? Icons.pause : Icons.play}</button><button type="button" data-media="next" aria-label="Next" ${np.canNext ? '' : 'disabled'}>${Icons.next}</button></span>`
+      : `<span class="sn-controls"><button type="button" data-radio-stop aria-label="Stop">${Icons.pause}</button></span>`;
+    const key = [title, sub, np && np.playing, !!art].join('|');
+    if (el.dataset.key !== key) {   // only redraw when something changed, so a tap isn't lost mid-redraw
+      el.dataset.key = key;
+      el.innerHTML = `<span class="sn-art" ${art}>${art ? '' : Icons.music}</span><span class="sn-text"><b>${esc(title)}</b><i>${esc(sub)}</i></span>${controls}`;
+    }
   }
+  $('showNow').addEventListener('click', (e) => {
+    e.stopPropagation();   // using the player must not end the slideshow
+    if (e.target.closest('[data-radio-stop]')) { stopRadio(); updateShowNow(); return; }
+    const b = e.target.closest('[data-media]');
+    if (!b) return;
+    if (hasMediaNative()) { try { NATIVE.mediaControl(b.dataset.media); } catch (_) {} }
+    setTimeout(() => { readNow(); updateShowNow(); }, 500);
+  });
   setInterval(() => {
     if (!tour.on) return;
+    if (hasMediaNative()) readNow();
     updateShowNow();
     const ph = document.querySelector('#showBody .sv:not(.out) .sv-photo');   // a long photo slide keeps changing pictures
     if (ph && photo.current && !ph.style.backgroundImage.includes(photo.current)) ph.style.backgroundImage = `url('${photo.current}')`;
