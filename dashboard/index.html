@@ -93,6 +93,7 @@
   <!-- Showcase: big, one thing at a time -->
   <div class="showcase" id="showcase" hidden>
     <div class="show-body" id="showBody"></div>
+    <div class="show-now" id="showNow" hidden></div>
     <div class="show-bar"><i id="showBar"></i></div>
   </div>
 
@@ -419,6 +420,13 @@
             <select name="nightEnabled"><option value="1">On</option><option value="0">Off</option></select></label>
           <label class="field"><span>Night from</span><select name="nightStart" class="timesel"></select></label>
           <label class="field"><span>until</span><select name="nightEnd" class="timesel"></select></label>
+        </div>
+        <div class="field" id="alwaysOpts" hidden>
+          <span>Always-on slideshow</span>
+          <label class="field"><span>Time on each slide</span>
+            <select name="slideSeconds"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option></select></label>
+          <span class="sub">Show these slides</span>
+          <div class="checks" id="slideChecks"></div>
         </div>
       </div>
 

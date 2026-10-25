@@ -8,7 +8,7 @@
     lat: null, lon: null, place: '',
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage',
-    showcaseMinutes: '5', pixelShift: '1',
+    showcaseMinutes: '5', slideSeconds: '60', slideSkip: '', pixelShift: '1',
     layout: 'clock,weather,agenda,todo', photoSource: 'art', photoSeconds: '30', mealList: '', shopList: '', pageSeconds: '60',
     ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
@@ -1165,9 +1165,13 @@
 
   // ─── Big-screen tour (burn-in protection) ──────────────────────────────────
 
-  const TOUR_ALL = { time: 'clock', weather: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news', meals: 'meals', shop: 'shop' };
+  const TOUR_ALL = { time: 'clock', weather: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news', meals: 'meals', shop: 'shop', music: 'music' };
+  const SLIDE_NAMES = { time: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos', news: 'In the news', meals: 'Dinners', shop: 'Shopping list', music: 'Music (while playing)' };
+  const slideSkipped = (v) => alwaysTour() && String(cfg.slideSkip || '').split(',').includes(v);
+  const musicPlaying = () => !!((music.np && music.np.playing) || music.audio);
+  const slideMs = () => (alwaysTour() ? Math.max(5, Number(cfg.slideSeconds) || 60) * 1000 : TOUR_VIEW_MS);
   let TOUR = Object.keys(TOUR_ALL);
-  const tourViews = () => Object.keys(TOUR_ALL).filter((v) => visibleWidgets().includes(TOUR_ALL[v]) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (!['agenda', 'todo'].includes(v) || state.loaded));
+  const tourViews = () => Object.keys(TOUR_ALL).filter((v) => !slideSkipped(v) && (v === 'music' ? (alwaysTour() && musicPlaying()) : visibleWidgets().includes(TOUR_ALL[v])) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (!['agenda', 'todo'].includes(v) || state.loaded));
   const tour = { on: false, i: 0, cycle: 0, timer: null, last: Date.now() };
 
   // Skreen+: the tour can run all the time. A tap ends it for two minutes, then it resumes.
@@ -1192,7 +1196,7 @@
     const bar = $('showBar');
     bar.style.transition = 'none'; bar.style.width = '0';
     void bar.offsetWidth;
-    bar.style.transition = `width ${TOUR.length * TOUR_VIEW_MS}ms linear`; bar.style.width = '100%';
+    bar.style.transition = `width ${TOUR.length * slideMs()}ms linear`; bar.style.width = '100%';
     showTourView();
   }
 
@@ -1213,8 +1217,27 @@
       if (tour.i < TOUR.length) showTourView();
       else if (alwaysTour() && !isNight(new Date()) && !dialogOpen()) beginTourCycle();   // Skreen+: straight into the next round
       else endTour();
-    }, TOUR_VIEW_MS);
+    }, slideMs());
+    updateShowNow();
   }
+
+  // Always-on slideshow: what's playing sits in the corner of every slide (the timers already do). A radio station
+  // or song shows its name; the music slide itself doesn't need the extra strip.
+  function updateShowNow() {
+    const el = $('showNow');
+    const on = tour.on && alwaysTour() && musicPlaying() && TOUR[tour.i] !== 'music';
+    el.hidden = !on;
+    if (!on) return;
+    const np = music.np && music.np.playing ? music.np : null;
+    const line = np ? [np.title, np.artist].filter(Boolean).join(' \u2014 ') : (music.station ? music.station.name : '');
+    el.innerHTML = `<span class="sn-art" ${np && music.art ? `style="background-image:url('${music.art}')"` : ''}>${np && music.art ? '' : Icons.music}</span><span class="sn-text">${esc(line)}</span>`;
+  }
+  setInterval(() => {
+    if (!tour.on) return;
+    updateShowNow();
+    const ph = document.querySelector('#showBody .sv:not(.out) .sv-photo');   // a long photo slide keeps changing pictures
+    if (ph && photo.current && !ph.style.backgroundImage.includes(photo.current)) ph.style.backgroundImage = `url('${photo.current}')`;
+  }, 3000);
 
   // Lists on the big pages show only the rows that fit inside the margins, never one cut off at the edge.
   function fitRows(v) {
@@ -1260,6 +1283,12 @@
     if (name === 'news') {
       const rows = News.current.slice(0, 4).map((s) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(s.text)}</div></div>`).join('');
       return `<div class="kicker">In the news</div><div class="sv-list sv-news">${rows}</div>`;
+    }
+    if (name === 'music') {
+      const np = music.np && music.np.playing ? music.np : null;
+      const title = np ? (np.title || 'Playing') : (music.station ? music.station.name : 'Playing');
+      const sub = np ? [np.artist, np.app].filter(Boolean).join(' \u00b7 ') : 'Internet radio';
+      return `<div class="kicker">Now playing</div><div class="sv-musicrow"><div class="np-art big" ${np && music.art ? `style="background-image:url('${music.art}')"` : ''}>${np && music.art ? '' : Icons.music}</div><div class="sv-musictext"><div class="mt">${esc(title)}</div><div class="ma">${esc(sub)}</div></div></div>`;
     }
     if (name === 'photos') return `<div class="sv-photo${photo.items[photo.order[photo.i]] && photo.items[photo.order[photo.i]].art ? ' art' : ''}" style="background-image:url('${photo.current}')"></div>`;
     const now = new Date();
@@ -2173,7 +2202,19 @@
   const settingsSheet = $('settingsSheet'), form = $('settingsForm');
   form.elements.showcaseMinutes.addEventListener('change', (e) => {
     if (e.target.value === 'always' && !hasPlus()) { e.target.value = '5'; offerPlus('An always-on slideshow is part of Skreen+.'); }
+    drawSlideOpts();
   });
+  // Always-on slideshow options: how long each slide stays, and which ones to leave out.
+  function drawSlideOpts() {
+    const on = form.elements.showcaseMinutes.value === 'always' && hasPlus();
+    $('alwaysOpts').hidden = !on;
+    const skip = String(cfg.slideSkip || '').split(',');
+    if (!$('slideChecks').children.length) {
+      $('slideChecks').innerHTML = Object.entries(SLIDE_NAMES).map(([id, name]) => `<label class="check"><input type="checkbox" data-slide="${id}" ${skip.includes(id) ? '' : 'checked'}>${esc(name)}</label>`).join('');
+    } else {
+      $('slideChecks').querySelectorAll('input').forEach((i) => { i.checked = !skip.includes(i.dataset.slide); });
+    }
+  }
 
   // ─── Other calendars (published links) ─────────────────────────────────────
 
@@ -2239,6 +2280,7 @@
     const tourSel = form.elements.showcaseMinutes;
     if (!hasPlus() && tourSel.value === 'always') tourSel.value = '5';
     drawPhotoSettings(true);
+    drawSlideOpts();
     draftIcs = (cfg.ics || []).map((c) => ({ ...c }));
     drawIcs();
     $('icsResult').textContent = '';
@@ -2388,6 +2430,7 @@
     for (const el of form.elements) if (el.name && el.name in cfg) cfg[el.name] = el.value.trim();
     if (draftLoc) Object.assign(cfg, draftLoc);
     cfg.ics = draftIcs;
+    if (hasPlus()) cfg.slideSkip = Array.from($('slideChecks').querySelectorAll('input:not(:checked)')).map((i) => i.dataset.slide).join(',');
     if (draftLayout && hasPlus()) cfg.layout = serializeLayout(draftLayout);
     document.querySelectorAll('#acctBox .acct').forEach((el) => {
       const acct = el.dataset.a;
