@@ -456,7 +456,7 @@ body.native .field.native-only { display: flex; }
 .show-body { position: absolute; inset: 0; }
 .sv {
   position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 2.4vh;
-  padding: 7vh 6vw; animation: svin 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+  padding: 10vh 8vw; animation: svin 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 .sv.out { animation: svout 0.6s ease forwards; }
 @keyframes svin { from { opacity: 0; transform: translateY(2.5vh); } }
@@ -481,7 +481,8 @@ body.native .field.native-only { display: flex; }
 .sv.p2.sv-weather { flex-direction: row-reverse; }
 
 .sv-list { gap: 0; text-align: left; }
-.sv-list { width: 100%; }
+.sv-list { width: 100%; min-height: 0; overflow: hidden; }   /* never runs into the padding at the edges */
+.sv-list .ttl { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sv.p1 .sv-list, .sv.p2 .sv-list { width: fit-content; max-width: 100%; }
 .sv-list .row { display: flex; align-items: baseline; gap: 3vw; padding: 2.2vh 0; border-top: 2px solid rgba(243, 238, 227, 0.22); width: 100%; }
 .sv-list .row:first-of-type { border-top: 0; }

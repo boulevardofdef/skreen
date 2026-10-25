@@ -1207,12 +1207,21 @@
     v.innerHTML = tourHtml(name);
     body.appendChild(v);
     fitToWidth(v.querySelector('.big'), v.clientWidth * 0.88);
+    fitRows(v);
     tour.timer = setTimeout(() => {
       tour.i++;
       if (tour.i < TOUR.length) showTourView();
       else if (alwaysTour() && !isNight(new Date()) && !dialogOpen()) beginTourCycle();   // Skreen+: straight into the next round
       else endTour();
     }, TOUR_VIEW_MS);
+  }
+
+  // Lists on the big pages show only the rows that fit inside the margins, never one cut off at the edge.
+  function fitRows(v) {
+    const list = v.querySelector('.sv-list');
+    if (!list) return;
+    const limit = list.getBoundingClientRect().bottom;
+    Array.from(list.children).forEach((r) => { if (r.getBoundingClientRect().bottom > limit + 1) r.style.display = 'none'; });
   }
 
   // Big type is sized from the screen, but some devices draw the font wider than expected.
@@ -1275,13 +1284,13 @@
         const running = !e.allDay && e.s <= now;
         const when = e.allDay ? 'All day' : fmtTime(e.s, { small: true });
         const sub = [e.s >= tomorrow && !e.allDay ? 'Tomorrow' : '', e.location ? e.location.split('\n')[0] : e.calendar || ''].filter(Boolean).join(' · ');
-        return `<div class="row${running ? ' now' : ''}"><div class="rt">${when}</div><div class="rn">${esc(e.title)}${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>`;
+        return `<div class="row${running ? ' now' : ''}"><div class="rt">${when}</div><div class="rn"><span class="ttl">${esc(e.title)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>`;
       }).join('');
       if (!rows) rows = '<div class="empty-big">Nothing on the calendar</div>';
       return `<div class="kicker">Next up</div><div class="sv-list">${rows}</div>`;
     }
     const { open } = taskGroups();
-    const rows = open.slice(0, 6).map((t) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(t.title)}${t.who && t.who.length ? `<span class="sv-who">${t.who.map(esc).join(' · ')}</span>` : ''}</div></div>`).join('')
+    const rows = open.slice(0, 6).map((t) => `<div class="row"><div class="bullet"></div><div class="rn"><span class="ttl">${esc(t.title)}</span>${t.who && t.who.length ? `<span class="sv-who">${t.who.map(esc).join(' · ')}</span>` : ''}</div></div>`).join('')
       || '<div class="empty-big">All caught up</div>';
     return `<div class="kicker">To-do · ${open.length}</div><div class="sv-list">${rows}${open.length > 6 ? `<div class="more">+ ${open.length - 6} more</div>` : ''}</div>`;
   }
