@@ -58,6 +58,10 @@ Data safety (use Google's own definitions; if a question doesn't fit, stop and a
   - Sent to our relay and passed on without being stored: approximate location (rounded to ~1 km) for the weather,
     and the words typed into city search and radio search. If the form counts that as collected, declare
     Approximate location, purpose App functionality, processed ephemerally, not shared for advertising.
+  - Approximate location: collection is OPTIONAL (users can choose). Device location is only used if the user taps
+    "Use my location" in Settings; otherwise they type a city or ZIP, and only that place's coordinates (rounded to ~1 km)
+    are sent. Purpose: App functionality only. Passed through our relay to MET Norway (a service provider for the weather);
+    not stored, not used for ads, analytics or personalization. If unsure about "shared", declare it shared with a service provider.
   - Data encrypted in transit: Yes. Users can request deletion: everything is on the device; uninstalling deletes it.
   - No ads, no analytics, no advertising ID.
 
