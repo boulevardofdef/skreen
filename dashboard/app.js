@@ -322,7 +322,7 @@
 
   function renderAgenda() {
     const el = $('agenda');
-    if (skeletonOn()) { agendaIndex = new Map(); el.innerHTML = skeletonAgenda(); return; }
+    if (skeletonOn()) { agendaIndex = new Map(); el.innerHTML = skeletonAgenda(); delete el.dataset.html; return; }
     agendaIndex = new Map();
     const now = new Date();
     const today = startOfDay(now);
@@ -352,7 +352,7 @@
       html += timed.map((ev) => eventCard(ev, now, dayStart, dayEnd)).join('');
       html += '</div>';
     }
-    el.innerHTML = html;
+    if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }   // untouched when nothing changed, so it can't flicker
   }
 
   function eventCard(ev, now, dayStart, dayEnd) {
@@ -524,7 +524,7 @@
   }
 
   function renderTasks() {
-    if (skeletonOn()) { $('taskCount').textContent = ''; $('tasks').innerHTML = skeletonTasks(); return; }
+    if (skeletonOn()) { $('taskCount').textContent = ''; $('tasks').innerHTML = skeletonTasks(); delete $('tasks').dataset.html; return; }
     const { open, done } = taskGroups();
     $('taskCount').textContent = open.length || '';
     let html = '';
@@ -541,7 +541,7 @@
           <span class="box">${Icons.check}</span><span class="body"><span class="label">${esc(t.title)}</span>${chipsHtml(t.who)}</span><span class="ago">${ago(completedMs(t))}</span>
         </li>`).join('');
     }
-    $('tasks').innerHTML = html;
+    if ($('tasks').dataset.html !== html) { $('tasks').innerHTML = html; $('tasks').dataset.html = html; }
   }
 
   async function mutate(fn) {
