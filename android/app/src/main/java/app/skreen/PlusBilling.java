@@ -91,8 +91,9 @@ final class PlusBilling implements com.android.billingclient.api.PurchasesUpdate
                                 .setProductType(BillingClient.ProductType.INAPP)
                                 .build()))
                 .build();
-        client.queryProductDetailsAsync(params, (result, list) -> {
-            if (result.getResponseCode() != BillingClient.BillingResponseCode.OK || list.isEmpty()) return;
+        client.queryProductDetailsAsync(params, (result, found) -> {
+            List<ProductDetails> list = found == null ? null : found.getProductDetailsList();
+            if (result.getResponseCode() != BillingClient.BillingResponseCode.OK || list == null || list.isEmpty()) return;
             details = list.get(0);
             ProductDetails.OneTimePurchaseOfferDetails offer = details.getOneTimePurchaseOfferDetails();
             if (offer != null) price = offer.getFormattedPrice();
