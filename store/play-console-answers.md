@@ -9,35 +9,14 @@ Images are in this folder: icon-512.png, feature-graphic-1024x500.png, screensho
 
 ## Main store listing
 App name: Skreen
-Short description (max 80):
-Always-on wall display: clock, weather, calendar, to-do list, timers and music.
+Short description (max 80): see store/play/listing-short-description.txt
+Full description (max 4000): see store/play/listing-full-description.txt  (paste it exactly)
+Category: Productivity (or Tools).
 
-Full description:
-Skreen turns a cheap Android tablet into the one screen your whole home looks at: the time, the weather, today's calendar and your to-do list, big and always current.
-
-FREE, FOREVER
-- Big clock, hourly and five-day weather, and a plain-English line on whether it will rain
-- Your Google Calendar, plus any calendar link (Outlook, Apple, Yahoo and more)
-- Your Google Tasks list: tap to check things off, add new ones by typing or talking, tag who they're for
-- Up to four named timers, with a full-screen alarm when they finish
-- Music: see and control what's playing from Spotify, YouTube Music or any music app, or search internet radio and play it on the display
-- Made to stay on: night mode, a slowly drifting layout and a rotating big-clock tour help protect your screen; brightness controls are built in
-
-SKREEN+ (OPTIONAL, ONE PAYMENT)
-Everything above stays free. Skreen+ is a single purchase, yours for good, that adds:
-- Several Google accounts and to-do lists at once
-- Choose and arrange your own layout, with extra skreens you swipe between
-- A photo slideshow with a gallery of paintings or your own pictures
-- In-the-news widget
-- Dinner planner and shopping list, kept in Google Tasks
-- Big Skreen Mode: a smart-display way to use Skreen, one big slide at a time
-
-YOUR DATA STAYS YOURS
-Your calendar and tasks go straight from Google to your tablet. They don't pass through us. No ads, no analytics, nothing sold or shared.
-
-Skreen needs a Google account for calendar and tasks. Music controls need your permission under Android's "Notification access", which you grant yourself and can switch off any time.
-
-Category: Productivity (or Tools). Tags: clock, calendar, widgets (whatever the console offers).
+Graphics (store/play/ and store/):
+  - App icon 512x512: store/icon-512.png
+  - Feature graphic 1024x500: store/feature-graphic-1024x500.png
+  - Tablet screenshots (1920x1200): store/play/screenshot-1.png ... screenshot-6.png  (use for 7-inch and 10-inch tablet slots, and phone slots if asked)
 
 ## App content
 Ads: No.
