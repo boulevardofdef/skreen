@@ -68,7 +68,7 @@ Open that on the tablet in Chrome, allow *install unknown apps* when asked, and 
 | `dashboard/privacy.html` | Privacy policy (needed for Google verification) |
 | `docs/launch.md` | Google Cloud setup, verification and store checklist |
 | `dashboard/fonts/` | Bricolage Grotesque, Fraunces, Archivo, Space Grotesk, Big Shoulders and Geist Mono (all SIL OFL) |
-| `dashboard/sw.js`, `manifest.webmanifest`, `icon.svg` | Offline fallback and installability |
+| `dashboard/sw.js`, `manifest.webmanifest`, `icon-*.png` | Offline fallback and installability |
 | `android/` | The Android app (bundles `dashboard/`) |
 | `.github/workflows/pages.yml` | Publishes `dashboard/` to GitHub Pages |
 | `.github/workflows/android.yml` | Builds `Skreen.apk` and publishes it to the latest release |

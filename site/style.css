@@ -12,7 +12,7 @@ img { max-width: 100%; height: auto; display: block; }
 
 header { display: flex; align-items: center; justify-content: space-between; padding: 1.4rem 0; }
 .logo { display: flex; align-items: center; gap: 0.7rem; font-weight: 800; font-size: 1.5rem; letter-spacing: -0.02em; text-decoration: none; }
-.logo svg { width: 2rem; height: 2rem; }
+.logo img { display: block; }
 nav a { margin-left: 1.4rem; text-decoration: none; color: var(--muted); font: 500 0.85rem "Geist Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; }
 nav a:hover { color: var(--ink); }
 

@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <!-- three agenda bars: orange, bone, dim bone -->
-    <path android:fillColor="#FF5B2E" android:pathData="M30,32.4 L66,32.4 L66,43.2 L30,43.2 Z" />
-    <path android:fillColor="#F3EEE3" android:pathData="M42,48.6 L78,48.6 L78,59.4 L42,59.4 Z" />
-    <path android:fillColor="#80F3EEE3" android:pathData="M30,64.8 L66,64.8 L66,75.6 L30,75.6 Z" />
-</vector>
