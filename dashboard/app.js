@@ -1956,7 +1956,7 @@
   const mealsShown = () => hasPlus() && visibleWidgets().includes('meals');
   const ymdOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const mealTarget = () => { const [a, l] = String(cfg.mealList || '').split('|'); return a && l && accountList().includes(a) ? { a, l } : null; };
-  const mealState = { byDate: {}, ready: false, error: '' };
+  const mealState = { byDate: {}, ideas: [], ready: false, error: '' };
 
   function mealDays() {
     const today = startOfDay(new Date());
@@ -1986,6 +1986,7 @@
       const sample = ['Tacos', 'Sheet-pan chicken', 'Pasta night', 'Leftovers', 'Pizza & movie', 'Grilled salmon', 'Soup and bread'];
       mealState.byDate = {};
       mealDays().forEach(({ date }, i) => { mealState.byDate[date] = [{ id: 'd' + i, title: sample[i], done: false }]; });
+      mealState.ideas = ['Tacos', 'Pasta night', 'Sheet-pan chicken', 'Chili', 'Grilled salmon', 'Stir fry'].map((title, i) => ({ id: 'i' + i, title }));
       mealState.ready = true; mealState.error = '';
       drawMeals();
       return;
@@ -1997,6 +1998,7 @@
       const items = await Google.mealTasks(t.a, t.l, days[0].date, days[6].date);
       mealState.byDate = {};
       items.forEach((m) => { (mealState.byDate[m.date] = mealState.byDate[m.date] || []).push(m); });
+      try { mealState.ideas = await Google.mealIdeas(t.a, t.l); } catch (_) { /* ideas are optional */ }
       mealState.ready = true; mealState.error = '';
     } catch (err) {
       mealState.error = err.message || 'failed';
@@ -2103,6 +2105,11 @@
     $('mealHint').textContent = items.length > 1 ? `Also planned: ${items.slice(1).map((m) => m.title).join(', ')}` : 'What\u2019s for dinner?';
     $('mealInput').value = items[0] ? items[0].title : '';
     $('mealClear').hidden = !items[0];
+    // The list's undated tasks, as one-tap choices.
+    const planned = new Set(Object.values(mealState.byDate).flat().map((m) => m.title.toLowerCase()));
+    const ideas = (mealState.ideas || []).slice(0, 14);
+    $('mealIdeas').hidden = !ideas.length;
+    $('mealIdeas').innerHTML = ideas.map((i) => `<button type="button" class="idea${planned.has(i.title.toLowerCase()) ? ' used' : ''}" data-idea="${esc(i.title)}">${esc(i.title)}</button>`).join('');
     $('mealSheet').showModal();
     setTimeout(() => $('mealInput').focus(), 50);
   }
@@ -2140,6 +2147,7 @@
     const b = e.target.closest('[data-date]');
     if (b && (isDemo() || mealTarget())) openMeal(b.dataset.date);
   });
+  $('mealIdeas').addEventListener('click', (e) => { const b = e.target.closest('[data-idea]'); if (b) { $('mealInput').value = b.dataset.idea; saveMeal(false); } });
   $('mealSave').addEventListener('click', () => saveMeal(false));
   $('mealClear').addEventListener('click', () => saveMeal(true));
   $('mealCancel').addEventListener('click', () => $('mealSheet').close());

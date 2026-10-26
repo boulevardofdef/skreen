@@ -794,3 +794,9 @@ body.timer-inline .wx-days { display: none; }
 .song-search { border-top: 1px solid var(--rule); padding: 0.8rem 0; }
 .song-search .sub { font: 600 0.78rem/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
 .song-search .hint { margin: 0.4rem 0 0; font-size: 0.85rem; color: var(--faint); }
+
+.meal-ideas { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.2rem 0 0.9rem; max-height: 9rem; overflow-y: auto; }
+.meal-ideas .idea { border: 1px solid var(--rule); background: transparent; color: var(--ink); padding: 0.55rem 0.9rem; font: 600 1rem/1.2 var(--display); }
+.meal-ideas .idea.used { color: var(--muted); }
+.meal-ideas .idea:active { background: var(--ink); color: var(--bg); }
+.hint.how { margin: 0.5rem 0 0; font-size: 0.9rem; line-height: 1.45; color: var(--muted); }

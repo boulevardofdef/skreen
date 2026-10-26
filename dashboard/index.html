@@ -206,6 +206,7 @@
     <div class="brand-row sm" data-brand></div>
     <h3 id="mealDay"></h3>
     <p class="hint" id="mealHint">What's for dinner?</p>
+    <div class="meal-ideas" id="mealIdeas" hidden></div>
     <div class="add-row">
       <input id="mealInput" type="text" autocomplete="off" enterkeyhint="done" placeholder="e.g. Tacos" maxlength="120">
       <button type="button" class="mic" id="mealMic" aria-label="Speak"></button>
@@ -299,7 +300,8 @@
 
         <div class="group native-only">Dinners <span class="plus-chip" data-plus-logo></span></div>
         <div class="native-block" id="mealField">
-          <label class="field"><span>Dinner planner list <em>(a Google Tasks list, one dinner per day by due date)</em></span><select id="mealPick"></select></label>
+          <label class="field"><span>Dinner planner list <em>(a Google Tasks list)</em></span><select id="mealPick"></select></label>
+          <p class="hint how">How it works: make a Google Tasks list, such as &ldquo;Dinners&rdquo;. Tasks <b>without a date</b> are your meal ideas (add them any time, from your phone too). Tap a day on the Dinners widget and pick an idea, or type a new meal, and Skreen puts a dated copy on that day. You can also add a task to the list with a date, and it shows on that day.</p>
         </div>
 
         <div class="group native-only">Shopping list <span class="plus-chip" data-plus-logo></span></div>

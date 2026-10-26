@@ -132,6 +132,11 @@ window.Google = (() => {
     const res = await call(acct, `${base}?${q}`);
     return (res.items || []).filter((t) => t.title && t.due && !t.parent).map((t) => ({ id: t.id, title: t.title, date: t.due.slice(0, 10), done: t.status === 'completed' }));
   }
+  // The list's undated tasks: the pool of meal ideas to pick from.
+  async function mealIdeas(acct, listId) {
+    const res = await call(acct, `${TASKS}/lists/${encodeURIComponent(listId)}/tasks?showCompleted=false&showHidden=false&maxResults=100&fields=items(id,title,due,parent,position)`);
+    return (res.items || []).filter((t) => t.title && !t.due && !t.parent).sort((a, b) => ((a.position || '') < (b.position || '') ? -1 : 1)).map((t) => ({ id: t.id, title: t.title }));
+  }
   async function addMeal(acct, listId, title, date) {
     const t = await call(acct, `${TASKS}/lists/${encodeURIComponent(listId)}/tasks`, { method: 'POST', body: JSON.stringify({ title: title.slice(0, 500), due: `${date}T00:00:00.000Z` }) });
     return { id: t.id, title: t.title, date, done: false };
@@ -140,5 +145,5 @@ window.Google = (() => {
 
   const forgetCaches = () => { calCache.clear(); defaultList.clear(); };
 
-  return { init, AuthError, listCalendars, listTaskLists, resolveList, events, tasks, addTask, setDone, setNotes, setTitle, mealTasks, addMeal, deleteTask, forgetCaches, chosenCalendars };
+  return { init, AuthError, listCalendars, listTaskLists, resolveList, events, tasks, addTask, setDone, setNotes, setTitle, mealTasks, mealIdeas, addMeal, deleteTask, forgetCaches, chosenCalendars };
 })();
