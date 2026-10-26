@@ -11,6 +11,7 @@ window.Google = (() => {
   const init = (getToken) => { tokenProvider = getToken; };
 
   class AuthError extends Error {}
+  class QuotaError extends Error {}   // Google says too many requests: back off and keep showing what we have
 
   async function call(acct, url, opts = {}) {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -20,6 +21,7 @@ window.Google = (() => {
       if (opts.body) headers['Content-Type'] = 'application/json';
       const res = await fetch(url, { ...opts, headers });
       if (res.status === 401) { if (attempt === 0) continue; throw new AuthError('expired'); }
+      if (res.status === 429) throw new QuotaError('quota');
       if (!res.ok) throw new Error('Google returned ' + res.status);
       return res.status === 204 ? null : res.json();
     }
@@ -154,5 +156,5 @@ window.Google = (() => {
 
   const forgetCaches = () => { calCache.clear(); defaultList.clear(); taskMemo.clear(); };
 
-  return { init, AuthError, listCalendars, listTaskLists, resolveList, events, tasks, addTask, setDone, setNotes, setTitle, mealTasks, mealIdeas, addMeal, deleteTask, forgetCaches, chosenCalendars };
+  return { init, AuthError, QuotaError, listCalendars, listTaskLists, resolveList, events, tasks, addTask, setDone, setNotes, setTitle, mealTasks, mealIdeas, addMeal, deleteTask, forgetCaches, chosenCalendars };
 })();

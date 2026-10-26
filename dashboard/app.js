@@ -187,8 +187,9 @@
   // How often to ask Google for changes is a setting (default 10 minutes). Nothing is asked at night, or when
   // neither the schedule nor the to-do list is on the screen, so the calls (which Google counts and limits) go to
   // times someone can see the result.
-  let dataTimer = null;
+  let dataTimer = null, quotaUntil = 0;
   function pollData() {
+    if (Date.now() < quotaUntil) return;   // Google asked us to slow down
     const nothingShown = !['agenda', 'todo'].some((w) => visibleWidgets().includes(w));
     const asleep = isNight() && !$('night').hidden;
     if (nothingShown || asleep) return;
@@ -221,9 +222,12 @@
       if (!state.mutating && Date.now() - state.lastMutation > 4000) state.tasks = decorateTasks(data.tasks);
       state.lastSync = new Date();
       state.loaded = true;
-      state.syncError = (data.errors || []).length ? ((data.errors[0] instanceof Google.AuthError) ? 'auth' : 'partial') : null;
+      const firstErr = (data.errors || [])[0];
+      if (firstErr instanceof Google.QuotaError) quotaUntil = Date.now() + 30 * 60000;
+      state.syncError = firstErr ? (firstErr instanceof Google.AuthError ? 'auth' : firstErr instanceof Google.QuotaError ? 'quota' : 'partial') : null;
     } catch (err) {
-      state.syncError = err instanceof Google.AuthError ? 'auth' : (err.message || String(err));
+      if (err instanceof Google.QuotaError) quotaUntil = Date.now() + 30 * 60000;   // back off for half an hour; the data on screen stays
+      state.syncError = err instanceof Google.AuthError ? 'auth' : err instanceof Google.QuotaError ? 'quota' : (err.message || String(err));
       console.warn('Sync failed', err);
     }
     renderAll();
@@ -1468,6 +1472,9 @@
       el.classList.add('error');
       el.dataset.go = 'signin';
       el.innerHTML = '<span class="dot"></span>Google needs you to sign in again · <u>Sign in</u>';
+    } else if (!isDemo() && state.syncError === 'quota') {
+      el.dataset.go = 'none';
+      el.innerHTML = `<span class="dot"></span>Google is busy. Showing the last update${state.lastSync ? ` from ${fmtTime(state.lastSync)}` : ''}, trying again soon`;
     } else if (!isDemo() && state.syncError === 'partial') {
       el.classList.add('error');
       el.dataset.go = 'fix';
