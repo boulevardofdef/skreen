@@ -1198,12 +1198,14 @@
   function maybeStartTour(now = new Date()) {
     const mins = alwaysTour() ? 2 : Number(cfg.showcaseMinutes);
     if (!mins || tour.on || isNight(now) || dialogOpen()) return;
+    // Always-on: begin shortly after the app opens (the two-minute wait is only for resuming after a tap).
+    if (alwaysTour() && !tour.everStarted && performance.now() > 15000) { startTour(); return; }
     if (now.getTime() - tour.last >= mins * 60000) startTour();
   }
   const dialogOpen = () => !!document.querySelector('dialog[open]') || !$('guide').hidden;
 
   function startTour() {
-    tour.on = true;
+    tour.on = true; tour.everStarted = true;
     $('showcase').hidden = false;
     beginTourCycle();
   }
@@ -2558,7 +2560,7 @@
     saveSettings();
     state.nightDismissedUntil = 0;
     state.bgKey = '';
-    tour.last = Date.now();
+    tour.last = alwaysTour() ? 0 : Date.now();   // always-on starts right away; the others wait their usual time
     lastMinute = -1;
     applyLayout();
     nudgeLayout(new Date());
