@@ -113,10 +113,11 @@ window.Google = (() => {
   const taskUrl = (listId, id) => `${TASKS}/lists/${encodeURIComponent(listId)}/tasks/${encodeURIComponent(id)}`;
   const patch = (acct, listId, id, body) => call(acct, taskUrl(listId, id), { method: 'PATCH', body: JSON.stringify(body) }).then(() => true);
 
-  async function addTask(acct, listId, title, notes = '') {
+  async function addTask(acct, listId, title, notes = '', previousId = '') {
     const body = { title: title.slice(0, 500) };
     if (notes) body.notes = notes;
-    const t = await call(acct, `${TASKS}/lists/${encodeURIComponent(listId)}/tasks`, { method: 'POST', body: JSON.stringify(body) });
+    // Google puts a new task at the top; `previous` places it after that task (the bottom, for a shopping list).
+    const t = await call(acct, `${TASKS}/lists/${encodeURIComponent(listId)}/tasks${previousId ? `?previous=${encodeURIComponent(previousId)}` : ''}`, { method: 'POST', body: JSON.stringify(body) });
     return { id: t.id, title: t.title, notes: t.notes || '', position: t.position, done: false };
   }
   const setNotes = (acct, listId, id, notes) => patch(acct, listId, id, { notes: notes || null });

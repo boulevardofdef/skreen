@@ -2040,7 +2040,7 @@
     if (!t) { drawShop(); return; }
     try {
       const all = await Google.tasks(t.a, t.l);
-      shopState.items = all.filter((x) => !x.done);
+      shopState.items = all.filter((x) => !x.done).sort(byPosition);   // the same order as in Google Tasks
       shopState.ready = true; shopState.error = '';
     } catch (err) {
       shopState.error = err.message || 'failed';
@@ -2068,9 +2068,16 @@
     shopState.ready = true;
     drawShop();
     if (isDemo()) return;
-    try { const real = await Google.addTask(t.a, t.l, text); tmp.id = real.id; }
-    catch (e) { shopState.items = shopState.items.filter((x) => x !== tmp); drawShop(); showToast('Couldn\u2019t add that item'); }
+    // One at a time, each placed after the last real item, so several quick adds keep their order.
+    shopQueue = shopQueue.then(async () => {
+      try {
+        const prev = shopState.items.slice(0, shopState.items.indexOf(tmp)).reverse().find((x) => !String(x.id).startsWith('tmp'));
+        const real = await Google.addTask(t.a, t.l, text, '', prev ? prev.id : '');
+        tmp.id = real.id; tmp.position = real.position;
+      } catch (e) { shopState.items = shopState.items.filter((x) => x !== tmp); drawShop(); showToast('Couldn\u2019t add that item'); }
+    });
   }
+  let shopQueue = Promise.resolve();
 
   $('shopList').addEventListener('click', (e) => {
     if (e.target.closest('[data-shop-setup]')) { if (canSignIn()) openSettings(); return; }
