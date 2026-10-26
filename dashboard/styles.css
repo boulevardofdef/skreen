@@ -556,6 +556,9 @@ body.native .field.native-only { display: flex; }
 .plus-card { border: 1px solid var(--rule); padding: 0.9rem 1rem; margin-bottom: 1rem; }
 .plus-card p { margin: 0 0 0.8rem; font-size: 1rem; line-height: 1.45; }
 .plus-card .adv { margin-top: 0.8rem; }
+.plus-card .adv[hidden] { display: none; }
+.plus-card.no-actions p { margin-bottom: 0; }
+.plus-card .loc-row[hidden] { display: none; }
 .plus-card.on { border-color: var(--accent); }
 #layoutField.locked .layout-list { opacity: 0.4; }
 
@@ -818,3 +821,5 @@ body.big-mode .gear { z-index: 40; }
 .show-now { left: 9.6rem; bottom: 0.7rem; }
 .sv-caption { position: absolute; left: 8vw; bottom: 13vh; max-width: 70vw; padding: 0.5rem 0.9rem; background: rgba(0, 0, 0, 0.55); font: 500 max(1rem, 2.2vh)/1.3 var(--mono); letter-spacing: 0.04em; color: var(--ink); z-index: 2; }
 .sv-caption:empty { display: none; }
+
+.stab > .credit:first-child { margin-top: 0; }   /* the negative margin would be cut off at the top of the page */

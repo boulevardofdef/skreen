@@ -1188,10 +1188,19 @@
   const SLIDE_NAMES = { time: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos', news: 'In the news', meals: 'Dinners', shop: 'Shopping list', music: 'Music (while playing)' };
   const slideSkipped = (v) => alwaysTour() && String(cfg.slideSkip || '').split(',').includes(v);
   const musicPlaying = () => !!((music.np && music.np.playing) || music.audio);
-  const slideMs = () => (alwaysTour() ? Math.max(5, Number(cfg.slideSeconds) || 60) * 1000 : TOUR_VIEW_MS);
+  const slideMs = () => (alwaysTour() ? Math.max(5, Number(cfg.slideSeconds) || 60) * 1000 : Math.round(4 * TOUR_VIEW_MS / Math.max(1, TOUR.length)));   // the tour always lasts four slides' worth
   let TOUR = Object.keys(TOUR_ALL);
   const ROTATING_TOUR = ['time', 'weather', 'agenda', 'todo'];   // the occasional tour is always these four, so it's always the same length
-  const tourViews = () => Object.keys(TOUR_ALL).filter((v) => (alwaysTour() || ROTATING_TOUR.includes(v)) && !slideSkipped(v) && (v === 'music' ? (alwaysTour() && musicPlaying()) : visibleWidgets().includes(TOUR_ALL[v])) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (!['agenda', 'todo'].includes(v) || state.loaded));
+  // Is this slide switched on, and does it have something to show right now?
+  const viewOk = (v) => !slideSkipped(v) && (v === 'music' ? (alwaysTour() && musicPlaying()) : visibleWidgets().includes(TOUR_ALL[v])) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (!['agenda', 'todo'].includes(v) || state.loaded)
+  // The occasional tour is always the same length (four slides' worth). If some of the usual four are off, the rest
+  // are shown longer; if all four are off, it uses up to four of the other widgets you have on.
+  const tourViews = () => {
+    const all = Object.keys(TOUR_ALL).filter(viewOk);
+    if (alwaysTour()) return all;
+    const base = ROTATING_TOUR.filter(viewOk);
+    return base.length ? base : all.filter((v) => v !== 'music').slice(0, 4);
+  };
   const tour = { on: false, i: 0, cycle: 0, timer: null, last: Date.now() };
 
   // Skreen+: the tour can run all the time. A tap ends it for two minutes, then it resumes.
@@ -1216,6 +1225,7 @@
 
   function beginTourCycle() {
     TOUR = tourViews();
+    if (!TOUR.length) { endTour(); return; }   // nothing to show right now
     tour.i = 0; tour.cycle++;
     const bar = $('showBar');
     bar.style.transition = 'none'; bar.style.width = '0';
@@ -1538,10 +1548,12 @@
   };
 
   function refreshAppSection() {
-    if (!canUpdate()) return;
     let name = '';
-    try { name = NATIVE.getVersionName ? NATIVE.getVersionName() : ''; } catch (_) {}
-    $('appVersion').textContent = `Skreen app ${name || 'build ' + NATIVE.getVersion()} \u00b7 site ${loadedStamp || 'dev'}`;
+    try { name = NATIVE && NATIVE.getVersionName ? NATIVE.getVersionName() : ''; } catch (_) {}
+    $('appVersion').textContent = NATIVE
+      ? `Skreen app ${name || 'build ' + (NATIVE.getVersion ? NATIVE.getVersion() : '')} \u00b7 site ${loadedStamp || 'dev'}`
+      : `Skreen on the web \u00b7 site ${loadedStamp || 'dev'}`;
+    if (!canUpdate()) return;
     $('installUpdate').hidden = !state.update;
     $('installUpdate').disabled = !!state.updating;
     if (state.update) $('updateResult').textContent = `${state.update.name} is available${state.update.notes ? ': ' + state.update.notes : ''}`;
@@ -2231,6 +2243,9 @@
     $('plusBuy').hidden = on || !st.canBuy;
     $('plusBuy').textContent = st.price ? `Unlock Skreen+ \u00b7 ${st.price}` : 'Unlock Skreen+';
     $('plusForget').hidden = !(on && st.code);
+    const actions = !($('plusBuy').hidden && $('plusForget').hidden);
+    $('plusActions').hidden = !actions;
+    $('plusCard').classList.toggle('no-actions', !actions);
     $('plusCodeBox').hidden = on;
   }
   $('plusBuy').addEventListener('click', () => Plus.buy());
