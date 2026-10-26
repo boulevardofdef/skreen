@@ -1778,14 +1778,43 @@
   }
 
   const PAGE_GAP = 3;   // rem of empty space between skreens, so one never shows at the edge of its neighbour
+  // Going past the last skreen carries on to the first, sliding the same way, as if it were skreen N+1
+  // (and the same backwards). The first page is parked just after the last one for the slide, then put back.
+  const pageX = (idx) => `translateX(calc(${-idx * 100}% - ${idx * PAGE_GAP}rem))`;
+  function parkPage(page, slot) {   // slot: where it should sit, in pages from the first (n = after the last, -1 = before the first)
+    clearTimeout(pager.wrapTimer);
+    if (pager.wrapPage && pager.wrapPage !== page) pager.wrapPage.style.transform = '';
+    pager.wrapPage = page;
+    const shift = slot === -1 ? -pager.count : pager.count;
+    page.style.transform = `translateX(calc(${shift * 100}% + ${shift * PAGE_GAP}rem))`;
+  }
+  function unparkPage() {
+    clearTimeout(pager.wrapTimer);
+    if (pager.wrapPage) { pager.wrapPage.style.transform = ''; pager.wrapPage = null; }
+  }
+  function settleWrap() {   // after the slide: pages back in place, the strip jumps (unseen) to the real position
+    const track = document.querySelector('#dash .pager');
+    unparkPage();
+    if (!track) return;
+    track.style.transition = 'none';
+    track.style.transform = pager.count > 1 ? pageX(pager.index) : '';
+    void track.offsetWidth;
+    track.style.transition = '';
+  }
   function setPage(i, { manual = false, instant = false } = {}) {
     const track = document.querySelector('#dash .pager');
     if (!track) return;
-    pager.index = ((i % pager.count) + pager.count) % pager.count;
+    const n = pager.count, pages = track.querySelectorAll(':scope > .page');
+    const wrapFwd = n > 1 && i >= n, wrapBack = n > 1 && i < 0;
+    pager.index = ((i % n) + n) % n;
     pager.changedAt = Date.now();
-    if (instant) { track.style.transition = 'none'; } else { track.style.transition = ''; }
-    track.style.transform = pager.count > 1 ? `translateX(calc(${-pager.index * 100}% - ${pager.index * PAGE_GAP}rem))` : '';
+    if (instant) { unparkPage(); track.style.transition = 'none'; } else { track.style.transition = ''; }
+    let slot = pager.index;
+    if (wrapFwd && pages[0] && !instant) { parkPage(pages[0], n); slot = n; }
+    else if (wrapBack && pages[n - 1] && !instant) { parkPage(pages[n - 1], -1); slot = -1; }
+    track.style.transform = n > 1 ? pageX(slot) : '';
     if (instant) { void track.offsetWidth; track.style.transition = ''; }
+    else if (pager.wrapPage) pager.wrapTimer = setTimeout(settleWrap, 900);
     document.querySelectorAll('#pageDots button').forEach((b, k) => b.classList.toggle('on', k === pager.index));
     if (manual) pager.changedAt = Date.now() + 15000;   // after a swipe, leave it alone for a while
   }
@@ -1812,8 +1841,14 @@
       if (moved) {
         const track = dash.querySelector('.pager');
         track.style.transition = 'none';
-        const atEdge = pager.count < 2;
-        track.style.transform = `translateX(calc(${-pager.index * 100}% - ${pager.index * PAGE_GAP}rem + ${atEdge ? dx / 3 : dx}px))`;
+        // At the ends, show the page that would come next (the first after the last, the last before the first).
+        const n = pager.count, pages = track.querySelectorAll(':scope > .page');
+        if (n > 1) {
+          if (dx < 0 && pager.index === n - 1) { if (pager.wrapPage !== pages[0]) parkPage(pages[0], n); }
+          else if (dx > 0 && pager.index === 0) { if (pager.wrapPage !== pages[n - 1]) parkPage(pages[n - 1], -1); }
+          else unparkPage();
+        }
+        track.style.transform = `translateX(calc(${-pager.index * 100}% - ${pager.index * PAGE_GAP}rem + ${n < 2 ? dx / 3 : dx}px))`;
       }
     });
     const end = (e) => {
