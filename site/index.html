@@ -3,83 +3,180 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Skreen: the wall display that stays on</title>
-  <meta name="description" content="Turn a cheap Android tablet into an always-on wall display: clock, weather, calendar, to-do list, timers and music. Free, with one optional upgrade.">
-  <meta property="og:title" content="Skreen: the wall display that stays on">
-  <meta property="og:description" content="Clock, weather, calendar, to-do list, timers and music on a cheap Android tablet.">
+  <title>Skreen: one screen for your whole day</title>
+  <meta name="description" content="Your calendar, lists, weather, timers and music on one always-on screen in your kitchen, editable from anywhere. Runs on any Android tablet. Free, with one optional $14.99 upgrade.">
+  <meta property="og:title" content="Skreen: one screen for your whole day">
+  <meta property="og:description" content="Your calendar, lists, weather, timers and music, always on the kitchen wall. Free on any Android tablet.">
   <meta property="og:image" content="https://skreen.fyi/img/logo-wide.png">
-  <meta name="theme-color" content="#0e0d0b">
+  <meta name="theme-color" content="#f3eee3">
   <link rel="icon" href="favicon-32.png" type="image/png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="preload" href="fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <a class="logo" href="/"><img src="icon-192.png" width="40" height="40" alt="" style="border-radius:9px">Skreen</a>
-    <nav><a href="#features">Features</a><a href="#plus">Skreen+</a><a href="mailto:support@skreen.fyi">Contact</a></nav>
-  </header>
 
-  <main>
-    <div class="hero">
-      <h1>The wall display that <em>stays on.</em></h1>
-      <p class="lede">Put a cheap Android tablet on the wall and Skreen turns it into the one screen the whole house looks at: the time, the weather, today&rsquo;s calendar and your to-do list. Big, calm and always current.</p>
+<header class="top">
+  <div class="wrap bar">
+    <a class="logo" href="/"><img src="icon-192.png" width="40" height="40" alt="">Skreen</a>
+    <nav>
+      <a href="#how">How it works</a><a href="#free">Free</a><a href="#plus">Skreen+</a><a href="#faq">FAQ</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="hero wrap">
+    <div class="hero-copy">
+      <p class="eyebrow">For any Android tablet</p>
+      <h1>One screen for your <em>whole day.</em></h1>
+      <p class="lede">Your calendar, to-do list, shopping list, weather, timers and music, always on in the kitchen and editable from anywhere. It&rsquo;s not the last century. Retire the whiteboard.</p>
       <div class="cta">
-        <a class="btn primary" href="https://app.skreen.fyi/?test=yes">See it with sample data</a>
-        <span class="soon">Google Play: coming soon</span>
+        <a class="btn primary" href="https://app.skreen.fyi/?test=yes">Try it with sample data</a>
+        <span class="soon">Google Play &middot; coming soon</span>
       </div>
-      <figure class="hero-shot"><img class="shot" src="img/main.jpg" width="1280" height="800" alt="The Skreen display: a large clock, the weather, today's schedule and a to-do list on a dark background."><figcaption class="mono cap">Sample data, on a 10-inch tablet</figcaption></figure>
+      <p class="fine">Free forever. One optional upgrade, $14.99 once.</p>
     </div>
-
-    <section id="features">
-      <h2>Everything a wall display should do. Free.</h2>
-      <p class="sub">The main display is free forever. No account with us, no ads, no tracking.</p>
-      <div class="features">
-        <div class="feature"><span class="mono">01</span><h3>Clock and weather</h3><p>A big, easy-to-read clock, the next few hours and the week ahead, and a plain-English line on whether it will rain.</p></div>
-        <div class="feature"><span class="mono">02</span><h3>Your calendars</h3><p>Google Calendar, plus Outlook, Apple, Yahoo or any calendar link. Today and tomorrow at a glance, with what&rsquo;s on right now highlighted.</p></div>
-        <div class="feature"><span class="mono">03</span><h3>A to-do list for everyone</h3><p>Your Google Tasks list, on the wall. Tap to check things off, add new ones by typing or talking, and tag who it&rsquo;s for.</p></div>
-        <div class="feature"><span class="mono">04</span><h3>Timers</h3><p>Up to four named countdowns, set with a keypad or your voice. When one finishes the whole display turns orange and the tablet rings.</p></div>
-        <div class="feature"><span class="mono">05</span><h3>Music</h3><p>See what&rsquo;s playing from Spotify, YouTube Music or any music app, with play, pause and skip. Or search internet radio and play it right on the display.</p></div>
-        <div class="feature"><span class="mono">06</span><h3>Made to stay on</h3><p>Night mode, a slow layout drift and a rotating big-clock tour help protect the screen. Dimming and brightness are built in.</p></div>
+    <figure class="hero-photo">
+      <!-- Drop a photo at img/hero-kitchen.jpg and it replaces the illustration below. See docs/photo-brief.md. -->
+      <div class="wall">
+        <div class="wall-tablet"><img src="img/s/main.jpg" width="1400" height="875" alt="Skreen on a kitchen wall: a big clock, the weather, today's schedule and a to-do list."></div>
+        <div class="counter"></div>
       </div>
-    </section>
+      <img class="photo" src="img/hero-kitchen.jpg" alt="A woman in her thirties glances at the Skreen on her kitchen wall while she makes lunch." onerror="this.remove()">
+    </figure>
+  </section>
 
-    <section>
-      <div class="pair">
-        <div><img class="shot" src="img/timers.jpg" width="1280" height="800" alt="Two kitchen timers running under the date, one named Pasta."><h3>Timers right under the clock</h3><p>Start one from the little button in the corner. They stay where you can see them.</p></div>
-        <div><img class="shot" src="img/music.jpg" width="1280" height="800" alt="The music panel showing a song with play, pause and skip buttons, and a list of radio stations."><h3>Music without another app</h3><p>Controls for what&rsquo;s playing, and radio you can search and start yourself.</p></div>
+  <!-- THE PROBLEM -->
+  <section class="problem">
+    <div class="wrap">
+      <p class="eyebrow">Look around your kitchen</p>
+      <h2>A to-do list on the fridge. A shopping list on the counter. Sticky notes on everything.</h2>
+      <div class="chips" aria-hidden="true">
+        <span>Whiteboard</span><span>Sticky notes</span><span>Shopping list</span><span>Fridge calendar</span><span>Kitchen timer</span><span>Weather app</span><span>Radio</span>
       </div>
-    </section>
+      <p class="big-line">There&rsquo;s never been one place to see your whole day, on one screen, that you can change from anywhere. <strong>Until now.</strong></p>
+    </div>
+  </section>
 
-    <section id="plus">
-      <div class="plus">
-        <div>
-          <h2>Skreen+</h2>
-          <div class="price">$14.99<small>One payment. Yours for good. Launch price.</small></div>
-          <p class="sub" style="margin-top:1.5rem">Everything on the main display stays free. Skreen+ adds extras for households that want more.</p>
-        </div>
-        <ul>
-          <li>Several Google accounts and to-do lists at once <span>for the whole family</span></li>
-          <li>Choose and arrange your own layout <span>with extra skreens you can swipe between</span></li>
-          <li>Photo slideshow <span>a gallery of paintings, or your own pictures</span></li>
-          <li>In-the-news widget</li>
-          <li>Dinner planner and shopping list <span>kept in Google Tasks</span></li>
-          <li>Big Skreen Mode <span>a smart-display way to use Skreen</span></li>
-        </ul>
+  <!-- HOW IT WORKS -->
+  <section id="how" class="wrap how">
+    <h2>Up and running in five minutes.</h2>
+    <ol class="steps">
+      <li><b>1</b><h3>Grab a tablet</h3><p>Any Android tablet will do: a cheap new one, or the one that&rsquo;s been in a drawer since 2019. Skreen doesn&rsquo;t sell hardware, so there&rsquo;s nothing to buy from us.</p></li>
+      <li><b>2</b><h3>Sign in with Google</h3><p>Connect the Google account you already use. Your calendar and your Google Tasks lists appear on the screen. No new account, nothing to set up.</p></li>
+      <li><b>3</b><h3>Add things from anywhere</h3><p>Put an event in your calendar or a task on your list from your phone, your laptop, wherever. It shows up on the wall.</p></li>
+    </ol>
+  </section>
+
+  <!-- FREE -->
+  <section id="free" class="free">
+    <div class="wrap">
+      <p class="eyebrow">Free, forever</p>
+      <h2>Everything you check ten times a day.</h2>
+      <p class="sub">An always-on clock, weather, calendar and to-do list. Plus the two things people use their smart displays for most: a timer and music.</p>
+      <div class="cards">
+        <article><h3>Clock and weather</h3><p>A big clock you can read from the stove, the next hours and the week ahead, and a plain-English line on whether it&rsquo;ll rain.</p></article>
+        <article><h3>Your calendar</h3><p>Google Calendar, plus Outlook, Apple or any calendar link. Today and tomorrow at a glance, with what&rsquo;s on right now lit up.</p></article>
+        <article><h3>A to-do list for everyone</h3><p>Your Google Tasks, on the wall. Tap to check things off, add new ones by typing or talking, and tag who it&rsquo;s for.</p></article>
+        <article><h3>Timers</h3><p>Up to four named timers, set with a keypad or your voice. When one&rsquo;s done the whole screen turns orange and rings.</p></article>
+        <article><h3>Music</h3><p>See what&rsquo;s playing from your favourite music apps and pause, play or skip from the wall.</p></article>
+        <article><h3>Live radio</h3><p>Stations from around the world, any genre you can think of, searched and played right in Skreen. No other app needed.</p></article>
       </div>
-    </section>
+      <div class="shots two">
+        <figure><img src="img/s/timers.jpg" width="1400" height="875" loading="lazy" alt="Two timers running under the clock, one named Pasta."><figcaption>Timers, always in sight</figcaption></figure>
+        <figure><img src="img/s/music.jpg" width="1400" height="875" loading="lazy" alt="The music panel: what's playing with controls, and a list of radio stations."><figcaption>Music and live radio</figcaption></figure>
+      </div>
+    </div>
+  </section>
 
-    <section class="privacy">
-      <h2>Your data stays yours.</h2>
-      <p>Your calendar and tasks go straight from Google to your tablet. They don&rsquo;t pass through us and we don&rsquo;t store them. There are no ads and no analytics, and we never sell or share your information. Read the <a href="https://app.skreen.fyi/privacy.html">privacy policy</a>.</p>
-    </section>
-  </main>
-</div>
+  <!-- NO HARDWARE -->
+  <section class="nohw wrap">
+    <h2>We don&rsquo;t sell you hardware.</h2>
+    <p>Other home screens come with a device and a price tag to match. Skreen is just the software. Run it on a tablet you already own or a cheap one off the shelf, and keep your money.</p>
+  </section>
+
+  <!-- PLUS -->
+  <section id="plus" class="plus">
+    <div class="wrap plus-grid">
+      <div>
+        <p class="eyebrow">Skreen+</p>
+        <h2>Retire the smart display.</h2>
+        <div class="price">$14.99<small>once &middot; launch price &middot; no subscription</small></div>
+        <p class="sub">One payment unlocks everything below, and it&rsquo;s yours for good. More customizable than the big names, because you choose what goes on the wall.</p>
+      </div>
+      <ul class="plus-list">
+        <li><b>Dinner planner</b><span>The week&rsquo;s meals at a glance. Pick from your own list of ideas.</span></li>
+        <li><b>Shopping list</b><span>A real list on the wall that everyone can add to from their phones.</span></li>
+        <li><b>News headlines</b><span>Today&rsquo;s top stories, at a glance.</span></li>
+        <li><b>Art and photos</b><span>Decorate your kitchen with a gallery of the greatest paintings, or your own photographs.</span></li>
+        <li><b>Your layout</b><span>Choose, hide and arrange widgets, across as many screens as you like.</span></li>
+        <li><b>More than one Google account</b><span>Everyone&rsquo;s calendars and lists on the same screen.</span></li>
+        <li><b>Big Skreen Mode</b><span>The smart-display way to use it. See below.</span></li>
+      </ul>
+    </div>
+    <div class="wrap shots two">
+      <figure><img src="img/s/plus.jpg" width="1400" height="875" loading="lazy" alt="Dinners for the week, a shopping list and news headlines side by side."><figcaption>Dinners, shopping and headlines</figcaption></figure>
+      <figure><img src="img/s/settings-widgets.jpg" width="1400" height="875" loading="lazy" alt="The layout settings, with each widget switched on or off and moved up or down."><figcaption>Choose and arrange your widgets</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- BIG SKREEN MODE -->
+  <section class="big">
+    <div class="wrap">
+      <p class="eyebrow">Skreen+ &middot; Big Skreen Mode</p>
+      <h2>Big enough to read from across the room.</h2>
+      <p class="sub">Turn it on and Skreen cycles through the widgets you choose, one big bold slide at a time. The time, the weather, your timers and a music player with controls stay in view on every slide. You pick how long each slide stays.</p>
+      <div class="shots two dark">
+        <figure><img src="img/s/big-time.jpg" width="1400" height="875" loading="lazy" alt="A huge clock, with a timer, the weather and a music player in the corners."><figcaption>The time, huge</figcaption></figure>
+        <figure><img src="img/s/big-agenda.jpg" width="1400" height="875" loading="lazy" alt="Today's schedule in large type."><figcaption>Your schedule, in bold type</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRIVACY + SCREEN CARE -->
+  <section class="care wrap">
+    <div>
+      <h2>Your data stays where it already is.</h2>
+      <p>Skreen has no accounts of its own. It talks straight to the Google account you already use, and your calendar and lists aren&rsquo;t stored on any server of ours. Only your tablet holds them. No ads, no tracking, nothing sold. <a href="https://app.skreen.fyi/privacy.html">Read the privacy policy</a>.</p>
+    </div>
+    <div>
+      <h2>Built to be left on.</h2>
+      <p>An always-on screen deserves some care. Skreen shows a useful, rotating slideshow at an interval you control, nudges the layout slightly through the day, and dims to a quiet night mode. Your tablet&rsquo;s screen stays healthy for years.</p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="faq wrap">
+    <h2>Questions</h2>
+    <details><summary>What do I need?</summary><p>An Android tablet with Google Play (Android 8 or newer) and a Google account. Amazon Fire tablets don&rsquo;t work, because they don&rsquo;t have Google&rsquo;s sign-in. Leave it plugged in and it&rsquo;s a wall display.</p></details>
+    <details><summary>Is it really free?</summary><p>Yes. The clock, weather, calendar, to-do list, timers, music controls and radio are free, with no ads. Skreen+ is an optional one-time purchase of $14.99 (launch price) that adds the extras above. There&rsquo;s no subscription.</p></details>
+    <details><summary>How do I add an event or a task?</summary><p>The way you already do: in Google Calendar or Google Tasks, on your phone or the web. It appears on Skreen within a few minutes (you can choose how often it checks), or tap the heading on the screen to check right away. You can also add and tick off tasks right on the screen.</p></details>
+    <details><summary>Does it replace an Echo Show or a Nest Hub?</summary><p>It does the screen part, and does it bigger: clock, weather, calendar, lists, timers, music, radio and news. It isn&rsquo;t a voice assistant, doesn&rsquo;t control smart-home devices and doesn&rsquo;t do video calls.</p></details>
+    <details><summary>Which music apps work?</summary><p>Skreen shows what any music app on the tablet is playing, such as Spotify or YouTube Music, with play, pause and skip, once you allow it in Android&rsquo;s settings. Radio is built into Skreen and needs no other app.</p></details>
+    <details><summary>Does it work offline?</summary><p>It keeps showing the last calendar and lists it had, and the clock keeps running. Weather, radio and updates need the internet.</p></details>
+    <details><summary>What about iPhone or iPad?</summary><p>Skreen is Android only for now. You can still add events and tasks from an iPhone through Google Calendar and Tasks.</p></details>
+    <details><summary>Can I get a refund on Skreen+?</summary><p>Purchases go through Google Play, so Google Play&rsquo;s refund rules apply.</p></details>
+  </section>
+
+  <!-- FINAL -->
+  <section class="final">
+    <div class="wrap">
+      <h2>One screen. Your whole day.</h2>
+      <div class="cta center">
+        <a class="btn primary" href="https://app.skreen.fyi/?test=yes">Try it with sample data</a>
+        <span class="soon">Google Play &middot; coming soon</span>
+      </div>
+    </div>
+  </section>
+</main>
+
 <footer>
-  <div class="wrap">
-    <span>&copy; 2026 Skreen. Skreen is an Android app; Google Play is a trademark of Google LLC.</span>
+  <div class="wrap foot">
+    <span>&copy; 2026 Skreen</span>
     <span><a href="https://app.skreen.fyi/privacy.html">Privacy</a> &middot; <a href="mailto:support@skreen.fyi">support@skreen.fyi</a></span>
+    <p class="marks">Skreen is an independent app. Google, Google Play, Google Calendar, Google Tasks, YouTube Music, Spotify, Amazon Echo Show and Nest Hub are trademarks of their respective owners. Mentioning them does not imply endorsement.</p>
   </div>
 </footer>
 </body>
