@@ -8,7 +8,7 @@
     lat: null, lon: null, place: '',
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage',
-    showcaseMinutes: '5', bigMode: '0', slideSeconds: '60', slideSkip: '', pixelShift: '1',
+    showcaseMinutes: '5', refreshMinutes: '10', bigMode: '0', slideSeconds: '60', slideSkip: '', pixelShift: '1',
     layout: 'clock,weather,agenda,todo', photoSource: 'art', photoSeconds: '30', mealList: '', shopList: '', pageSeconds: '60',
     ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
@@ -38,7 +38,6 @@
   const isDemo = () => DEV_DEMO && noSource();
 
 
-  const REFRESH_DATA_MS = 2 * 60 * 1000;
   const REFRESH_WEATHER_MS = 15 * 60 * 1000;
   const AGENDA_DAYS = 7;
   const DAY_MS = 86400000;
@@ -184,6 +183,21 @@
     setTitle: (t, title) => Google.setTitle(t.a, t.l, t.rid, title),
     setDone: (t, done) => Google.setDone(t.a, t.l, t.rid, done),
   };
+
+  // How often to ask Google for changes is a setting (default 10 minutes). Nothing is asked at night, or when
+  // neither the schedule nor the to-do list is on the screen, so the calls (which Google counts and limits) go to
+  // times someone can see the result.
+  let dataTimer = null;
+  function pollData() {
+    const nothingShown = !['agenda', 'todo'].some((w) => visibleWidgets().includes(w));
+    const asleep = isNight() && !$('night').hidden;
+    if (nothingShown || asleep) return;
+    refreshData();
+  }
+  function scheduleData() {
+    clearTimeout(dataTimer);
+    dataTimer = setTimeout(() => { pollData(); scheduleData(); }, Math.max(1, Number(cfg.refreshMinutes) || 10) * 60000);
+  }
 
   async function refreshData() {
     if (isDemo()) {
@@ -1413,7 +1427,7 @@
     if (on && tour.on) endTour();
     if (night.hidden === !on) { if (on) renderNight(now); return; }
     night.hidden = !on;
-    if (on) renderNight(now);
+    if (on) renderNight(now); else setTimeout(refreshData, 1500);   // morning: fresh data right away
   }
 
   function renderNight(now) {
@@ -2150,6 +2164,7 @@
     const li = e.target.closest('.task[data-id]');
     if (li) toggleShop(li.dataset.id);
   });
+  document.querySelectorAll('[data-w="agenda"] .col-head, [data-w="todo"] .col-head').forEach((h) => h.addEventListener('click', () => { refreshData(); showToast('Checking for changes\u2026'); }));
   $('shopAddIcon').innerHTML = Icons.plus || '+';
   $('shopAdd').addEventListener('click', () => { $('shopSheet').showModal(); setTimeout(() => $('shopInput').focus(), 50); });
   $('shopSave').addEventListener('click', addShop);
@@ -2585,6 +2600,7 @@
     if ($('shopPick') && $('shopPick').options.length > 1 && hasPlus()) cfg.shopList = $('shopPick').value;
     Google.forgetCaches();
     saveSettings();
+    scheduleData();
     state.nightDismissedUntil = 0;
     state.bgKey = '';
     if (tour.on && tour.big && !alwaysTour()) endTour();   // Big Skreen Mode was switched off
@@ -2646,7 +2662,7 @@
   }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      keepAwake(); refreshData(); refreshWeather();
+      keepAwake(); if (Date.now() - (state.lastSync ? state.lastSync.getTime() : 0) > 2 * 60000) refreshData(); refreshWeather();
       if (canUpdate() && Date.now() - lastUpdateCheck > 15 * 60000) backgroundUpdateCheck();
     }
   });
@@ -2723,7 +2739,7 @@
     setInterval(() => syncNews(true), 30 * 60000);
     setInterval(refreshMeals, 10 * 60000);
     setInterval(refreshShop, 5 * 60000);
-    setInterval(refreshData, REFRESH_DATA_MS);
+    scheduleData();
     setInterval(refreshWeather, REFRESH_WEATHER_MS);
     if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname !== 'appassets.androidplatform.net') navigator.serviceWorker.register('sw.js').catch(() => {});
   }

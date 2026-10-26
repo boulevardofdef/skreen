@@ -97,17 +97,26 @@ window.Google = (() => {
     return id;
   }
 
+  // One request per check: the open tasks. The "done in the last 24 hours" list is fetched again only when the
+  // set of open tasks changed (or now and then), because that's the only time it can have changed.
+  const taskMemo = new Map();
   async function tasks(acct, listId) {
     const base = `${TASKS}/lists/${encodeURIComponent(listId)}/tasks`;
-    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-    const [open, done] = await Promise.all([
-      call(acct, `${base}?showCompleted=false&showHidden=false&maxResults=100&fields=items(id,title,notes,position,parent,status)`),
-      call(acct, `${base}?showCompleted=true&showHidden=true&completedMin=${encodeURIComponent(since)}&maxResults=100&fields=items(id,title,notes,parent,status,completed)`),
-    ]);
+    const open = await call(acct, `${base}?showCompleted=false&showHidden=false&maxResults=100&fields=items(id,title,notes,position,parent,status)`);
     const out = [];
     for (const t of (open.items || [])) if (t.title && !t.parent && t.status !== 'completed') out.push({ id: t.id, title: t.title, notes: t.notes || '', position: t.position, done: false });
-    for (const t of (done.items || [])) if (t.title && !t.parent && t.status === 'completed' && t.completed) out.push({ id: t.id, title: t.title, notes: t.notes || '', done: true, completed: t.completed });
-    return out;
+    const key = `${acct}|${listId}`, ids = out.map((t) => t.id).sort().join(',');
+    let memo = taskMemo.get(key);
+    if (!memo || memo.ids !== ids || Date.now() - memo.at > 3600 * 1000) {
+      const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const done = await call(acct, `${base}?showCompleted=true&showHidden=true&completedMin=${encodeURIComponent(since)}&maxResults=100&fields=items(id,title,notes,parent,status,completed)`);
+      const list = [];
+      for (const t of (done.items || [])) if (t.title && !t.parent && t.status === 'completed' && t.completed) list.push({ id: t.id, title: t.title, notes: t.notes || '', done: true, completed: t.completed });
+      memo = { ids, done: list, at: Date.now() };
+      taskMemo.set(key, memo);
+    }
+    const cutoff = Date.now() - 24 * 3600 * 1000;
+    return out.concat(memo.done.filter((t) => Date.parse(t.completed) > cutoff));
   }
 
   const taskUrl = (listId, id) => `${TASKS}/lists/${encodeURIComponent(listId)}/tasks/${encodeURIComponent(id)}`;
@@ -122,7 +131,7 @@ window.Google = (() => {
   }
   const setNotes = (acct, listId, id, notes) => patch(acct, listId, id, { notes: notes || null });
   const setTitle = (acct, listId, id, title) => patch(acct, listId, id, { title: String(title).slice(0, 500) });
-  const setDone = (acct, listId, id, done) => patch(acct, listId, id, done ? { status: 'completed' } : { status: 'needsAction', completed: null });
+  const setDone = (acct, listId, id, done) => { taskMemo.delete(`${acct}|${listId}`); return patch(acct, listId, id, done ? { status: 'completed' } : { status: 'needsAction', completed: null }); };
 
   // Dinner planner: tasks whose due date falls in [from, to] (YYYY-MM-DD). Google keeps a task's due
   // date as midnight UTC of that day, so the date part is the day itself.
@@ -143,7 +152,7 @@ window.Google = (() => {
   }
   const deleteTask = (acct, listId, id) => call(acct, taskUrl(listId, id), { method: 'DELETE' }).then(() => true);
 
-  const forgetCaches = () => { calCache.clear(); defaultList.clear(); };
+  const forgetCaches = () => { calCache.clear(); defaultList.clear(); taskMemo.clear(); };
 
   return { init, AuthError, listCalendars, listTaskLists, resolveList, events, tasks, addTask, setDone, setNotes, setTitle, mealTasks, mealIdeas, addMeal, deleteTask, forgetCaches, chosenCalendars };
 })();

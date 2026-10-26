@@ -823,3 +823,4 @@ body.big-mode .gear { z-index: 40; }
 .sv-caption:empty { display: none; }
 
 .stab > .credit:first-child { margin-top: 0; }   /* the negative margin would be cut off at the top of the page */
+body.native p.native-only { display: block; }
