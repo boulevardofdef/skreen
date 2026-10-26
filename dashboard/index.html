@@ -294,97 +294,17 @@
         <button type="button" class="btn ghost small" id="openGuide">Setup guide <span id="guideArrow"></span></button>
       </div>
 
-      <div class="settings-scroll">
-        <div class="group native-only">Google accounts</div>
-        <div class="native-block" id="acctBox"></div>
-
-        <div class="group native-only">Dinners <span class="plus-chip" data-plus-logo></span></div>
-        <div class="native-block" id="mealField">
-          <label class="field"><span>Dinner planner list <em>(a Google Tasks list)</em></span><select id="mealPick"></select></label>
-          <p class="hint how">How it works: make a Google Tasks list, such as &ldquo;Dinners&rdquo;. Tasks <b>without a date</b> are your meal ideas (add them any time, from your phone too). Tap a day on the Dinners widget and pick an idea, or type a new meal, and Skreen puts a dated copy on that day. You can also add a task to the list with a date, and it shows on that day.</p>
-        </div>
-
-        <div class="group native-only">Shopping list <span class="plus-chip" data-plus-logo></span></div>
-        <div class="native-block" id="shopField">
-          <label class="field"><span>Shopping list <em>(a Google Tasks list)</em></span><select id="shopPick"></select></label>
-        </div>
-
-        <div class="group">Other calendars</div>
-        <div class="field">
-          <span>Outlook, Apple, Yahoo and others: paste a calendar link</span>
-          <div class="checks" id="icsList"></div>
-          <div class="ics-add">
-            <input id="icsUrl" type="url" inputmode="url" autocomplete="off" placeholder="https:// or webcal:// calendar link">
-            <input id="icsName" type="text" autocomplete="off" placeholder="Name (optional)" maxlength="24">
-            <button type="button" class="btn ghost small" id="icsAddBtn">Add calendar</button>
-          </div>
-          <div class="test-result" id="icsResult"></div>
-          <p class="credit">Skreen's relay fetches the link for you and keeps nothing. <a href="#" id="icsHelp">How to get a link</a></p>
-        </div>
-
-        <div class="group">Weather</div>
-        <div class="field">
-          <span>Location</span>
-          <div class="loc-row">
-            <input id="locSearch" type="text" placeholder="City or ZIP code" autocomplete="off">
-            <button type="button" class="btn ghost small" id="locFind">Search</button>
-            <button type="button" class="btn ghost small" id="locGps" aria-label="Use my location"></button>
-          </div>
-          <div class="loc-current" id="locCurrent"></div>
-          <div class="loc-results" id="locResults"></div>
-        </div>
-        <p class="credit">Forecasts from MET Norway. Place data © OpenStreetMap contributors. News from Wikipedia (CC BY-SA).</p>
-
-        <div class="field-grid">
-          <label class="field"><span>Temperature</span>
-            <select name="units"><option value="fahrenheit">°F</option><option value="celsius">°C</option></select></label>
-          <label class="field"><span>Clock</span>
-            <select name="clock"><option value="12">12-hour</option><option value="24">24-hour</option></select></label>
-        </div>
-
-        <div class="group plus-head" data-plus-logo></div>
-        <div class="plus-card" id="plusCard">
-          <p id="plusText"></p>
-          <div class="loc-row">
-            <button type="button" class="btn primary small" id="plusBuy" hidden>Get Skreen Plus</button>
-            <button type="button" class="btn ghost small" id="plusForget" hidden>Remove code</button>
-          </div>
-          <details class="adv" id="plusCodeBox">
-            <summary>Have an unlock code?</summary>
-            <div class="loc-row">
-              <div class="code-field"><span class="code-prefix">SKR-</span><input id="plusCode" type="text" autocomplete="off" autocapitalize="characters" placeholder="XXXX-XXXX-XXXX-XXXX" spellcheck="false" autocorrect="off"></div>
-              <button type="button" class="btn ghost small" id="plusRedeem">Unlock</button>
-            </div>
-            <div class="test-result" id="plusResult"></div>
-          </details>
-        </div>
-
-        <div class="group">Layout <span class="plus-chip" data-plus-logo></span></div>
-        <div class="field" id="layoutField">
-          <span>Show, hide and reorder what's on the skreen. One skreen fits three columns; the rest go on more skreens you can swipe between.</span>
-          <div class="layout-list" id="layoutList"></div>
-          <label class="field"><span>Switch skreens by itself</span>
-            <select name="pageSeconds"><option value="0">Off, I'll swipe</option><option value="30">Every 30 seconds</option><option value="60">Every minute</option><option value="120">Every 2 minutes</option><option value="300">Every 5 minutes</option><option value="600">Every 10 minutes</option></select></label>
-        </div>
-
-        <div class="group">Photos <span class="plus-chip" data-plus-logo></span></div>
-        <div class="field" id="photoField">
-          <span>A slideshow, as a widget under Layout and in the big-skreen tour</span>
-          <label class="field"><span>Show</span>
-            <select name="photoSource" id="photoSource"><option value="art">Art gallery (public-domain paintings)</option><option value="mine">My photos (this tablet)</option></select></label>
-          <div class="field" id="minePhotos" hidden>
-            <div class="loc-row">
-              <button type="button" class="btn ghost small" id="photoPick">Choose photos</button>
-              <button type="button" class="btn ghost small" id="photoClear" hidden>Remove all</button>
-            </div>
-            <div class="test-result" id="photoCount"></div>
-            <p class="credit">Opens Android's photo picker, which includes Google Photos. Choose as many as you like; Skreen keeps a smaller copy on this tablet only.</p>
-          </div>
-          <label class="field"><span>Change picture every</span>
-            <select name="photoSeconds"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option></select></label>
-          <p class="credit">Art: public-domain paintings from Wikimedia Commons.</p>
-        </div>
-
+      <div class="settings-body">
+        <nav class="settings-nav" id="settingsNav">
+          <button type="button" data-tab="display" class="on">Display</button>
+          <button type="button" data-tab="accounts">Accounts</button>
+          <button type="button" data-tab="widgets">Widgets</button>
+          <button type="button" data-tab="weather">Weather</button>
+          <button type="button" data-tab="plus">Skreen+</button>
+          <button type="button" data-tab="app">About</button>
+        </nav>
+        <div class="settings-scroll" id="settingsScroll">
+        <section class="stab on" data-tab="display">
         <div class="group">Look</div>
         <div class="field-grid">
           <label class="field"><span>Background</span>
@@ -398,7 +318,10 @@
               <option value="shoulders">Poster · Big Shoulders</option>
             </select></label>
         </div>
-
+        <div class="field-grid">
+          <label class="field"><span>Clock</span>
+            <select name="clock"><option value="12">12-hour</option><option value="24">24-hour</option></select></label>
+        </div>
         <div class="group native-only">Brightness <em>this app only</em></div>
         <div class="field-grid native-only">
           <label class="field"><span>Daytime brightness</span>
@@ -406,17 +329,6 @@
           <label class="field"><span>Night brightness</span>
             <select name="nightBrightness"><option value="1">1%</option><option value="3">3%</option><option value="10">10%</option><option value="25">25%</option></select></label>
         </div>
-
-        <div class="group native-only updater">App</div>
-        <div class="field native-only updater">
-          <span id="appVersion">Version</span>
-          <div class="loc-row">
-            <button type="button" class="btn ghost small" id="checkUpdate">Check for updates</button>
-            <button type="button" class="btn primary small" id="installUpdate" hidden>Install update</button>
-          </div>
-          <div class="test-result" id="updateResult"></div>
-        </div>
-
         <div class="group">Skreen care</div>
         <div class="field-grid">
           <label class="field"><span>Big-skreen tour</span>
@@ -439,6 +351,112 @@
             <select name="slideSeconds"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option></select></label>
           <span class="sub">Show these slides</span>
           <div class="checks" id="slideChecks"></div>
+        </div>
+        </section>
+
+        <section class="stab" data-tab="accounts">
+        <div class="group native-only">Google accounts</div>
+        <div class="native-block" id="acctBox"></div>
+        <div class="group">Other calendars</div>
+        <div class="field">
+          <span>Outlook, Apple, Yahoo and others: paste a calendar link</span>
+          <div class="checks" id="icsList"></div>
+          <div class="ics-add">
+            <input id="icsUrl" type="url" inputmode="url" autocomplete="off" placeholder="https:// or webcal:// calendar link">
+            <input id="icsName" type="text" autocomplete="off" placeholder="Name (optional)" maxlength="24">
+            <button type="button" class="btn ghost small" id="icsAddBtn">Add calendar</button>
+          </div>
+          <div class="test-result" id="icsResult"></div>
+          <p class="credit">Skreen's relay fetches the link for you and keeps nothing. <a href="#" id="icsHelp">How to get a link</a></p>
+        </div>
+        </section>
+
+        <section class="stab" data-tab="widgets">
+        <div class="group">Layout <span class="plus-chip" data-plus-logo></span></div>
+        <div class="field" id="layoutField">
+          <span>Show, hide and reorder what's on the skreen. One skreen fits three columns; the rest go on more skreens you can swipe between.</span>
+          <div class="layout-list" id="layoutList"></div>
+          <label class="field"><span>Switch skreens by itself</span>
+            <select name="pageSeconds"><option value="0">Off, I'll swipe</option><option value="30">Every 30 seconds</option><option value="60">Every minute</option><option value="120">Every 2 minutes</option><option value="300">Every 5 minutes</option><option value="600">Every 10 minutes</option></select></label>
+        </div>
+        <div class="group">Photos <span class="plus-chip" data-plus-logo></span></div>
+        <div class="field" id="photoField">
+          <span>A slideshow, as a widget under Layout and in the big-skreen tour</span>
+          <label class="field"><span>Show</span>
+            <select name="photoSource" id="photoSource"><option value="art">Art gallery</option><option value="mine">My photos (this tablet)</option></select></label>
+          <div class="field" id="minePhotos" hidden>
+            <div class="loc-row">
+              <button type="button" class="btn ghost small" id="photoPick">Choose photos</button>
+              <button type="button" class="btn ghost small" id="photoClear" hidden>Remove all</button>
+            </div>
+            <div class="test-result" id="photoCount"></div>
+            <p class="credit">Opens Android's photo picker, which includes Google Photos. Choose as many as you like; Skreen keeps a smaller copy on this tablet only.</p>
+          </div>
+          <label class="field"><span>Change picture every</span>
+            <select name="photoSeconds"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option></select></label>
+        </div>
+        <div class="group native-only">Dinners <span class="plus-chip" data-plus-logo></span></div>
+        <div class="native-block" id="mealField">
+          <label class="field"><span>Dinner planner list <em>(a Google Tasks list)</em></span><select id="mealPick"></select></label>
+          <p class="hint how">How it works: make a Google Tasks list, such as &ldquo;Dinners&rdquo;. Tasks <b>without a date</b> are your meal ideas (add them any time, from your phone too). Tap a day on the Dinners widget and pick an idea, or type a new meal, and Skreen puts a dated copy on that day. You can also add a task to the list with a date, and it shows on that day.</p>
+        </div>
+        <div class="group native-only">Shopping list <span class="plus-chip" data-plus-logo></span></div>
+        <div class="native-block" id="shopField">
+          <label class="field"><span>Shopping list <em>(a Google Tasks list)</em></span><select id="shopPick"></select></label>
+        </div>
+        </section>
+
+        <section class="stab" data-tab="weather">
+        <div class="group">Weather</div>
+        <div class="field">
+          <span>Location</span>
+          <div class="loc-row">
+            <input id="locSearch" type="text" placeholder="City or ZIP code" autocomplete="off">
+            <button type="button" class="btn ghost small" id="locFind">Search</button>
+            <button type="button" class="btn ghost small" id="locGps" aria-label="Use my location"></button>
+          </div>
+          <div class="loc-current" id="locCurrent"></div>
+          <div class="loc-results" id="locResults"></div>
+        </div>
+        <p class="credit">Forecasts from MET Norway. Place data © OpenStreetMap contributors.</p>
+        <div class="field-grid">
+          <label class="field"><span>Temperature</span>
+            <select name="units"><option value="fahrenheit">°F</option><option value="celsius">°C</option></select></label>
+        </div>
+        </section>
+
+        <section class="stab" data-tab="plus">
+        <div class="group plus-head" data-plus-logo></div>
+        <div class="plus-card" id="plusCard">
+          <p id="plusText"></p>
+          <div class="loc-row">
+            <button type="button" class="btn primary small" id="plusBuy" hidden>Get Skreen Plus</button>
+            <button type="button" class="btn ghost small" id="plusForget" hidden>Remove code</button>
+          </div>
+          <details class="adv" id="plusCodeBox">
+            <summary>Have an unlock code?</summary>
+            <div class="loc-row">
+              <div class="code-field"><span class="code-prefix">SKR-</span><input id="plusCode" type="text" autocomplete="off" autocapitalize="characters" placeholder="XXXX-XXXX-XXXX-XXXX" spellcheck="false" autocorrect="off"></div>
+              <button type="button" class="btn ghost small" id="plusRedeem">Unlock</button>
+            </div>
+            <div class="test-result" id="plusResult"></div>
+          </details>
+        </div>
+        </section>
+
+        <section class="stab" data-tab="app">
+        <div class="group native-only updater">App</div>
+        <div class="field native-only updater">
+          <span id="appVersion">Version</span>
+          <div class="loc-row">
+            <button type="button" class="btn ghost small" id="checkUpdate">Check for updates</button>
+            <button type="button" class="btn primary small" id="installUpdate" hidden>Install update</button>
+          </div>
+          <div class="test-result" id="updateResult"></div>
+        </div>
+        <p class="credit">Forecasts from MET Norway. Place data © OpenStreetMap contributors. News from Wikipedia (CC BY-SA).</p>
+        <p class="credit">Skreen shows your own calendar and tasks. Nothing leaves your device except what the privacy policy describes.</p>
+        </section>
         </div>
       </div>
 

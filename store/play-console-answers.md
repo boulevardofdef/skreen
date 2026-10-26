@@ -27,7 +27,7 @@ SKREEN+ (OPTIONAL, ONE PAYMENT)
 Everything above stays free. Skreen+ is a single purchase, yours for good, that adds:
 - Several Google accounts and to-do lists at once
 - Choose and arrange your own layout, with extra skreens you swipe between
-- A photo slideshow with public-domain paintings or your own pictures
+- A photo slideshow with a gallery of paintings or your own pictures
 - In-the-news widget
 - Dinner planner and shopping list, kept in Google Tasks
 - Always-on slideshow mode

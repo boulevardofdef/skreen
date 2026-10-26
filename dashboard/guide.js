@@ -83,7 +83,7 @@ window.Guide = (() => {
 <ul>
   <li><b>Several Google accounts</b>, and several calendars and to-do lists from each, shown together.</li>
   <li><b>Your own layout.</b> Show or hide the clock, weather, schedule and to-do list, and put them in any order.</li>
-  <li><b>Photos.</b> A slideshow on the main skreen and in the big-skreen tour: either public-domain paintings (no setup), or your own pictures chosen from Google Photos or the tablet.</li>
+  <li><b>Photos.</b> A slideshow on the main skreen and in the big-skreen tour: either a gallery of paintings (no setup), or your own pictures chosen from Google Photos or the tablet.</li>
   <li><b>Dinner planner.</b> What's for dinner each day this week, kept in a Google Tasks list. Add it under Settings → Layout. <button class="btn ghost small" data-go="dinners">How it works →</button></li>
   <li><b>Shopping list.</b> A Google Tasks list on the wall: tap an item to tick it off, or tap <b>Add item</b> (type or speak). Make a list in Google Tasks called <b>Shopping</b>, choose it under Settings → Shopping list, then tick <b>Shopping list</b> under Settings → Layout. Family members can add to it from their phones.</li>
   <li><b>In the news.</b> A short list of today's top stories from Wikipedia's front page, as a widget and in the big-skreen tour. Add it under Settings → Layout.</li>

@@ -1777,13 +1777,14 @@
     if (typeof refreshShop === 'function') { drawShop(); refreshShop(); }
   }
 
+  const PAGE_GAP = 3;   // rem of empty space between skreens, so one never shows at the edge of its neighbour
   function setPage(i, { manual = false, instant = false } = {}) {
     const track = document.querySelector('#dash .pager');
     if (!track) return;
     pager.index = ((i % pager.count) + pager.count) % pager.count;
     pager.changedAt = Date.now();
     if (instant) { track.style.transition = 'none'; } else { track.style.transition = ''; }
-    track.style.transform = pager.count > 1 ? `translateX(${-pager.index * 100}%)` : '';
+    track.style.transform = pager.count > 1 ? `translateX(calc(${-pager.index * 100}% - ${pager.index * PAGE_GAP}rem))` : '';
     if (instant) { void track.offsetWidth; track.style.transition = ''; }
     document.querySelectorAll('#pageDots button').forEach((b, k) => b.classList.toggle('on', k === pager.index));
     if (manual) pager.changedAt = Date.now() + 15000;   // after a swipe, leave it alone for a while
@@ -1812,7 +1813,7 @@
         const track = dash.querySelector('.pager');
         track.style.transition = 'none';
         const atEdge = pager.count < 2;
-        track.style.transform = `translateX(calc(${-pager.index * 100}% + ${atEdge ? dx / 3 : dx}px))`;
+        track.style.transform = `translateX(calc(${-pager.index * 100}% - ${pager.index * PAGE_GAP}rem + ${atEdge ? dx / 3 : dx}px))`;
       }
     });
     const end = (e) => {
@@ -1933,7 +1934,7 @@
   function drawNews() {
     const list = News.current;
     $('newsList').innerHTML = list.length
-      ? list.map((s) => `<li class="news-item"><a ${s.url ? `href="${esc(s.url)}" data-ext` : ''}>${esc(s.text)}</a></li>`).join('')
+      ? list.map((s) => `<li class="news-item">${esc(s.text)}</li>`).join('')
       : `<li class="news-item news-empty">${newsFailed ? 'Couldn\u2019t load the news right now. Trying again soon.' : 'Loading the news\u2026'}</li>`;
   }
   async function syncNews(force = false) {
@@ -2204,6 +2205,7 @@
   $('plusSheetCode').addEventListener('click', () => {
     $('plusSheet').close();
     $('plusCodeBox').open = true;
+    showTab('plus');
     $('plusCard').scrollIntoView({ block: 'center' });
     setTimeout(() => $('plusCode').focus(), 50);
   });
@@ -2336,7 +2338,18 @@
   $('fontSelect').addEventListener('change', (e) => applyFont(e.target.value));   // live preview
   settingsSheet.addEventListener('close', () => applyFont(cfg.font));              // Cancel puts it back
 
+  // Settings is a full page with a menu of sections down the left.
+  let settingsTab = 'display';
+  function showTab(id) {
+    settingsTab = id;
+    document.querySelectorAll('#settingsNav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === id));
+    document.querySelectorAll('.stab').forEach((t) => t.classList.toggle('on', t.dataset.tab === id));
+    $('settingsScroll').scrollTop = 0;
+  }
+  $('settingsNav').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) showTab(b.dataset.tab); });
+
   function openSettings() {
+    showTab(settingsTab);
     fillBackgroundOptions();
     fillTimeOptions();
     for (const el of form.elements) if (el.name && el.name in cfg) el.value = cfg[el.name] ?? '';

@@ -102,7 +102,7 @@ button { cursor: pointer; }
   transition: transform 6s ease-in-out;
 }
 .pager-view { width: 100%; height: 100%; overflow: hidden; }
-.pager { display: flex; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1); touch-action: pan-y; }
+.pager { display: flex; gap: 3rem; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1); touch-action: pan-y; }
 .page { flex: 0 0 100%; min-width: 0; height: 100%; display: grid; grid-template-columns: var(--cols, minmax(0, 1.06fr) minmax(0, 1.3fr) minmax(0, 0.92fr)); }
 .lane { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 0 1.8rem; border-left: 1px solid var(--rule); container-type: inline-size; }
 .lane:first-child { padding-left: 0; border-left: 0; }
@@ -325,8 +325,16 @@ button { cursor: pointer; }
 .btn.small { padding: 0.65rem 1rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; }
 .btn.small .ico { font-size: 1.1rem; }
 
-.settings { width: min(52rem, 94vw); }
-.settings-scroll { overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; padding-right: 0.4rem; min-height: 0; }
+/* Settings: a full page, sections down the left, one section at a time. */
+.sheet.settings { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; border: 0; box-shadow: none; }
+.sheet.settings form { height: 100%; max-height: none; padding: 1.4rem 2rem 1.2rem; }
+.settings-body { flex: 1; min-height: 0; display: flex; gap: 2rem; }
+.settings-nav { width: 13rem; flex: none; display: flex; flex-direction: column; gap: 0.3rem; border-right: 1px solid var(--rule); padding-right: 1rem; }
+.settings-nav button { text-align: left; padding: 0.95rem 1rem; border: 0; background: transparent; color: var(--muted); font: 600 0.95rem/1.2 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
+.settings-nav button.on { background: var(--ink); color: var(--bg); }
+.settings-scroll { flex: 1; min-width: 0; overflow-y: auto; padding: 0 0.4rem 1rem 0; }
+.stab { display: none; flex-direction: column; gap: 1rem; max-width: 46rem; }
+.stab.on { display: flex; }
 .group { margin-top: 0.8rem; padding-top: 0.6rem; border-top: 3px solid var(--ink); font: 600 0.85rem/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; }
 .group:first-child { margin-top: 0; }
 .field { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
@@ -569,7 +577,10 @@ body.native .field.native-only { display: flex; }
   .wx-hours, .wx-days { margin-inline: -0.35rem; }
   .wx-temp { font-size: 4rem; }
   .sheet { width: 94vw; max-width: 94vw; max-height: 92dvh; }
-  .settings-scroll { max-height: 62dvh; }
+  .sheet.settings form { padding: 1rem; }
+  .settings-body { flex-direction: column; gap: 0.8rem; }
+  .settings-nav { width: auto; flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 0 0 0.5rem; }
+  .settings-nav button { flex: none; padding: 0.7rem 0.9rem; }
   .field-grid { grid-template-columns: 1fr; }
   .ev-row { grid-template-columns: 4.6rem minmax(0, 1fr); gap: 0.7rem; }
   .gear { left: 1rem; }
