@@ -30,7 +30,7 @@ Everything above stays free. Skreen+ is a single purchase, yours for good, that 
 - A photo slideshow with a gallery of paintings or your own pictures
 - In-the-news widget
 - Dinner planner and shopping list, kept in Google Tasks
-- Always-on slideshow mode
+- Big Skreen Mode: a smart-display way to use Skreen, one big slide at a time
 
 YOUR DATA STAYS YOURS
 Your calendar and tasks go straight from Google to your tablet. They don't pass through us. No ads, no analytics, nothing sold or shared.

@@ -179,7 +179,7 @@
     <div class="brand-row sm" data-brand></div>
     <h3>Skreen+</h3>
     <p id="plusWhy"></p>
-    <p class="hint">One payment, yours for good: several Google accounts and to-do lists, your own layout, the photos, news, dinner and shopping widgets, and an always-on slideshow. Everything on the main skreen stays free.</p>
+    <p class="hint">One payment, yours for good: several Google accounts and to-do lists, your own layout, the photos, news, dinner and shopping widgets, and Big Skreen Mode. Everything on the main skreen stays free.</p>
     <div class="sheet-actions">
       <button type="button" class="btn ghost" id="plusSheetClose">Not now</button>
       <button type="button" class="btn ghost" id="plusSheetCode">I have a code</button>
@@ -299,6 +299,7 @@
           <button type="button" data-tab="display" class="on">Display</button>
           <button type="button" data-tab="accounts">Accounts</button>
           <button type="button" data-tab="widgets">Widgets</button>
+          <button type="button" data-tab="big">Big Skreen Mode</button>
           <button type="button" data-tab="weather">Weather</button>
           <button type="button" data-tab="plus">Skreen+</button>
           <button type="button" data-tab="app">About</button>
@@ -331,12 +332,11 @@
         </div>
         <div class="group">Skreen care</div>
         <div class="field-grid">
-          <label class="field"><span>Big-skreen tour</span>
+          <label class="field"><span>Rotating tour</span>
             <select name="showcaseMinutes">
               <option value="0">Off</option><option value="5">Every 5 min</option>
               <option value="10">Every 10 min</option><option value="15">Every 15 min</option>
               <option value="30">Every 30 min</option>
-              <option value="always">Always on (Skreen+)</option>
             </select></label>
           <label class="field"><span>Nudge layout (anti burn-in)</span>
             <select name="pixelShift"><option value="1">On</option><option value="0">Off</option></select></label>
@@ -344,13 +344,6 @@
             <select name="nightEnabled"><option value="1">On</option><option value="0">Off</option></select></label>
           <label class="field"><span>Night from</span><select name="nightStart" class="timesel"></select></label>
           <label class="field"><span>until</span><select name="nightEnd" class="timesel"></select></label>
-        </div>
-        <div class="field" id="alwaysOpts" hidden>
-          <span>Always-on slideshow</span>
-          <label class="field"><span>Time on each slide</span>
-            <select name="slideSeconds"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option></select></label>
-          <span class="sub">Show these slides</span>
-          <div class="checks" id="slideChecks"></div>
         </div>
         </section>
 
@@ -403,6 +396,21 @@
         <div class="group native-only">Shopping list <span class="plus-chip" data-plus-logo></span></div>
         <div class="native-block" id="shopField">
           <label class="field"><span>Shopping list <em>(a Google Tasks list)</em></span><select id="shopPick"></select></label>
+        </div>
+        </section>
+
+        <section class="stab" data-tab="big">
+        <div class="group">Big Skreen Mode <span class="plus-chip" data-plus-logo></span></div>
+        <div class="field" id="bigField">
+          <span>A different way to use Skreen, like a smart display: one big slide at a time, rotating through everything you've set up, with the time, weather, timers and music always in view. Tap the screen to pause it for two minutes.</span>
+          <label class="field"><span>Big Skreen Mode</span>
+            <select name="bigMode"><option value="0">Off</option><option value="1">On</option></select></label>
+        <div class="field" id="alwaysOpts" hidden>
+          <label class="field"><span>Time on each slide</span>
+            <select name="slideSeconds"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option></select></label>
+          <span class="sub">Show these slides</span>
+          <div class="checks" id="slideChecks"></div>
+        </div>
         </div>
         </section>
 

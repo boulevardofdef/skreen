@@ -8,7 +8,7 @@
     lat: null, lon: null, place: '',
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage',
-    showcaseMinutes: '5', slideSeconds: '60', slideSkip: '', pixelShift: '1',
+    showcaseMinutes: '5', bigMode: '0', slideSeconds: '60', slideSkip: '', pixelShift: '1',
     layout: 'clock,weather,agenda,todo', photoSource: 'art', photoSeconds: '30', mealList: '', shopList: '', pageSeconds: '60',
     ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
@@ -27,6 +27,7 @@
   function saveSettings() { try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch (_) {} }
 
   let cfg = loadSettings();
+  if (cfg.showcaseMinutes === 'always') { cfg.showcaseMinutes = '5'; cfg.bigMode = '1'; saveSettings(); }   // the old "always on" tour is now Big Skreen Mode
   if (cfg.people || 'backendUrl' in cfg || 'secret' in cfg) { delete cfg.people; delete cfg.backendUrl; delete cfg.secret; saveSettings(); }   // names now come from the tasks themselves; the script backend is gone
   // Where the data comes from: Google sign-in in the app, or sample data.
   const canSignIn = () => !!(window.SkreenNative && window.SkreenNative.signIn);
@@ -1193,7 +1194,7 @@
   const tour = { on: false, i: 0, cycle: 0, timer: null, last: Date.now() };
 
   // Skreen+: the tour can run all the time. A tap ends it for two minutes, then it resumes.
-  const alwaysTour = () => cfg.showcaseMinutes === 'always' && hasPlus();
+  const alwaysTour = () => cfg.bigMode === '1' && hasPlus();   // Big Skreen Mode
 
   function maybeStartTour(now = new Date()) {
     const mins = alwaysTour() ? 2 : Number(cfg.showcaseMinutes);
@@ -1331,7 +1332,7 @@
       return `<div class="kicker">Shopping</div><div class="sv-list sv-news">${rows}</div>`;
     }
     if (name === 'news') {
-      const rows = News.current.slice(0, 4).map((s) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(s.text)}</div></div>`).join('');
+      const rows = News.current.slice(0, 4).map((s) => `<div class="row"><div class="rn">${esc(s.text)}</div></div>`).join('');
       return `<div class="kicker">In the news</div><div class="sv-list sv-news">${rows}</div>`;
     }
     if (name === 'music') {
@@ -2215,9 +2216,8 @@
     $('plusCard').classList.toggle('on', on);
     $('layoutField').classList.toggle('locked', !on);
     $('photoField').classList.toggle('locked', !on);
-    const tourSel = form.elements.showcaseMinutes;
-    ['mealField', 'shopField'].forEach((id) => $(id).classList.toggle('locked', !on));
-    if (!on && tourSel.value === 'always') tourSel.value = '5';
+    ['mealField', 'shopField', 'bigField'].forEach((id) => $(id).classList.toggle('locked', !on));
+    if (!on && form.elements.bigMode.value === '1') { form.elements.bigMode.value = '0'; drawSlideOpts(); }
     $('plusText').innerHTML = on
       ? '<b>Skreen+ is unlocked.</b> Thank you. It\u2019s yours for good.'
       : 'One payment unlocks Skreen+: several Google accounts and to-do lists, your own layout, an always-on slideshow and more. Everything you see on the main skreen today stays free.';
@@ -2246,7 +2246,7 @@
     $('plusCard').scrollIntoView({ block: 'center' });
     setTimeout(() => $('plusCode').focus(), 50);
   });
-  const PLUS_FIELDS = { layoutField: 'Choosing and arranging your own layout is part of Skreen+.', photoField: 'The photo slideshow is part of Skreen+.', mealField: 'The dinner planner is part of Skreen+.', shopField: 'The shopping list is part of Skreen+.' };
+  const PLUS_FIELDS = { layoutField: 'Choosing and arranging your own layout is part of Skreen+.', photoField: 'The photo slideshow is part of Skreen+.', mealField: 'The dinner planner is part of Skreen+.', shopField: 'The shopping list is part of Skreen+.', bigField: 'Big Skreen Mode is part of Skreen+.' };
   Object.entries(PLUS_FIELDS).forEach(([id, why]) => {
     $(id).addEventListener('click', (e) => { if (!hasPlus()) { e.preventDefault(); e.stopPropagation(); offerPlus(why); } }, true);
     $(id).addEventListener('focusin', (e) => { if (!hasPlus()) { e.target.blur(); offerPlus(why); } });
@@ -2302,13 +2302,13 @@
   // ─── Settings sheet ────────────────────────────────────────────────────────
 
   const settingsSheet = $('settingsSheet'), form = $('settingsForm');
-  form.elements.showcaseMinutes.addEventListener('change', (e) => {
-    if (e.target.value === 'always' && !hasPlus()) { e.target.value = '5'; offerPlus('An always-on slideshow is part of Skreen+.'); }
+  form.elements.bigMode.addEventListener('change', (e) => {
+    if (e.target.value === '1' && !hasPlus()) { e.target.value = '0'; offerPlus('Big Skreen Mode is part of Skreen+.'); }
     drawSlideOpts();
   });
   // Always-on slideshow options: how long each slide stays, and which ones to leave out.
   function drawSlideOpts() {
-    const on = form.elements.showcaseMinutes.value === 'always' && hasPlus();
+    const on = form.elements.bigMode.value === '1' && hasPlus();
     $('alwaysOpts').hidden = !on;
     const skip = String(cfg.slideSkip || '').split(',');
     if (!$('slideChecks').children.length) {
@@ -2390,8 +2390,7 @@
     fillBackgroundOptions();
     fillTimeOptions();
     for (const el of form.elements) if (el.name && el.name in cfg) el.value = cfg[el.name] ?? '';
-    const tourSel = form.elements.showcaseMinutes;
-    if (!hasPlus() && tourSel.value === 'always') tourSel.value = '5';
+    if (!hasPlus()) form.elements.bigMode.value = '0';
     drawPhotoSettings(true);
     drawSlideOpts();
     draftIcs = (cfg.ics || []).map((c) => ({ ...c }));
