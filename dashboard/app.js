@@ -1073,6 +1073,11 @@
   }
   function renderNow() {
     const box = $('musicNow'), np = music.np;
+    if (music.audio && music.station && !(np && np.playing)) {   // a radio station is playing in Skreen itself
+      $('songSearch').hidden = !(hasMediaNative() && np && np.access && np.active);
+      box.innerHTML = `<div class="np"><div class="np-art">${Icons.music}</div><div><div class="np-title">${esc(music.station.name)}</div><div class="np-artist">Internet radio</div><div class="np-controls"><button type="button" class="main" data-radio-stop aria-label="Stop">${Icons.pause}</button></div></div></div>`;
+      return;
+    }
     $('songSearch').hidden = !(hasMediaNative() && np && np.access && np.active);
     if (!hasMediaNative() && !isDemo()) {
       box.innerHTML = '<div class="np-setup"><p>Skreen can show and control what your music app is playing (Spotify, YouTube Music and others) in its Android app. The radio below works everywhere.</p></div>';
@@ -1116,14 +1121,14 @@
   function stopRadio() {
     if (music.audio) { try { music.audio.pause(); music.audio.removeAttribute('src'); music.audio.load(); } catch (_) {} }
     music.audio = null; music.station = null;
-    renderRadioPlaying(); updateMusicBtn();
+    renderRadioPlaying(); renderNow(); updateMusicBtn();
   }
   function playStation(st) {
     stopRadio();
     const a = new Audio(st.url);
     a.onerror = () => { if (music.audio === a) { stopRadio(); showToast('That station won’t play right now'); } };
     music.audio = a; music.station = st;
-    renderRadioPlaying(); updateMusicBtn();
+    renderRadioPlaying(); renderNow(); updateMusicBtn();
     a.play().catch(() => { if (music.audio === a) { stopRadio(); showToast('That station won’t play right now'); } });
   }
   function openMusic() {
@@ -1138,6 +1143,7 @@
   $('musicSheet').addEventListener('click', (e) => { if (e.target === $('musicSheet')) $('musicSheet').close(); });
   $('musicNow').addEventListener('click', (e) => {
     if (e.target.closest('[data-music-access]')) { try { NATIVE.openMediaAccess(); } catch (_) {} return; }
+    if (e.target.closest('[data-radio-stop]')) { stopRadio(); renderNow(); return; }
     const b = e.target.closest('[data-media]');
     if (!b || !hasMediaNative()) return;
     try { NATIVE.mediaControl(b.dataset.media); } catch (_) {}
