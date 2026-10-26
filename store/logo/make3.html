@@ -14,7 +14,7 @@ function build(o){ // o: W,H, screen{x,y,w,h}, bezel, apex, C, r, textSize, text
   const [t1,t2]=tangents(o.apex,o.C,o.r);
   const svg=`<svg id="${o.id}" width="${o.W}" height="${o.H}" viewBox="0 0 ${o.W} ${o.H}" xmlns="${NS}">
   <defs>
-   <clipPath id="disp${o.id}"><rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="14"/></clipPath>
+   <clipPath id="disp${o.id}"><rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="22"/></clipPath>
    <clipPath id="lit${o.id}"><circle cx="${o.C.x}" cy="${o.C.y}" r="${o.r}"/></clipPath>
    <linearGradient id="beam${o.id}" gradientUnits="userSpaceOnUse" x1="${o.apex.x}" y1="${o.apex.y}" x2="${o.C.x}" y2="${o.C.y}"><stop offset="0" stop-color="#ffb08a" stop-opacity=".08"/><stop offset="1" stop-color="#ffd7bd" stop-opacity=".5"/></linearGradient>
    <radialGradient id="pool${o.id}" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fffaf0"/><stop offset=".72" stop-color="#f3eee3"/><stop offset="1" stop-color="#e8c9a8"/></radialGradient>
@@ -22,12 +22,9 @@ function build(o){ // o: W,H, screen{x,y,w,h}, bezel, apex, C, r, textSize, text
    ${o.dimDefs||''}
   </defs>
   <rect width="${W}" height="${H}" fill="#0e0d0b"/>
-  <!-- the stand -->
-  <rect x="${s.x+s.w/2-34}" y="${s.y+s.h-4}" width="68" height="${o.stand}" fill="#2a2723"/>
-  <rect x="${s.x+s.w/2-110}" y="${s.y+s.h+o.stand-6}" width="220" height="14" rx="7" fill="#34302b"/>
   <!-- the screen: bezel, then the display -->
-  <rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="22" fill="#2a2723" stroke="#44403a" stroke-width="3"/>
-  <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="14" fill="#171513"/>
+  <rect x="${s.x}" y="${s.y}" width="${s.w}" height="${s.h}" rx="36" fill="#2a2723" stroke="#44403a" stroke-width="3"/>
+  <rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" rx="22" fill="#171513"/>
   <g clip-path="url(#disp${o.id})">
    <text id="dim${o.id}" y="${o.baseline}" font-size="${o.textSize}" fill="${o.dimFill}">Skreen</text>
    <polygon points="${o.apex.x},${o.apex.y} ${t1.x},${t1.y} ${t2.x},${t2.y}" fill="url(#beam${o.id})"/>
@@ -37,8 +34,8 @@ function build(o){ // o: W,H, screen{x,y,w,h}, bezel, apex, C, r, textSize, text
   </g></svg>`;
   return svg;
 }
-const wide={id:'wide',W:1024,H:740,screen:{x:12,y:12,w:1000,h:625},bezel:22,stand:46,apex:{x:-30,y:-30},C:{x:252,y:326},r:204,textSize:300,baseline:445,dimFill:'#8a7f72'};
-const sq={id:'sq',W:512,H:512,screen:{x:14,y:84,w:484,h:300},bezel:14,stand:30,apex:{x:-20,y:-20},C:{x:256,y:234},r:122,textSize:192,baseline:303,dimFill:'url(#fadesq)',
+const wide={id:'wide',W:1024,H:649,screen:{x:12,y:12,w:1000,h:625},bezel:22,stand:46,apex:{x:-30,y:-30},C:{x:252,y:326},r:204,textSize:300,baseline:445,dimFill:'#8a7f72'};
+const sq={id:'sq',W:512,H:512,screen:{x:14,y:106,w:484,h:300},bezel:14,stand:30,apex:{x:-20,y:-20},C:{x:256,y:256},r:122,textSize:192,baseline:325,dimFill:'url(#fadesq)',
   dimDefs:'<linearGradient id="fadesq" gradientUnits="userSpaceOnUse" x1="368" y1="0" x2="500" y2="0"><stop offset="0" stop-color="#8a7f72" stop-opacity=".62"/><stop offset=".55" stop-color="#6a6156" stop-opacity=".22"/><stop offset="1" stop-color="#4a443c" stop-opacity=".03"/></linearGradient>'};
 document.getElementById('root').innerHTML=build(wide)+build(sq);
 document.fonts.ready.then(()=>{
