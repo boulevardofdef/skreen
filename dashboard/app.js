@@ -1250,7 +1250,7 @@
     v.className = `sv sv-${name} p${alwaysTour() ? (tour.cycle + tour.i) % 3 : 0}`;
     v.innerHTML = tourHtml(name);
     body.appendChild(v);
-    fitToWidth(v.querySelector('.big'), v.clientWidth * 0.88);
+    fitToWidth(v.querySelector('.big'), v.clientWidth * 0.82);   // never wider than the space inside the side margins
     fitRows(v);
     tour.timer = setTimeout(() => {
       tour.i++;
