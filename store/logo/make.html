@@ -1,0 +1,37 @@
+<!doctype html><meta charset="utf-8">
+<style>
+@font-face{font-family:B;src:url(file:///home/user/skreen/site/fonts/bricolage.woff2);font-weight:200 800}
+body{margin:0;background:#0e0d0b;display:flex;gap:40px;padding:40px}
+svg{width:512px;height:512px;display:block}
+text{font-family:B,sans-serif;font-weight:800;font-stretch:80%}
+</style>
+<!-- A: beam straight down from the top edge -->
+<svg id="a" viewBox="0 0 512 512">
+ <defs>
+  <clipPath id="scrA"><rect x="52" y="244" width="408" height="236" rx="12"/></clipPath>
+  <linearGradient id="beamA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb08a" stop-opacity=".05"/><stop offset="1" stop-color="#ffd7bd" stop-opacity=".42"/></linearGradient>
+  <radialGradient id="poolA" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fffaf0"/><stop offset=".72" stop-color="#f3eee3"/><stop offset="1" stop-color="#e8c9a8"/></radialGradient>
+  <radialGradient id="glowA" cx="50%" cy="50%" r="50%"><stop offset=".55" stop-color="#ff5b2e" stop-opacity=".35"/><stop offset="1" stop-color="#ff5b2e" stop-opacity="0"/></radialGradient>
+ </defs>
+ <rect width="512" height="512" fill="#0e0d0b"/>
+ <rect x="52" y="244" width="408" height="236" rx="12" fill="#191714" stroke="#34302b" stroke-width="5"/>
+ <polygon points="236,0 276,0 364,366 148,366" fill="url(#beamA)"/>
+ <circle cx="256" cy="366" r="150" fill="url(#glowA)" clip-path="url(#scrA)"/>
+ <circle cx="256" cy="366" r="108" fill="url(#poolA)"/>
+ <text x="256" y="408" text-anchor="middle" font-size="132" fill="#ff5b2e" letter-spacing="-5">Sk</text>
+</svg>
+<!-- B: beam from the top-left corner -->
+<svg id="b" viewBox="0 0 512 512">
+ <defs>
+  <clipPath id="scrB"><rect x="52" y="244" width="408" height="236" rx="12"/></clipPath>
+  <linearGradient id="beamB" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="300" y2="330"><stop offset="0" stop-color="#ffb08a" stop-opacity=".05"/><stop offset="1" stop-color="#ffd7bd" stop-opacity=".45"/></linearGradient>
+  <radialGradient id="poolB" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fffaf0"/><stop offset=".72" stop-color="#f3eee3"/><stop offset="1" stop-color="#e8c9a8"/></radialGradient>
+  <radialGradient id="glowB" cx="50%" cy="50%" r="50%"><stop offset=".55" stop-color="#ff5b2e" stop-opacity=".35"/><stop offset="1" stop-color="#ff5b2e" stop-opacity="0"/></radialGradient>
+ </defs>
+ <rect width="512" height="512" fill="#0e0d0b"/>
+ <rect x="52" y="244" width="408" height="236" rx="12" fill="#191714" stroke="#34302b" stroke-width="5"/>
+ <polygon points="-10,-10 40,-10 385.8,296.3 214.2,427.7" fill="url(#beamB)"/>
+ <circle cx="300" cy="362" r="150" fill="url(#glowB)" clip-path="url(#scrB)"/>
+ <circle cx="300" cy="362" r="108" fill="url(#poolB)"/>
+ <text x="300" y="404" text-anchor="middle" font-size="132" fill="#ff5b2e" letter-spacing="-5">Sk</text>
+</svg>

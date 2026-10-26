@@ -1,0 +1,57 @@
+<!doctype html><meta charset="utf-8">
+<style>
+@font-face{font-family:B;src:url(file:///home/user/skreen/site/fonts/bricolage.woff2);font-weight:200 800}
+body{margin:0;background:#000}
+svg{display:block}
+text{font-family:B,sans-serif;font-weight:800;font-stretch:80%}
+</style>
+<svg id="wide" width="1024" height="640" viewBox="0 0 1024 640">
+ <defs>
+  <clipPath id="scr"><rect width="1024" height="640" rx="36"/></clipPath>
+  <clipPath id="lit"><circle cx="212" cy="322" r="208"/></clipPath>
+  <linearGradient id="beam" gradientUnits="userSpaceOnUse" x1="35" y1="0" x2="205" y2="320"><stop offset="0" stop-color="#ffb08a" stop-opacity=".10"/><stop offset="1" stop-color="#ffd7bd" stop-opacity=".5"/></linearGradient>
+  <radialGradient id="pool" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fffaf0"/><stop offset=".72" stop-color="#f3eee3"/><stop offset="1" stop-color="#e8c9a8"/></radialGradient>
+  <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset=".6" stop-color="#ff5b2e" stop-opacity=".4"/><stop offset="1" stop-color="#ff5b2e" stop-opacity="0"/></radialGradient>
+ </defs>
+ <g clip-path="url(#scr)">
+  <rect width="1024" height="640" fill="#171513"/>
+  <!-- the whole word is there, only barely visible -->
+  <text x="60" y="440" font-size="330" fill="#8a7f72">Skreen</text>
+  <polygon points="0,0 70,0 372.8,230.9 37.2,409.1" fill="url(#beam)"/>
+  <circle cx="212" cy="322" r="300" fill="url(#glow)"/>
+  <circle cx="212" cy="322" r="208" fill="url(#pool)"/>
+  <!-- the two letters the light falls on -->
+  <text x="60" y="440" font-size="330" fill="#ff5b2e" clip-path="url(#lit)">Skreen</text>
+ </g>
+ <rect x="3" y="3" width="1018" height="634" rx="34" fill="none" stroke="#3a3631" stroke-width="6"/>
+</svg>
+
+<svg id="sq" width="512" height="512" viewBox="0 64 576 576">
+ <defs>
+  <linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="380" y1="0" x2="580" y2="0"><stop offset="0" stop-color="#8a7f72" stop-opacity=".62"/><stop offset=".55" stop-color="#6a6156" stop-opacity=".22"/><stop offset="1" stop-color="#4a443c" stop-opacity=".03"/></linearGradient>
+  <clipPath id="scr2"><rect width="1024" height="640" rx="36"/></clipPath>
+  <clipPath id="lit2"><circle cx="212" cy="322" r="208"/></clipPath>
+  <linearGradient id="beam2" gradientUnits="userSpaceOnUse" x1="35" y1="0" x2="205" y2="320"><stop offset="0" stop-color="#ffb08a" stop-opacity=".10"/><stop offset="1" stop-color="#ffd7bd" stop-opacity=".5"/></linearGradient>
+  <radialGradient id="pool2" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fffaf0"/><stop offset=".72" stop-color="#f3eee3"/><stop offset="1" stop-color="#e8c9a8"/></radialGradient>
+  <radialGradient id="glow2" cx="50%" cy="50%" r="50%"><stop offset=".6" stop-color="#ff5b2e" stop-opacity=".4"/><stop offset="1" stop-color="#ff5b2e" stop-opacity="0"/></radialGradient>
+ </defs>
+ <g clip-path="url(#scr2)">
+  <rect width="1024" height="640" fill="#171513"/>
+  <!-- the whole word is there, only barely visible -->
+  <text x="60" y="440" font-size="330" fill="url(#fade)">Skreen</text>
+  <polygon points="0,0 70,0 372.8,230.9 37.2,409.1" fill="url(#beam2)"/>
+  <circle cx="212" cy="322" r="300" fill="url(#glow2)"/>
+  <circle cx="212" cy="322" r="208" fill="url(#pool2)"/>
+  <!-- the two letters the light falls on -->
+  <text x="60" y="440" font-size="330" fill="#ff5b2e" clip-path="url(#lit2)">Skreen</text>
+ </g>
+ <rect x="3" y="3" width="1018" height="634" rx="34" fill="none" stroke="#3a3631" stroke-width="6"/>
+</svg>
+
+<script>
+document.fonts.ready.then(()=>{ document.querySelectorAll('svg').forEach(svg=>{
+  const ts=[...svg.querySelectorAll('text')]; const t0=ts[0]; let fs=300; ts.forEach(t=>t.setAttribute('font-size',fs));
+  const w=t0.getComputedTextLength(); fs=fs*905/w; ts.forEach(t=>t.setAttribute('font-size',fs.toFixed(1)));
+  ts.forEach(t=>{t.setAttribute('y',String(Math.round(320+fs*0.36)));});
+}); document.body.dataset.ready='1'; });
+</script>
