@@ -811,3 +811,10 @@ body.timer-inline .wx-days { display: none; }
 .meal-ideas .idea.used { color: var(--muted); }
 .meal-ideas .idea:active { background: var(--ink); color: var(--bg); }
 .hint.how { margin: 0.5rem 0 0; font-size: 0.9rem; line-height: 1.45; color: var(--muted); }
+
+/* Big Skreen Mode: no progress bar, the corner buttons stay on top, the player sits beside them */
+.showcase.big .show-bar { display: none; }
+body.big-mode .gear { z-index: 40; }
+.show-now { left: 9.6rem; bottom: 0.7rem; }
+.sv-caption { position: absolute; left: 8vw; bottom: 13vh; max-width: 70vw; padding: 0.5rem 0.9rem; background: rgba(0, 0, 0, 0.55); font: 500 max(1rem, 2.2vh)/1.3 var(--mono); letter-spacing: 0.04em; color: var(--ink); z-index: 2; }
+.sv-caption:empty { display: none; }

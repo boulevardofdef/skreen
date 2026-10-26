@@ -1206,7 +1206,9 @@
   const dialogOpen = () => !!document.querySelector('dialog[open]') || !$('guide').hidden;
 
   function startTour() {
-    tour.on = true; tour.everStarted = true;
+    tour.on = true; tour.everStarted = true; tour.big = alwaysTour();
+    $('showcase').classList.toggle('big', tour.big);
+    document.body.classList.toggle('big-mode', tour.big);   // the corner buttons stay usable on top of Big Skreen Mode
     $('showcase').hidden = false;
     beginTourCycle();
   }
@@ -1236,7 +1238,7 @@
     tour.timer = setTimeout(() => {
       tour.i++;
       if (tour.i < TOUR.length) showTourView();
-      else if (alwaysTour() && !isNight(new Date()) && !dialogOpen()) beginTourCycle();   // Skreen+: straight into the next round
+      else if (alwaysTour() && !isNight(new Date())) beginTourCycle();   // Big Skreen Mode: straight into the next round, even behind a dialog
       else endTour();
     }, slideMs());
     updateShowNow();
@@ -1288,6 +1290,8 @@
     updateShowNow();
     const ph = document.querySelector('#showBody .sv:not(.out) .sv-photo');   // a long photo slide keeps changing pictures
     if (ph && photo.current && !ph.style.backgroundImage.includes(photo.current)) ph.style.backgroundImage = `url('${photo.current}')`;
+    const cap = document.querySelector('#showBody .sv:not(.out) .sv-caption');
+    if (cap && cap.textContent !== $('photoCaption').textContent) cap.textContent = $('photoCaption').textContent;
   }, 3000);
 
   // Lists on the big pages show only the rows that fit inside the margins, never one cut off at the edge.
@@ -1313,11 +1317,13 @@
 
   function endTour() {
     clearTimeout(tour.timer);
-    tour.on = false; tour.last = Date.now();
+    tour.on = false; tour.last = tour.big ? 0 : Date.now();   // Big Skreen Mode comes straight back (after a dialog, or the night)
+    tour.big = false;
+    document.body.classList.remove('big-mode');
     $('showcase').hidden = true;
     $('showBody').innerHTML = '';
   }
-  $('showcase').addEventListener('click', endTour);
+  $('showcase').addEventListener('click', () => { if (!tour.big) endTour(); });   // Big Skreen Mode is left only through Settings
 
   function tourHtml(name) {
     if (name === 'meals') {
@@ -1341,7 +1347,7 @@
       const sub = np ? [np.artist, np.app].filter(Boolean).join(' \u00b7 ') : 'Internet radio';
       return `<div class="kicker">Now playing</div><div class="sv-musicrow"><div class="np-art big" ${np && music.art ? `style="background-image:url('${music.art}')"` : ''}>${np && music.art ? '' : Icons.music}</div><div class="sv-musictext"><div class="mt">${esc(title)}</div><div class="ma">${esc(sub)}</div></div></div>`;
     }
-    if (name === 'photos') return `<div class="sv-photo${photo.items[photo.order[photo.i]] && photo.items[photo.order[photo.i]].art ? ' art' : ''}" style="background-image:url('${photo.current}')"></div>`;
+    if (name === 'photos') return `<div class="sv-photo${photo.items[photo.order[photo.i]] && photo.items[photo.order[photo.i]].art ? ' art' : ''}" style="background-image:url('${photo.current}')"></div><div class="sv-caption">${esc($('photoCaption').textContent)}</div>`;
     const now = new Date();
     if (name === 'time') {
       const { hm, ap } = timeParts(now);
@@ -2559,6 +2565,7 @@
     saveSettings();
     state.nightDismissedUntil = 0;
     state.bgKey = '';
+    if (tour.on && tour.big && !alwaysTour()) endTour();   // Big Skreen Mode was switched off
     tour.last = alwaysTour() ? 0 : Date.now();   // always-on starts right away; the others wait their usual time
     lastMinute = -1;
     applyLayout();
@@ -2642,14 +2649,14 @@
   }
   function quietEnough() {
     const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
-    return !dialogOpen() && !tour.on && !state.mutating && !typing && !timers.length &&
+    return !dialogOpen() && (!tour.on || tour.big) && !state.mutating && !typing && !timers.length &&
       !$('toast').classList.contains('show') && Date.now() - lastTouch > QUIET_MS;
   }
   function maybeSelfReload() { if (newerSite && quietEnough()) location.reload(); }
 
   // Android back button: close whatever is open, never leave the app.
   window.skreenBack = () => {
-    if (tour.on) { endTour(); return true; }
+    if (tour.on && !tour.big) { endTour(); return true; }
     if (!guide.hidden) { closeGuide(); return true; }
     const open = document.querySelector('dialog[open]');
     if (open) { open.close(); return true; }
