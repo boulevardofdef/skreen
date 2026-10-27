@@ -1324,7 +1324,7 @@
     if (hasMediaNative()) readNow();
     updateShowNow();
     const ph = document.querySelector('#showBody .sv:not(.out) .sv-photo');   // a long photo slide keeps changing pictures
-    if (ph && photo.current && !ph.style.backgroundImage.includes(photo.current)) ph.style.backgroundImage = `url('${photo.current}')`;
+    if (ph && photo.current && !ph.style.backgroundImage.includes(photo.current)) { ph.style.backgroundImage = `url('${photo.current}')`; ph.style.setProperty('--img', `url('${photo.current}')`); }
     const cap = document.querySelector('#showBody .sv:not(.out) .sv-caption');
     if (cap && cap.textContent !== $('photoCaption').textContent) cap.textContent = $('photoCaption').textContent;
   }, 3000);
@@ -1382,7 +1382,7 @@
       const sub = np ? [np.artist, np.app].filter(Boolean).join(' \u00b7 ') : 'Internet radio';
       return `<div class="kicker">Now playing</div><div class="sv-musicrow"><div class="np-art big" ${np && music.art ? `style="background-image:url('${music.art}')"` : ''}>${np && music.art ? '' : Icons.music}</div><div class="sv-musictext"><div class="mt">${esc(title)}</div><div class="ma">${esc(sub)}</div></div></div>`;
     }
-    if (name === 'photos') return `<div class="sv-photo${photo.items[photo.order[photo.i]] && photo.items[photo.order[photo.i]].art ? ' art' : ''}" style="background-image:url('${photo.current}')"></div><div class="sv-caption">${esc($('photoCaption').textContent)}</div>`;
+    if (name === 'photos') return `<div class="sv-photo${photo.items[photo.order[photo.i]] && photo.items[photo.order[photo.i]].art ? ' art' : ''}" style="background-image:url('${photo.current}'); --img:url('${photo.current}')"></div><div class="sv-caption">${esc($('photoCaption').textContent)}</div>`;
     const now = new Date();
     if (name === 'time') {
       const { hm, ap } = timeParts(now);
@@ -1946,6 +1946,7 @@
     img.onload = () => {
       const back = photo.front === 'A' ? $('pfB') : $('pfA'), front = photo.front === 'A' ? $('pfA') : $('pfB');
       back.style.backgroundImage = `url("${img.src}")`;
+      back.style.setProperty('--img', `url("${img.src}")`);
       back.classList.toggle('art', !!item.art);
       back.classList.add('on'); front.classList.remove('on');
       photo.front = photo.front === 'A' ? 'B' : 'A';

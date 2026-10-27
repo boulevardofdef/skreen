@@ -740,8 +740,10 @@ body.timer-inline .wx-days { display: none; }
 .layout-screen { padding: 0.45rem 0.8rem; font: 600 0.78rem/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); border-top: 1px solid var(--accent); background: rgba(255, 91, 46, 0.07); }
 .news-list { -webkit-mask-image: none; mask-image: none; }
 
-.pf.art { background-size: contain; background-repeat: no-repeat; background-color: #0a0908; }
-.sv-photo.art { background-size: contain; background-repeat: no-repeat; background-color: #0a0908; }
+/* Paintings keep their whole shape. Whatever the picture doesn't cover is filled with a soft, dark blur of the same painting, not black bars. */
+.pf.art, .sv-photo.art { background-color: #0a0908; background-image: none !important; overflow: hidden; }
+.pf.art::before, .sv-photo.art::before { content: ""; position: absolute; inset: -12%; background: var(--img) center / cover no-repeat; filter: blur(34px) brightness(0.5) saturate(1.1); }
+.pf.art::after, .sv-photo.art::after { content: ""; position: absolute; inset: 0; background: var(--img) center / contain no-repeat; }
 .pf-caption { position: absolute; left: 0; right: 0; bottom: 0; padding: 2.2rem 1.1rem 0.8rem; font: 500 0.8rem/1.3 var(--mono); letter-spacing: 0.05em; color: rgba(243, 238, 227, 0.8); background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent); }
 .pf-caption:empty { display: none; }
 
