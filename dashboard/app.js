@@ -7,7 +7,7 @@
   const DEFAULTS = {
     lat: null, lon: null, place: '',
     units: 'fahrenheit', clock: '12',
-    bg: 'auto', font: 'bricolage',
+    bg: 'auto', font: 'bricolage', accent: 'orange',
     showcaseMinutes: '5', refreshMinutes: '10', bigMode: '0', slideSeconds: '60', slideSkip: '', pixelShift: '1',
     layout: 'clock,weather,agenda,todo', photoSource: 'art', photoSeconds: '30', mealList: '', shopList: '', pageSeconds: '60',
     ics: [],
@@ -56,6 +56,17 @@
   const FONTS = ['bricolage', 'fraunces', 'archivo', 'space', 'shoulders'];
   const applyFont = (f) => { document.body.dataset.font = FONTS.includes(f) ? f : 'bricolage'; };
   applyFont(cfg.font);
+
+  // The accent is the one bright colour on the screen (the "now" event, weather icon, timers). Everything draws it from --accent.
+  const ACCENTS = { orange: '#ff5b2e', amber: '#ffb020', mint: '#3ddc97', sky: '#4cc3ff', blue: '#7b93ff', violet: '#b58cff', rose: '#ff6fae', red: '#ff4d4d' };
+  const applyAccent = (id) => {
+    const c = ACCENTS[id] || ACCENTS.orange, n = parseInt(c.slice(1), 16);
+    const mix = (v) => Math.round(v + (255 - v) * 0.4);   // a lighter shade for the alarm's pulse
+    const root = document.documentElement.style;
+    root.setProperty('--accent', c);
+    root.setProperty('--accent-soft', `rgb(${mix(n >> 16)}, ${mix((n >> 8) & 255)}, ${mix(n & 255)})`);
+  };
+  applyAccent(cfg.accent);
 
   // Static icons
   $('addIcon').innerHTML = Icons.plus;
@@ -454,7 +465,7 @@
     const notes = plainText(ev.description);
     if (notes) rows.push(['Notes', linkify(notes)]);
 
-    eventSheet.style.setProperty('--c', ev.color || '#ff5b2e');
+    eventSheet.style.setProperty('--c', ev.color || 'var(--accent)');
     $('evTitle').textContent = ev.title;
     $('evRows').innerHTML = rows.map(([k, v]) => `<div class="ev-row" style="--c:${esc(ev.color || '#e8c887')}"><b>${k}</b><div>${v}</div></div>`).join('');
     if (!eventSheet.open) eventSheet.showModal();
@@ -2425,6 +2436,8 @@
   }
   $('fontSelect').addEventListener('change', (e) => applyFont(e.target.value));   // live preview
   settingsSheet.addEventListener('close', () => applyFont(cfg.font));              // Cancel puts it back
+  $('accentSelect').addEventListener('change', (e) => applyAccent(e.target.value));   // live preview
+  settingsSheet.addEventListener('close', () => applyAccent(cfg.accent));
 
   // Settings is a full page with a menu of sections down the left.
   let settingsTab = 'display';
