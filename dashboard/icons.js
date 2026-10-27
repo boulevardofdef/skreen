@@ -74,7 +74,7 @@ window.Icons = (() => {
   };
 
   // The Skreen logo: one fixed mark + wordmark, shown on every screen except the main display.
-  const lockup = '<img class="lockup" src="logo-lockup.png" alt="Skreen">';
+  const lockup = '<img class="lockup" src="skreen-wordmark-reverse.svg" alt="Skreen">';
   const logo = `<span class="brand-logo">${lockup}</span>`;
 
   const logoPlus = `<span class="brand-logo plus">${lockup}<svg class="plus-sign" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z" fill="#e8c887"/></svg></span>`;
