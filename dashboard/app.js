@@ -1251,10 +1251,16 @@
     const mins = alwaysTour() ? 2 : Number(cfg.showcaseMinutes);
     if (!mins || tour.on || isNight(now) || dialogOpen()) return;
     // Always-on: begin shortly after the app opens (the two-minute wait is only for resuming after a tap).
-    if (alwaysTour() && !tour.everStarted && performance.now() > 15000) { startTour(); return; }
+    if (alwaysTour() && !tour.everStarted && performance.now() > 8000) { startTour(); return; }
     if (now.getTime() - tour.last >= mins * 60000) startTour();
   }
   const dialogOpen = () => !!document.querySelector('dialog[open]') || !$('guide').hidden;
+  // After the app (re)loads, Big Skreen Mode starts within seconds, not at some later minute tick or after the
+  // two-minute wait. Check every second until it has started once (Skreen+ can take a moment to be confirmed).
+  const bigBoot = setInterval(() => {
+    if (tour.everStarted || performance.now() > 180000) { clearInterval(bigBoot); return; }
+    if (alwaysTour()) maybeStartTour();
+  }, 1000);
 
   function startTour() {
     tour.on = true; tour.everStarted = true; tour.big = alwaysTour();
