@@ -326,17 +326,21 @@
 
   // ─── Skeletons: grey placeholders while data loads, or until something is connected ───
 
-  const skeletonOn = () => !isDemo() && (noSource() || !state.loaded);
+  // Signed out, or Google took the permission away and nothing has loaded: both show the still placeholders with a sign-in button, not a shimmer that never ends.
+  const needsSignIn = () => !isDemo() && canSignIn() && (noSource() || (state.syncError === 'auth' && !state.loaded));
+  const skeletonOn = () => !isDemo() && (noSource() || needsSignIn() || !state.loaded);
   const sk = (w, h = 1) => `<i class="sk" style="width:${w}%;height:${h}rem"></i>`;
   function skeletonAgenda() {
     const card = (a, b, c) => `<div class="sk-card"><div class="sk-when">${sk(80, 1.2)}${sk(55, 0.9)}</div><div class="sk-what">${sk(a, 1.3)}${sk(b, 1.3)}${sk(c, 0.9)}</div></div>`;
-    const cta = noSource() ? `<button type="button" class="sk-cta">${canSignIn() ? 'Sign in with Google to see your day' : 'Add a calendar link in Settings to see your day'}</button>` : '';
-    return `<div class="skeleton${noSource() ? ' still' : ''}" aria-hidden="${noSource() ? 'false' : 'true'}">${cta}<div class="sk-day">${sk(30, 1)}</div>${card(78, 52, 40)}${card(66, 0, 34)}${card(84, 60, 44)}${card(58, 0, 30)}</div>`;
+    const still = noSource() || needsSignIn();
+    const cta = still ? `<button type="button" class="sk-cta">${canSignIn() ? 'Sign in with Google to see your day' : 'Add a calendar link in Settings to see your day'}</button>` : '';
+    return `<div class="skeleton${still ? ' still' : ''}" aria-hidden="${still ? 'false' : 'true'}">${cta}<div class="sk-day">${sk(30, 1)}</div>${card(78, 52, 40)}${card(66, 0, 34)}${card(84, 60, 44)}${card(58, 0, 30)}</div>`;
   }
   function skeletonTasks() {
     const row = (w) => `<li class="sk-task"><i class="sk sk-box"></i>${sk(w, 1.3)}</li>`;
-    const cta = noSource() && canSignIn() ? '<li><button type="button" class="sk-cta">Sign in to see your to-do list</button></li>' : '';
-    return `<li class="skeleton${noSource() ? ' still' : ''}" aria-hidden="${noSource() ? 'false' : 'true'}"><ul>${cta}${[72, 54, 80, 46, 64].map(row).join('')}</ul></li>`;
+    const still = noSource() || needsSignIn();
+    const cta = still && canSignIn() ? '<li><button type="button" class="sk-cta">Sign in to see your to-do list</button></li>' : '';
+    return `<li class="skeleton${still ? ' still' : ''}" aria-hidden="${still ? 'false' : 'true'}"><ul>${cta}${[72, 54, 80, 46, 64].map(row).join('')}</ul></li>`;
   }
   const syncWeatherSkeleton = () => $('weather').classList.toggle('is-loading', !state.weather);
   document.addEventListener('click', (e) => {
@@ -2505,7 +2509,8 @@
         body.innerHTML = `<span class="sub">Calendars to show</span><div class="checks">${cals.map((c) => `<label class="check"><input type="checkbox" data-cal="${esc(c.id)}" ${chosenCals.has(c.id) ? 'checked' : ''}><i style="background:${esc(c.color)}"></i><span>${esc(c.name)}</span></label>`).join('')}</div>
           <span class="sub">${plus ? 'To-do lists to show' : 'To-do list'}</span><div class="checks">${lists.map((l) => `<label class="check"><input type="${kind}" name="list-${esc(a)}" data-list="${esc(l.id)}" ${chosenLists.includes(l.id) ? 'checked' : ''}><span>${esc(l.title)}</span></label>`).join('')}</div>`;
       } catch (e) {
-        body.textContent = 'Couldn\u2019t load this account. Check your connection.';
+        if (e instanceof Google.AuthError) body.innerHTML = '<span class="sub">Google needs you to sign in again to use this account.</span><div class="loc-row"><button type="button" class="btn ghost small" data-acct="resign">Sign in again</button></div>';
+        else body.textContent = 'Couldn\u2019t load this account. Check your connection.';
       }
     }));
     drawAddTo();
@@ -2551,6 +2556,8 @@
     if (!b) return;
     if (b.dataset.acct === 'add') {
       if (usingGoogle() && !hasPlus() && accountList().length >= 1) { offerPlus('Using several Google accounts is part of Skreen+.'); return; }
+      if (await startSignIn()) fillGoogleSection();
+    } else if (b.dataset.acct === 'resign') {
       if (await startSignIn()) fillGoogleSection();
     } else if (b.dataset.acct === 'remove') {
       removeAccount(b.dataset.who);

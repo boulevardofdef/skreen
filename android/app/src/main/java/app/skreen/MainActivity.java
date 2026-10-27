@@ -318,7 +318,8 @@ public class MainActivity extends Activity {
             String name = (resultCode == RESULT_OK && data != null) ? data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME) : null;
             if (name == null) { deliverToken(pendingAuthRequest, null, "cancelled"); return; }
             List<String> all = accounts();
-            if (!all.contains(name)) { all.add(name); saveAccounts(all); }
+            pendingNewAccount = null;
+            if (!all.contains(name)) { all.add(name); saveAccounts(all); pendingNewAccount = name; }
             authorize(true, pendingAuthRequest, name);
             return;
         }
@@ -332,11 +333,13 @@ public class MainActivity extends Activity {
             return;
         }
         if (requestCode == REQ_AUTH) {
-            if (resultCode != RESULT_OK || data == null) { deliverToken(pendingAuthRequest, null, "cancelled"); return; }
+            if (resultCode != RESULT_OK || data == null) { forgetPendingAccount(); deliverToken(pendingAuthRequest, null, "cancelled"); return; }
             try {
                 AuthorizationResult result = Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(data);
+                pendingNewAccount = null;
                 deliverToken(pendingAuthRequest, result.getAccessToken(), null);
             } catch (ApiException e) {
+                forgetPendingAccount();
                 deliverToken(pendingAuthRequest, null, "auth_failed");
             }
             return;
@@ -406,6 +409,16 @@ public class MainActivity extends Activity {
         return out;
     }
 
+    /** The account just picked in a sign-in that then failed or was cancelled: take it out again, so Skreen doesn't think it's signed in. */
+    private String pendingNewAccount;
+    private void forgetPendingAccount() {
+        if (pendingNewAccount == null) return;
+        List<String> all = accounts();
+        all.remove(pendingNewAccount);
+        saveAccounts(all);
+        pendingNewAccount = null;
+    }
+
     private void saveAccounts(List<String> list) {
         prefs.edit().putString("accounts", new org.json.JSONArray(list).toString()).apply();
     }
@@ -426,13 +439,15 @@ public class MainActivity extends Activity {
                         try {
                             startIntentSenderForResult(result.getPendingIntent().getIntentSender(), REQ_AUTH, null, 0, 0, 0);
                         } catch (IntentSender.SendIntentException e) {
+                            forgetPendingAccount();
                             deliverToken(reqId, null, "resolution_failed");
                         }
                     } else {
+                        pendingNewAccount = null;
                         deliverToken(reqId, result.getAccessToken(), null);
                     }
                 })
-                .addOnFailureListener(e -> deliverToken(reqId, null, String.valueOf(e.getMessage())));
+                .addOnFailureListener(e -> { if (interactive) forgetPendingAccount(); deliverToken(reqId, null, String.valueOf(e.getMessage())); });
     }
 
     /** Plays the tablet's alarm tone on a loop (a finished timer) until stopAlarmSound(). */
