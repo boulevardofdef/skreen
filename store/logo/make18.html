@@ -1,0 +1,57 @@
+<!doctype html><meta charset="utf-8">
+<style>
+@font-face{font-family:Arch;src:url(file:///home/user/skreen/dashboard/fonts/archivo.woff2);font-weight:100 900;font-stretch:62% 125%}
+body{margin:0;background:transparent;display:flex;gap:40px;padding:40px;width:max-content}
+.tile{position:relative;overflow:hidden;flex:none}
+.sk{position:absolute;font-family:Arch;font-weight:800;font-stretch:100%;letter-spacing:-.03em;line-height:1;white-space:nowrap}
+</style>
+<div id="root"></div>
+<script>
+const cv=document.createElement('canvas').getContext('2d');
+// The trail: everything to the left of the S that you can reach without crossing the letter. That is the empty space
+// left of its outline, plus the lower opening (which faces left). The upper opening faces right, so it is never reached.
+const N=400, X0=520, W=1300, H=700, BASE=500;
+let mask=null, bounds=null;
+function trace(){
+ const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d',{willReadFrequently:true});
+ x.font=`800 ${N}px Arch`; x.textBaseline='alphabetic'; x.fillStyle='#000'; x.fillText('S',X0,BASE);
+ const d=x.getImageData(0,0,W,H).data, ink=(px,py)=>d[(py*W+px)*4+3]>110;
+ let top=H,bot=0,right=0; for(let py=0;py<H;py++)for(let px=0;px<W;px++) if(ink(px,py)){ if(py<top)top=py; if(py>bot)bot=py; if(px>right)right=px; }
+ const seen=new Uint8Array(W*H), st=[];
+ for(let py=top;py<=bot;py++){ st.push(0,py); }
+ while(st.length){ const py=st.pop(), px=st.pop(); if(px<0||px>right||py<top||py>bot) continue; const k=py*W+px; if(seen[k]||ink(px,py)) continue; seen[k]=1; st.push(px+1,py,px-1,py,px,py+1,px,py-1); }
+ // grow the trail 3px into the letter so no dark hairline shows where the two meet (the S is drawn on top)
+ const grown=new Uint8Array(W*H);
+ for(let py=top;py<=bot;py++)for(let px=0;px<=right+3;px++) if(seen[py*W+px]) for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){ const qx=px+dx,qy=py+dy; if(qx>=0&&qx<W&&qy>=0&&qy<H) grown[qy*W+qx]=1; }
+ const m=document.createElement('canvas'); m.width=W; m.height=H; const mx=m.getContext('2d'); const id=mx.createImageData(W,H);
+ for(let k=0;k<W*H;k++) if(grown[k]){ id.data[k*4]=255; id.data[k*4+1]=91; id.data[k*4+2]=46; id.data[k*4+3]=255; }
+ mx.putImageData(id,0,0); mask=m; bounds={top,bot,right};
+}
+
+const T=300;
+const VARS={
+ f1:{tile:'#171513',ring:'rgba(255,255,255,.14)',ink:'#ff5b2e',bar:'255,91,46',a:.45,wSk:.80},
+ f2:{tile:'#171513',ring:'rgba(255,255,255,.14)',ink:'#ff7d52',bar:'255,125,82',a:.5,wSk:.80},
+ f3:{tile:'#ff5b2e',ring:'rgba(0,0,0,0)',ink:'#1a0a04',bar:'26,10,4',a:.26,wSk:.80},
+};
+document.fonts.load('800 96px Arch').then(()=>{
+ trace();
+ const root=document.getElementById('root'); root.style.display='flex'; root.style.gap='40px';
+ for (const [id,v] of Object.entries(VARS)) {
+  cv.font='800 100px Arch'; cv.letterSpacing='-3px'; const m=cv.measureText('Sk'); const w100=m.actualBoundingBoxRight;
+  const fs=v.wSk*T/(w100/100), A=m.fontBoundingBoxAscent*fs/100, D=m.fontBoundingBoxDescent*fs/100;
+  const padR=T*.07, sx=T-padR-(w100/100)*fs;
+  const centerEm=(((bounds.top+bounds.bot)/2)-BASE)/N, baseY=T/2-centerEm*fs, lineTop=baseY-((fs-(A+D))/2+A);
+  const leftEm=sx/fs, sxN=X0-leftEm*N, sw=leftEm*N+(bounds.right-X0), sy=bounds.top, sh=bounds.bot-bounds.top;
+  // the trail, tinted to this variant
+  const o=document.createElement('canvas'); o.width=Math.round(sw/N*fs*2); o.height=Math.round(sh/N*fs*2); const ox=o.getContext('2d'); ox.imageSmoothingQuality='high';
+  ox.drawImage(mask,sxN,sy,sw,sh,0,0,o.width,o.height); ox.globalCompositeOperation='source-in'; ox.fillStyle=`rgba(${v.bar},${v.a})`; ox.fillRect(0,0,o.width,o.height);
+  const topPx=baseY+((bounds.top-BASE)/N)*fs;
+  const el=document.createElement('div'); el.className='tile'; el.id=id;
+  el.style.cssText=`width:${T}px;height:${T}px;border-radius:${T*.2}px;background:${v.tile};box-shadow:inset 0 0 0 ${T*.012}px ${v.ring}`;
+  el.innerHTML=`<img src="${o.toDataURL()}" style="position:absolute;left:0;top:${topPx}px;width:${sw/N*fs}px;height:${sh/N*fs}px"><span class="sk" style="left:${sx}px;top:${lineTop}px;font-size:${fs}px;color:${v.ink}">Sk</span>`;
+  root.appendChild(el);
+ }
+ document.fonts.ready.then(()=>document.body.dataset.ready=1);
+});
+</script>
