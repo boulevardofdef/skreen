@@ -21,7 +21,7 @@ p { margin: 0 0 1rem; }
 .top { position: sticky; top: 0; z-index: 20; background: rgba(243, 238, 227, 0.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule); }
 .bar { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0; }
 .logo { display: block; line-height: 0; }
-.logo img { height: 3.4rem; width: auto; }
+.logo img { height: 2.8rem; width: auto; }
 nav a { margin-left: 1.5rem; text-decoration: none; font: 500 0.82rem "Geist Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 nav a:hover { color: var(--ink); }
 
