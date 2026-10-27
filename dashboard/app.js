@@ -1274,6 +1274,7 @@
   }
 
   function showTourView() {
+    clearInterval(tour.subTimer);
     const body = $('showBody'), prev = body.firstElementChild;
     if (prev) { prev.classList.add('out'); setTimeout(() => prev.remove(), 600); }
     const name = TOUR[tour.i];
@@ -1285,6 +1286,7 @@
     body.appendChild(v);
     fitToWidth(v.querySelector('.big'), v.clientWidth * 0.82);   // never wider than the space inside the side margins
     fitRows(v);
+    if (alwaysTour()) startSubs(v); else clearInterval(tour.subTimer);
     tour.timer = setTimeout(() => {
       tour.i++;
       if (tour.i < TOUR.length) showTourView();
@@ -1347,7 +1349,7 @@
   // Lists on the big pages show only the rows that fit inside the margins, never one cut off at the edge.
   function fitRows(v) {
     const list = v.querySelector('.sv-list');
-    if (!list) return;
+    if (!list || list.classList.contains('sv-stage')) return;   // swiping slides size themselves
     const limit = list.getBoundingClientRect().bottom;
     Array.from(list.children).forEach((r) => { if (r.getBoundingClientRect().bottom > limit + 1) r.style.display = 'none'; });
   }
@@ -1366,7 +1368,7 @@
   }
 
   function endTour() {
-    clearTimeout(tour.timer);
+    clearTimeout(tour.timer); clearInterval(tour.subTimer);
     tour.on = false; tour.last = tour.big ? 0 : Date.now();   // Big Skreen Mode comes straight back (after a dialog, or the night)
     tour.big = false;
     document.body.classList.remove('big-mode');
@@ -1374,6 +1376,32 @@
     $('showBody').innerHTML = '';
   }
   $('showcase').addEventListener('click', () => { if (!tour.big) endTour(); });   // Big Skreen Mode is left only through Settings
+
+  // A big slide that swipes up through several parts, each given an equal share of the slide's time.
+  function stageHtml(kicker, panels, kind) {
+    return `<div class="kicker">${kicker}</div><div class="sv-list sv-stage ${kind}">${panels.map((p, i) => `<div class="sv-sub ${i ? 'below' : 'cur'}">${p}</div>`).join('')}</div>`;
+  }
+  const setSub = (el, state) => { el.classList.remove('above', 'cur', 'below'); el.classList.add(state); };
+  function startSubs(v) {
+    clearInterval(tour.subTimer);
+    const stage = v.querySelector('.sv-stage');
+    if (!stage) return;
+    // Headlines: shrink any that is too long for its box, so it never runs off the screen.
+    stage.querySelectorAll('.sv-headline').forEach((el) => {
+      let size = parseFloat(getComputedStyle(el).fontSize);
+      for (let k = 0; k < 14 && el.scrollHeight > el.clientHeight + 1 && size > 24; k++) { size *= 0.93; el.style.fontSize = size.toFixed(1) + 'px'; }
+    });
+    const panels = Array.from(stage.children);
+    if (panels.length < 2) return;
+    let i = 0, steps = 0;
+    tour.subTimer = setInterval(() => {
+      const cur = panels[i], next = panels[(i + 1) % panels.length];
+      next.classList.add('no-anim'); setSub(next, 'below'); void next.offsetWidth; next.classList.remove('no-anim');   // start the next part below, ready to rise
+      setSub(cur, 'above'); setSub(next, 'cur');
+      i = (i + 1) % panels.length;
+      if (++steps >= panels.length - 1) clearInterval(tour.subTimer);
+    }, slideMs() / panels.length);
+  }
 
   function tourHtml(name) {
     if (name === 'meals') {
@@ -1386,6 +1414,9 @@
     if (name === 'shop') {
       const rows = shopState.items.slice(0, 8).map((t) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(t.title)}</div></div>`).join('');
       return `<div class="kicker">Shopping</div><div class="sv-list sv-news">${rows}</div>`;
+    }
+    if (name === 'news' && alwaysTour()) {   // Big Skreen Mode: one big headline at a time, swiping up through up to three
+      return stageHtml('In the news', News.current.slice(0, 3).map((h) => `<div class="sv-headline"><span>${esc(h.text)}</span></div>`), 'headlines');
     }
     if (name === 'news') {
       const rows = News.current.slice(0, 4).map((s) => `<div class="row"><div class="rn">${esc(s.text)}</div></div>`).join('');
@@ -1415,13 +1446,19 @@
     if (name === 'agenda') {
       const events = state.events.map(normalizeEvent).filter((e) => e.e > now).sort((a, b) => (a.allDay === b.allDay ? a.s - b.s : a.allDay ? -1 : 1));
       const today = startOfDay(now), tomorrow = addDays(today, 1), after = addDays(today, 2);
-      const soon = events.filter((e) => e.s < after).slice(0, 4);
-      let rows = soon.map((e) => {
+      const soon = events.filter((e) => e.s < after).slice(0, alwaysTour() ? 6 : 4);   // Big Skreen Mode: three at a time, up to two screens of them
+      const rowHtml = (e) => {
         const running = !e.allDay && e.s <= now;
         const when = e.allDay ? 'All day' : fmtTime(e.s, { small: true });
         const sub = [e.s >= tomorrow && !e.allDay ? 'Tomorrow' : '', e.location ? e.location.split('\n')[0] : e.calendar || ''].filter(Boolean).join(' · ');
         return `<div class="row${running ? ' now' : ''}"><div class="rt">${when}</div><div class="rn"><span class="ttl">${esc(e.title)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>`;
-      }).join('');
+      };
+      if (alwaysTour() && soon.length) {
+        const pages = [];
+        for (let i = 0; i < soon.length; i += 3) pages.push(soon.slice(i, i + 3).map(rowHtml).join(''));
+        return stageHtml('Next up', pages, 'agenda');
+      }
+      let rows = soon.map(rowHtml).join('');
       if (!rows) rows = '<div class="empty-big">Nothing on the calendar</div>';
       return `<div class="kicker">Next up</div><div class="sv-list">${rows}</div>`;
     }
