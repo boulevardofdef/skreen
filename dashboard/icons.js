@@ -74,9 +74,10 @@ window.Icons = (() => {
   };
 
   // The Skreen logo: one fixed mark + wordmark, shown on every screen except the main display.
-  const logo = `<span class="brand-logo"><svg class="mark" viewBox="64 80 384 352" aria-hidden="true"><rect x="96" y="112" width="240" height="72" fill="#ff5b2e"/><rect x="176" y="220" width="240" height="72" fill="currentColor"/><rect x="96" y="328" width="240" height="72" fill="currentColor" opacity=".5"/></svg><span class="wordmark">Skreen</span></span>`;
+  const lockup = '<img class="lockup" src="logo-lockup.png" alt="Skreen">';
+  const logo = `<span class="brand-logo">${lockup}</span>`;
 
-  const logoPlus = `<span class="brand-logo plus"><svg class="mark" viewBox="64 80 384 352" aria-hidden="true"><rect x="96" y="112" width="240" height="72" fill="#ff5b2e"/><rect x="176" y="220" width="240" height="72" fill="currentColor"/><rect x="96" y="328" width="240" height="72" fill="currentColor" opacity=".5"/></svg><span class="wordmark">Skreen</span><svg class="plus-sign" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z" fill="#e8c887"/></svg></span>`;
+  const logoPlus = `<span class="brand-logo plus">${lockup}<svg class="plus-sign" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z" fill="#e8c887"/></svg></span>`;
 
   return { ...set, weather, WX, logo, logoPlus };
 })();
