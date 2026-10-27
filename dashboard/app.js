@@ -2377,12 +2377,24 @@
     const on = form.elements.bigMode.value === '1' && hasPlus();
     $('alwaysOpts').hidden = !on;
     const skip = String(cfg.slideSkip || '').split(',');
-    if (!$('slideChecks').children.length) {
-      $('slideChecks').innerHTML = Object.entries(SLIDE_NAMES).map(([id, name]) => `<label class="check"><input type="checkbox" data-slide="${id}" ${skip.includes(id) ? '' : 'checked'}>${esc(name)}</label>`).join('');
-    } else {
-      $('slideChecks').querySelectorAll('input').forEach((i) => { i.checked = !skip.includes(i.dataset.slide); });
-    }
+    // Say why a slide won't appear: its widget is off (that switch lives under Widgets), or it has nothing to show yet.
+    const note = (id) => {
+      if (id === 'music') return { text: 'Appears while music is playing' };
+      if (!visibleWidgets().includes(TOUR_ALL[id])) return { text: 'Not showing: this widget is off', go: true };
+      if (id === 'photos' && !photo.current) return { text: 'Not showing yet: no picture has loaded' };
+      if (id === 'news' && !News.current.length) return { text: 'Not showing yet: no headlines have loaded' };
+      if (id === 'meals' && !(mealState.ready && Object.keys(mealState.byDate).length)) return { text: 'Not showing yet: no dinners are planned' };
+      if (id === 'shop' && !shopState.items.length) return { text: 'Not showing yet: your shopping list is empty' };
+      if (['agenda', 'todo'].includes(id) && !state.loaded) return { text: 'Not showing yet: nothing has loaded' };
+      return null;
+    };
+    $('slideChecks').innerHTML = Object.entries(SLIDE_NAMES).map(([id, name]) => {
+      const n = note(id);
+      return `<div class="slide-row"><label class="check"><input type="checkbox" data-slide="${id}" ${skip.includes(id) ? '' : 'checked'}>${esc(name)}</label>` +
+        (n ? `<span class="slide-note">${esc(n.text)}${n.go ? ' <button type="button" class="linklike" data-goto="widgets">Turn it on in Widgets</button>' : ''}</span>` : '') + '</div>';
+    }).join('');
   }
+  $('slideChecks').addEventListener('click', (e) => { const b = e.target.closest('[data-goto]'); if (b) showTab(b.dataset.goto); });
 
   // ─── Other calendars (published links) ─────────────────────────────────────
 

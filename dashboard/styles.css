@@ -826,3 +826,9 @@ body.big-mode .gear { z-index: 40; }
 
 .stab > .credit:first-child { margin-top: 0; }   /* the negative margin would be cut off at the top of the page */
 body.native p.native-only { display: block; }
+
+/* Big Skreen Mode slide list: why a slide isn't showing */
+.slide-row { margin-bottom: 0.15rem; }
+.slide-note { display: block; margin: -0.2rem 0 0.5rem 2.1rem; font: 500 0.78rem/1.3 var(--mono); color: var(--muted); letter-spacing: 0.02em; }
+.slide-note .linklike { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; text-underline-offset: 0.18em; cursor: pointer; }
+#slideChecks { max-height: none; }   /* show every slide at once, not a small scrolling box */
