@@ -123,7 +123,7 @@ window.Guide = (() => {
       id: 'look', title: 'Backgrounds',
       html: `
 <h1>Backgrounds</h1>
-<p class="lede">Soft, dark colour fields that change every day, so the wall never feels stale and the text stays easy to read.</p>
+<p class="lede">Soft, dark color fields that change every day, so the wall never feels stale and the text stays easy to read.</p>
 <p>Skreen rotates through these, one per day. To pin one, go to <b>Settings → Background</b>. You can also change the <b>Typeface</b> there: five options, from the default through an editorial serif to a tall poster face, previewed live behind the settings sheet.</p>
 <p>Under <b>Settings → Layout</b> you can hide things you don't need (say, the schedule, to give the to-do list the room) and move them around with the arrows. The rotating tour skips anything you've hidden.</p>
 <div class="swatches" id="swatches"></div>`
@@ -158,7 +158,7 @@ window.Guide = (() => {
   <li><b>Rotating tour.</b> Every few minutes it takes over for about 30 seconds and shows the time, then the weather, the calendar and the to-do list, each as one huge page, and alternates left, centre and right. Nothing sits in the same pixels for long. Change the interval in Settings, or turn it off. Tap the skreen to end a tour early.</li>
   <li><b>Gentle layout nudge.</b> The whole layout drifts a few pixels over the day.</li>
   <li><b>Night mode.</b> From <span data-night>10:30 PM to 6:00 AM</span> (set under Settings → Skreen care) the skreen goes black with a dim clock that wanders slowly. On OLED, black pixels are off. Tap to wake the full display for two minutes.</li>
-  <li><b>Moving backgrounds.</b> The background colours drift slowly, and change daily.</li>
+  <li><b>Moving backgrounds.</b> The background colors drift slowly, and change daily.</li>
 </ul>
 <h2>If you see a faint ghost image</h2>
 <p>A faint outline of something that used to be on the skreen (a home screen, an old app) is usually <b>temporary image retention</b>. Showing the skreen varied content clears it, and Skreen's tour and night mode help. On an OLED panel, long-standing ghosts can be permanent burn-in, which no software can undo.</p>

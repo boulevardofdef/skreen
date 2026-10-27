@@ -19,9 +19,9 @@ p { margin: 0 0 1rem; }
 
 /* header */
 .top { position: sticky; top: 0; z-index: 20; background: rgba(243, 238, 227, 0.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule); }
-.bar { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0; }
-.logo { display: flex; align-items: center; gap: 0.7rem; font-weight: 800; font-size: 1.5rem; letter-spacing: -0.02em; text-decoration: none; }
-.logo img { border-radius: 9px; }
+.bar { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0; }
+.logo { display: block; line-height: 0; }
+.logo img { height: 3.4rem; width: auto; }
 nav a { margin-left: 1.5rem; text-decoration: none; font: 500 0.82rem "Geist Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 nav a:hover { color: var(--ink); }
 
@@ -49,6 +49,7 @@ nav a:hover { color: var(--ink); }
 .problem h2 { max-width: 52rem; }
 .chips { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 2.2rem 0; }
 .chips span { padding: 0.55rem 1rem; border: 1px solid rgba(243, 238, 227, 0.3); font: 500 0.9rem "Geist Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(243, 238, 227, 0.75); }
+.chips .lbl { border-color: transparent; padding-left: 0; color: var(--accent); }
 .big-line { max-width: 44rem; font-size: clamp(1.3rem, 2.4vw, 1.8rem); line-height: 1.35; color: rgba(243, 238, 227, 0.9); margin: 0; }
 .big-line strong { color: var(--accent); }
 
@@ -69,6 +70,10 @@ nav a:hover { color: var(--ink); }
 .shots figure { margin: 0; }
 .shots img { border-radius: 12px; box-shadow: 0 20px 50px rgba(14, 13, 11, 0.3), 0 0 0 2px #2a2723; background: var(--panel); }
 .shots figcaption { margin-top: 0.9rem; font: 500 0.82rem "Geist Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+.look { display: grid; grid-template-columns: 1fr 1.6fr; gap: clamp(1.5rem, 4vw, 3.5rem); align-items: center; margin-top: 3.6rem; }
+.look p { color: var(--muted); margin: 0.7rem 0 0; font-size: 1.15rem; }
+.look img { border-radius: 12px; box-shadow: 0 20px 50px rgba(14, 13, 11, 0.3), 0 0 0 2px #2a2723; background: var(--panel); }
 
 /* no hardware */
 .nohw { padding: clamp(3.5rem, 8vw, 6rem) 0; max-width: 56rem; }
@@ -116,7 +121,7 @@ footer { padding: 2.2rem 0 3rem; color: var(--muted); font-size: 0.95rem; }
 .marks { flex-basis: 100%; margin: 0.6rem 0 0; font-size: 0.8rem; color: #8a8377; max-width: 56rem; }
 
 @media (max-width: 860px) {
-  .hero, .plus-grid, .care { grid-template-columns: 1fr; }
+  .hero, .plus-grid, .care, .look { grid-template-columns: 1fr; }
   .hero-photo { aspect-ratio: 4 / 4.4; }
   nav a:nth-child(-n+2) { display: none; }
   nav a { margin-left: 1rem; }

@@ -1076,10 +1076,10 @@
 
   const music = { np: null, art: '', artKey: '', audio: null, station: null, results: [], searched: null };
   const hasMediaNative = () => !!(NATIVE && NATIVE.nowPlaying);
-  const DEMO_NP = { access: true, active: true, playing: true, title: 'Dreams', artist: 'Fleetwood Mac', album: 'Rumours', app: 'Spotify', canPrev: true, canNext: true };
+  const DEMO_NP = { access: true, active: true, playing: true, title: 'Something Lifted Her Up', artist: 'Parsons/Archer', album: 'Hydrophobia', app: 'Spotify', canPrev: true, canNext: true };
 
   function readNow() {
-    if (!hasMediaNative()) { music.np = isDemo() ? DEMO_NP : null; return; }
+    if (!hasMediaNative()) { music.np = isDemo() ? DEMO_NP : null; music.art = isDemo() ? 'demo-cover.jpg' : ''; return; }
     try {
       const np = JSON.parse(NATIVE.nowPlaying());
       if (np.key !== music.artKey) { music.artKey = np.key || ''; music.art = np.key ? (NATIVE.nowPlayingArt() || '') : ''; }

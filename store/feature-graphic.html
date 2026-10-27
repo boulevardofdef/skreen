@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8">
+<style>
+@font-face{font-family:B;src:url(file:///home/user/skreen/site/fonts/bricolage.woff2);font-weight:200 800}
+@font-face{font-family:G;src:url(file:///home/user/skreen/site/fonts/geist-mono.woff2)}
+body{margin:0;width:1024px;height:500px;overflow:hidden;background:#f3eee3;color:#0e0d0b;font-family:B,sans-serif;position:relative}
+.ph{position:absolute;right:0;top:0;width:600px;height:500px;background:url(file:///home/user/skreen/site/img/hero-kitchen.jpg) 50% 8%/cover}
+.ph::before{content:"";position:absolute;left:0;top:0;bottom:0;width:90px;background:linear-gradient(90deg,#f3eee3,rgba(243,238,227,0))}
+.logo{position:absolute;left:44px;top:40px;height:92px}
+h1{position:absolute;left:44px;top:170px;margin:0;width:400px;font-size:62px;line-height:.98;font-weight:800;font-stretch:86%;letter-spacing:-.03em}
+h1 em{font-style:normal;color:#ff5b2e}
+.k{position:absolute;left:44px;bottom:40px;font:600 15px G,monospace;letter-spacing:.16em;text-transform:uppercase;color:#5d574c}
+</style>
+<img class="logo" src="file:///home/user/skreen/site/img/logo-header.png">
+<h1>One screen for your <em>whole day.</em></h1>
+<div class="k">Free on any Android tablet</div>
+<div class="ph"></div>
+<script>document.fonts.ready.then(()=>document.body.dataset.ready=1)</script>

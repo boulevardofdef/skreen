@@ -10,6 +10,6 @@ h1{position:absolute;left:150px;top:112px;margin:0;font-size:84px;line-height:1;
 </style>
 <div class="k" id="k"></div><h1 id="h"></h1><div class="shot"><img id="i"></div>
 <script>
-const q=new URLSearchParams(location.search); document.getElementById('k').textContent=q.get('k'); document.getElementById('h').textContent=q.get('h'); document.getElementById('i').src='file:///home/user/skreen/site/img/shots/'+q.get('s')+'.jpg';
+const q=new URLSearchParams(location.search); document.getElementById('k').textContent=q.get('k'); document.getElementById('h').textContent=q.get('h'); document.getElementById('i').src=(q.get('dir')||'file:///home/user/skreen/site/img/shots/')+q.get('s')+'.jpg';
 document.fonts.ready.then(()=>{document.body.dataset.ready=1});
 </script>

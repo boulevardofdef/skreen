@@ -1,5 +1,5 @@
-/* Skreen backgrounds: soft, dark colour fields with gentle contrast. No lines, no patterns,
-   nothing sharp for text to fight with. One per day, or pin your favourite. */
+/* Skreen backgrounds: soft, dark color fields with gentle contrast. No lines, no patterns,
+   nothing sharp for text to fight with. One per day, or pin your favorite. */
 window.Backgrounds = (() => {
   const list = [
     { id: 'ink', name: 'Ink',
