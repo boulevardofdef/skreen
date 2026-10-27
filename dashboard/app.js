@@ -104,7 +104,7 @@
     try { if (arg === undefined) NATIVE[method](id); else NATIVE[method](id, arg); } catch (e) { pendingTokens.delete(id); reject(e); }
     setTimeout(() => { if (pendingTokens.has(id)) { pendingTokens.delete(id); reject(new Error('timed out')); } }, method === 'signIn' ? 300000 : 30000);
   });
-  if (NATIVE && NATIVE.getToken) Google.init((acct) => (NATIVE.getTokenFor && acct ? nativeToken('getTokenFor', acct) : nativeToken('getToken')), (acct) => { if (NATIVE.revokeGrant) NATIVE.revokeGrant(acct || ''); });
+  if (NATIVE && NATIVE.getToken) Google.init((acct) => (NATIVE.getTokenFor && acct ? nativeToken('getTokenFor', acct) : nativeToken('getToken')), (acct) => { if (NATIVE.clearToken) NATIVE.clearToken(acct || ''); });
 
   // ─── Accounts, calendars and lists (several accounts and lists are Skreen+) ─
 

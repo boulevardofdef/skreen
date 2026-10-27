@@ -52,10 +52,10 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.webkit.WebViewAssetLoader;
 
+import com.google.android.gms.auth.GoogleAuthUtil;
 import com.google.android.gms.auth.api.identity.AuthorizationRequest;
 import com.google.android.gms.auth.api.identity.AuthorizationResult;
 import com.google.android.gms.auth.api.identity.Identity;
-import com.google.android.gms.auth.api.identity.RevokeAccessRequest;
 import com.google.android.gms.common.AccountPicker;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.Scope;
@@ -338,6 +338,7 @@ public class MainActivity extends Activity {
             try {
                 AuthorizationResult result = Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(data);
                 pendingNewAccount = null;
+                if (result.getAccessToken() != null && pendingAuthName != null) lastTokens.put(pendingAuthName, result.getAccessToken());
                 deliverToken(pendingAuthRequest, result.getAccessToken(), null);
             } catch (ApiException e) {
                 forgetPendingAccount();
@@ -411,22 +412,22 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Takes back Skreen's access to one Google account, and with it the access token Google Play services keeps cached.
-     * Without this, a person who removes Skreen in their Google account (or signs out and in again) is handed the old,
-     * dead token with no consent screen, and every request then fails.
+     * Google Play services keeps the access token it last handed out and gives it back until it expires. If the person
+     * has since removed Skreen's access in their Google account, that cached token is dead, but nothing says so: Skreen
+     * gets the dead token again and every request fails, with no consent screen. Dropping the cached token makes the
+     * next sign-in ask Google afresh, which shows the consent screen when access is gone.
      */
-    private void revokeGrant(final String account) {
-        if (account == null || account.isEmpty()) return;
-        runOnUiThread(() -> {
-            try {
-                Identity.getAuthorizationClient(this).revokeAccess(RevokeAccessRequest.builder()
-                        .setAccount(new Account(account, "com.google")).setScopes(SCOPES).build());
-            } catch (Exception ignored) { }
-        });
+    private final java.util.Map<String, String> lastTokens = new java.util.HashMap<>();
+    private void clearCachedToken(final String account) {
+        final String token = account == null ? null : lastTokens.remove(account);
+        if (token == null) return;
+        new Thread(() -> {
+            try { GoogleAuthUtil.clearToken(getApplicationContext(), token); } catch (Exception ignored) { }
+        }).start();
     }
 
     /** The account just picked in a sign-in that then failed or was cancelled: take it out again, so Skreen doesn't think it's signed in. */
-    private String pendingNewAccount;
+    private String pendingNewAccount, pendingAuthName;
     private void forgetPendingAccount() {
         if (pendingNewAccount == null) return;
         List<String> all = accounts();
@@ -452,6 +453,7 @@ public class MainActivity extends Activity {
                     if (result.hasResolution()) {
                         if (!interactive) { deliverToken(reqId, null, "consent_needed"); return; }
                         pendingAuthRequest = reqId;
+                        pendingAuthName = name;
                         try {
                             startIntentSenderForResult(result.getPendingIntent().getIntentSender(), REQ_AUTH, null, 0, 0, 0);
                         } catch (IntentSender.SendIntentException e) {
@@ -460,6 +462,7 @@ public class MainActivity extends Activity {
                         }
                     } else {
                         pendingNewAccount = null;
+                        if (result.getAccessToken() != null) lastTokens.put(name, result.getAccessToken());
                         deliverToken(reqId, result.getAccessToken(), null);
                     }
                 })
@@ -726,16 +729,16 @@ public class MainActivity extends Activity {
         /** Forgets one account (the others stay signed in). */
         @JavascriptInterface
         public void removeAccount(final String account) {
-            revokeGrant(account);
+            clearCachedToken(account);
             List<String> all = accounts();
             all.remove(account);
             saveAccounts(all);
         }
 
-        /** Google refused this account's token: drop the cached token and the grant, so the next sign-in asks for consent again. */
+        /** Google refused this account's token: drop the cached one, so the next request gets a fresh answer (or a consent screen). */
         @JavascriptInterface
-        public void revokeGrant(final String account) {
-            MainActivity.this.revokeGrant(account);
+        public void clearToken(final String account) {
+            clearCachedToken(account);
         }
 
         /** Turns coordinates into a place name using the device's geocoder. Answer: window.skreenPlace(id, {city, region, country} | null). */
@@ -874,7 +877,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void signOut() {
-            for (String a : accounts()) revokeGrant(a);
+            for (String a : accounts()) clearCachedToken(a);
             prefs.edit().remove("account").remove("accounts").apply();
         }
 
