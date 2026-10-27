@@ -1,0 +1,75 @@
+<!doctype html><meta charset="utf-8">
+<style>
+@font-face{font-family:Arch;src:url(file:///home/user/skreen/dashboard/fonts/archivo.woff2);font-weight:100 900;font-stretch:62% 125%}
+@font-face{font-family:Mono;src:url(file:///home/user/skreen/dashboard/fonts/geist-mono.woff2);font-weight:100 900}
+body{margin:0;background:#f3eee3;font-family:Mono,monospace;width:1500px}
+.grid{display:grid;grid-template-columns:1fr 1fr}
+.cell{padding:30px 44px 28px;border:1px solid rgba(14,13,11,.12);margin:-1px 0 0 -1px;display:flex;flex-direction:column;gap:20px}
+.cell.dk{background:#0e0d0b}
+.lab{font:600 17px Mono;letter-spacing:.12em;color:#5d574c;text-transform:uppercase}
+.dk .lab{color:#9a9184}
+.row{display:flex;align-items:center;gap:44px}
+.word{display:flex;align-items:center}
+.tab{border-radius:calc(var(--fs)*.2);background:#2a2723;box-shadow:inset 0 0 0 calc(var(--fs)*.03) #4a453e;display:flex;align-items:center;justify-content:flex-end;position:relative;box-sizing:border-box;flex:none}
+.tab::before{content:"";position:absolute;inset:calc(var(--fs)*.104);border-radius:calc(var(--fs)*.125);background:#171513}
+.inner{position:relative;display:flex;align-items:center}
+.sk,.rest{font-family:Arch;font-weight:800;font-stretch:100%;letter-spacing:-.03em;line-height:1;font-size:var(--fs);white-space:nowrap}
+.sk{color:#ff5b2e;position:relative}
+.rest{color:#0e0d0b}.dk .rest{color:#f3eee3}
+small{font:500 13px Mono;color:#8a8377;letter-spacing:.08em}
+</style>
+<div class="grid" id="g"></div>
+<script>
+const FS=96, PADL=1.0, ALPHA=+(new URLSearchParams(location.search).get('a')||.35);
+const cv=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+// The trail: everything to the left of the S that you can reach without crossing the letter. That is the empty space
+// left of its outline, plus the lower opening (which faces left). The upper opening faces right, so it is never reached.
+const N=400, X0=520, W=1300, H=700, BASE=500;
+let mask=null, bounds=null;
+function trace(){
+ const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d',{willReadFrequently:true});
+ x.font=`800 ${N}px Arch`; x.textBaseline='alphabetic'; x.fillStyle='#000'; x.fillText('S',X0,BASE);
+ const d=x.getImageData(0,0,W,H).data, ink=(px,py)=>d[(py*W+px)*4+3]>110;
+ let top=H,bot=0,right=0; for(let py=0;py<H;py++)for(let px=0;px<W;px++) if(ink(px,py)){ if(py<top)top=py; if(py>bot)bot=py; if(px>right)right=px; }
+ const seen=new Uint8Array(W*H), st=[];
+ for(let py=top;py<=bot;py++){ st.push(0,py); }
+ while(st.length){ const py=st.pop(), px=st.pop(); if(px<0||px>right||py<top||py>bot) continue; const k=py*W+px; if(seen[k]||ink(px,py)) continue; seen[k]=1; st.push(px+1,py,px-1,py,px,py+1,px,py-1); }
+ // grow the trail 3px into the letter so no dark hairline shows where the two meet (the S is drawn on top)
+ const grown=new Uint8Array(W*H);
+ for(let py=top;py<=bot;py++)for(let px=0;px<=right+3;px++) if(seen[py*W+px]) for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){ const qx=px+dx,qy=py+dy; if(qx>=0&&qx<W&&qy>=0&&qy<H) grown[qy*W+qx]=1; }
+ const m=document.createElement('canvas'); m.width=W; m.height=H; const mx=m.getContext('2d'); const id=mx.createImageData(W,H);
+ for(let k=0;k<W*H;k++) if(grown[k]){ id.data[k*4]=255; id.data[k*4+1]=91; id.data[k*4+2]=46; id.data[k*4+3]=255; }
+ mx.putImageData(id,0,0); mask=m; bounds={top,bot,right};
+}
+const metrics=(fs)=>{ cv.font=`800 ${fs}px Arch`; const m=cv.measureText('S'); const A=m.fontBoundingBoxAscent,D=m.fontBoundingBoxDescent; return (fs-(A+D))/2+A; };
+const tab=(fs)=>{
+ const base=metrics(fs), padPx=PADL*fs;
+ // crop the mask: from -PADL em left of the S, up to the S's right edge, top to bottom of the S
+ const sx=X0-PADL*N, sw=PADL*N+(bounds.right-X0), sy=bounds.top, sh=bounds.bot-bounds.top;
+ const cw=Math.round((sw/N)*fs*3), ch=Math.round((sh/N)*fs*3);
+ const o=document.createElement('canvas'); o.width=cw; o.height=ch; const ox=o.getContext('2d'); ox.imageSmoothingQuality='high'; ox.drawImage(mask,sx,sy,sw,sh,0,0,cw,ch);
+ const url=o.toDataURL();
+ const topPx=base+((bounds.top-BASE)/N)*fs, wPx=(sw/N)*fs, hPx=(sh/N)*fs;
+ return `<div class="tab" style="--fs:${fs}px;height:${fs*1.42}px"><div class="inner"><img src="${url}" style="position:absolute;left:${-padPx}px;top:${topPx}px;width:${wPx}px;height:${hPx}px;opacity:${ALPHA}"><span class="sk">Sk</span></div></div>`;
+};
+document.fonts.load('800 96px Arch').then(()=>{
+ trace();
+ const g=document.getElementById('g');
+ const cell=(dark)=>`<div class="cell ${dark?'dk':''}"><div class="lab">Trail fills the whole lower opening${dark?' · on dark':''}</div>
+  <div class="row">${tab(FS*1.15)}<div class="word" style="--fs:${FS}px">${tab(FS)}<div class="rest">reen</div></div>
+  ${dark?'':`<div style="display:flex;gap:14px;align-items:center"><div class="sm" data-s="64"></div><div class="sm" data-s="32"></div><small>64 / 32px</small></div>`}</div></div>`;
+ g.insertAdjacentHTML('beforeend',cell(false)+cell(true));
+ document.fonts.ready.then(()=>{
+  document.querySelectorAll('.tab').forEach(t=>{
+   const fs=parseFloat(getComputedStyle(t).getPropertyValue('--fs')), w=t.querySelector('.inner').getBoundingClientRect().width;
+   const bez=fs*.104, padL=fs*PADL, padR=fs*.07; t.style.width=(w+padL+padR+2*bez)+'px'; t.style.paddingRight=(bez+padR)+'px';
+  });
+  document.querySelectorAll('.sm').forEach(box=>{
+   const src=box.closest('.row').querySelector('.tab'); const c=src.cloneNode(true); const s=+box.dataset.s;
+   const k=s/src.getBoundingClientRect().width; c.style.transform=`scale(${k})`; c.style.transformOrigin='0 0';
+   box.style.width=s+'px'; box.style.height=(src.getBoundingClientRect().height*k)+'px'; box.appendChild(c);
+  });
+  document.body.dataset.ready=1;
+ });
+});
+</script>
