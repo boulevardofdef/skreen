@@ -1,0 +1,15 @@
+# Skreen
+
+> Skreen is software that turns an Android tablet into an always-on wall display for your day: calendar, to-do list, shopping list, weather, timers, music and live radio. It is free, with one optional $14.99 one-time upgrade (Skreen+). Skreen does not sell hardware. An iPad version is planned.
+
+## What it does
+- Free: clock, weather, calendar (Google, Outlook, Apple or any calendar link), to-do list that syncs with Google Tasks, up to four timers, now-playing music controls, and live internet radio.
+- Skreen+ ($14.99 once, no subscription): dinner planner, shopping list, world news headlines, art and photo gallery, custom layouts, multiple Google accounts, and Big Skreen Mode (large, rotating slides readable from across the room).
+- Privacy: no Skreen accounts; calendars and lists stay in the user's Google account and on the tablet. No ads, no tracking.
+- Not a voice assistant: no smart-home control and no video calls.
+
+## Links
+- Website: https://skreen.fyi/
+- Try it with sample data: https://app.skreen.fyi/?test=yes
+- Privacy policy: https://app.skreen.fyi/privacy.html
+- Support: support@skreen.fyi
