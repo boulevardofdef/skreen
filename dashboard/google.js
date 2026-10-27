@@ -8,7 +8,8 @@ window.Google = (() => {
   const DEFAULT_TASK_LIST = 'Household';
 
   let tokenProvider = null;   // (account) => Promise<token>
-  const init = (getToken) => { tokenProvider = getToken; };
+  let onExpired = null;       // (account) => void: called when Google keeps refusing the token, so the app can drop it
+  const init = (getToken, expired) => { tokenProvider = getToken; onExpired = expired || null; };
 
   class AuthError extends Error {}
   class QuotaError extends Error {}   // Google says too many requests: back off and keep showing what we have
@@ -20,7 +21,7 @@ window.Google = (() => {
       const headers = { Authorization: 'Bearer ' + token };
       if (opts.body) headers['Content-Type'] = 'application/json';
       const res = await fetch(url, { ...opts, headers });
-      if (res.status === 401) { if (attempt === 0) continue; throw new AuthError('expired'); }
+      if (res.status === 401) { if (attempt === 0) continue; if (onExpired) { try { onExpired(acct); } catch (_) {} } throw new AuthError('expired'); }
       if (res.status === 429) throw new QuotaError('quota');
       if (!res.ok) throw new Error('Google returned ' + res.status);
       return res.status === 204 ? null : res.json();

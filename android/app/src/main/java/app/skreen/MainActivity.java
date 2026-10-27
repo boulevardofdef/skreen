@@ -55,6 +55,7 @@ import androidx.webkit.WebViewAssetLoader;
 import com.google.android.gms.auth.api.identity.AuthorizationRequest;
 import com.google.android.gms.auth.api.identity.AuthorizationResult;
 import com.google.android.gms.auth.api.identity.Identity;
+import com.google.android.gms.auth.api.identity.RevokeAccessRequest;
 import com.google.android.gms.common.AccountPicker;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.Scope;
@@ -409,6 +410,21 @@ public class MainActivity extends Activity {
         return out;
     }
 
+    /**
+     * Takes back Skreen's access to one Google account, and with it the access token Google Play services keeps cached.
+     * Without this, a person who removes Skreen in their Google account (or signs out and in again) is handed the old,
+     * dead token with no consent screen, and every request then fails.
+     */
+    private void revokeGrant(final String account) {
+        if (account == null || account.isEmpty()) return;
+        runOnUiThread(() -> {
+            try {
+                Identity.getAuthorizationClient(this).revokeAccess(RevokeAccessRequest.builder()
+                        .setAccount(new Account(account, "com.google")).setScopes(SCOPES).build());
+            } catch (Exception ignored) { }
+        });
+    }
+
     /** The account just picked in a sign-in that then failed or was cancelled: take it out again, so Skreen doesn't think it's signed in. */
     private String pendingNewAccount;
     private void forgetPendingAccount() {
@@ -710,9 +726,16 @@ public class MainActivity extends Activity {
         /** Forgets one account (the others stay signed in). */
         @JavascriptInterface
         public void removeAccount(final String account) {
+            revokeGrant(account);
             List<String> all = accounts();
             all.remove(account);
             saveAccounts(all);
+        }
+
+        /** Google refused this account's token: drop the cached token and the grant, so the next sign-in asks for consent again. */
+        @JavascriptInterface
+        public void revokeGrant(final String account) {
+            MainActivity.this.revokeGrant(account);
         }
 
         /** Turns coordinates into a place name using the device's geocoder. Answer: window.skreenPlace(id, {city, region, country} | null). */
@@ -851,6 +874,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void signOut() {
+            for (String a : accounts()) revokeGrant(a);
             prefs.edit().remove("account").remove("accounts").apply();
         }
 
