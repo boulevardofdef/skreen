@@ -1,0 +1,60 @@
+<!doctype html><meta charset="utf-8">
+<style>
+@font-face{font-family:Arch;src:url(file:///home/user/skreen/dashboard/fonts/archivo.woff2);font-weight:100 900;font-stretch:62% 125%}
+@font-face{font-family:Mono;src:url(file:///home/user/skreen/dashboard/fonts/geist-mono.woff2);font-weight:100 900}
+body{margin:0;background:#f3eee3;font-family:Mono,monospace;width:1500px}
+.grid{display:grid;grid-template-columns:1fr 1fr}
+.cell{padding:30px 44px 28px;border:1px solid rgba(14,13,11,.12);margin:-1px 0 0 -1px;display:flex;flex-direction:column;gap:20px}
+.cell.dk{background:#0e0d0b}
+.lab{font:600 17px Mono;letter-spacing:.12em;color:#5d574c;text-transform:uppercase}
+.dk .lab{color:#9a9184}
+.row{display:flex;align-items:center;gap:44px}
+.word{display:flex;align-items:center}
+.tab{border-radius:calc(var(--fs)*.2);background:#2a2723;box-shadow:inset 0 0 0 calc(var(--fs)*.03) #4a453e;display:flex;align-items:center;justify-content:flex-end;position:relative;box-sizing:border-box;flex:none}
+.tab::before{content:"";position:absolute;inset:calc(var(--fs)*.104);border-radius:calc(var(--fs)*.125);background:#171513}
+.inner{position:relative;display:flex;align-items:center}
+.sk,.rest{font-family:Arch;font-weight:800;font-stretch:100%;letter-spacing:-.03em;line-height:1;font-size:var(--fs);white-space:nowrap}
+.sk{color:#ff5b2e;position:relative}
+.rest{color:#0e0d0b}.dk .rest{color:#f3eee3}
+small{font:500 13px Mono;color:#8a8377;letter-spacing:.08em}
+</style>
+<div class="grid" id="g"></div>
+<script>
+const FS=96, PADL=1.0, ALPHA=+(new URLSearchParams(location.search).get('a')||.35);
+const cv=document.createElement('canvas').getContext('2d',{willReadFrequently:true});
+let outline=null; // the S's left contour: for every row, where its first ink pixel is (in em units, baseline at 0)
+function trace(){
+ const N=400, X0=60; const c=document.createElement('canvas'); c.width=700; c.height=700; const x=c.getContext('2d',{willReadFrequently:true});
+ x.font=`800 ${N}px Arch`; x.textBaseline='alphabetic'; x.fillStyle='#000'; x.fillText('S',X0,500);
+ const d=x.getImageData(0,0,700,700).data, rows=[];
+ for(let y=0;y<700;y++){ let f=-1; for(let xx=0;xx<700;xx++){ if(d[(y*700+xx)*4+3]>110){ f=xx; break; } } if(f>=0) rows.push([(f-X0)/N,(y-500)/N]); }
+ outline=rows; // [x em, y em relative to baseline]
+}
+const metrics=(fs)=>{ cv.font=`800 ${fs}px Arch`; const m=cv.measureText('S'); const A=m.fontBoundingBoxAscent,D=m.fontBoundingBoxDescent; return (fs-(A+D))/2+A; };
+const tab=(fs)=>{
+ const base=metrics(fs), pad=PADL*fs; const pts=outline.filter((_,i)=>i%2===0);
+ const first=pts[0], last=pts[pts.length-1];
+ let d=`M ${-pad} ${base+first[1]*fs} `; pts.forEach(([x,y])=>{ d+=`L ${(x+.004)*fs} ${base+y*fs} `; }); d+=`L ${-pad} ${base+last[1]*fs} Z`;
+ return `<div class="tab" style="--fs:${fs}px;height:${fs*1.42}px"><div class="inner"><svg style="position:absolute;left:0;top:0;overflow:visible" width="1" height="1"><path d="${d}" fill="rgba(255,91,46,${ALPHA})"/></svg><span class="sk">Sk</span></div></div>`;
+};
+document.fonts.load('800 96px Arch').then(()=>{
+ trace();
+ const g=document.getElementById('g');
+ const cell=(dark)=>`<div class="cell ${dark?'dk':''}"><div class="lab">X · 35%, following the S’s left edge${dark?' · on dark':''}</div>
+  <div class="row">${tab(FS*1.15)}<div class="word" style="--fs:${FS}px">${tab(FS)}<div class="rest">reen</div></div>
+  ${dark?'':`<div style="display:flex;gap:14px;align-items:center"><div class="sm" data-s="64"></div><div class="sm" data-s="32"></div><small>64 / 32px</small></div>`}</div></div>`;
+ g.insertAdjacentHTML('beforeend',cell(false)+cell(true));
+ document.fonts.ready.then(()=>{
+  document.querySelectorAll('.tab').forEach(t=>{
+   const fs=parseFloat(getComputedStyle(t).getPropertyValue('--fs')), w=t.querySelector('.inner').getBoundingClientRect().width;
+   const bez=fs*.104, padL=fs*PADL, padR=fs*.07; t.style.width=(w+padL+padR+2*bez)+'px'; t.style.paddingRight=(bez+padR)+'px';
+  });
+  document.querySelectorAll('.sm').forEach(box=>{
+   const src=box.closest('.row').querySelector('.tab'); const c=src.cloneNode(true); const s=+box.dataset.s;
+   const k=s/src.getBoundingClientRect().width; c.style.transform=`scale(${k})`; c.style.transformOrigin='0 0';
+   box.style.width=s+'px'; box.style.height=(src.getBoundingClientRect().height*k)+'px'; box.appendChild(c);
+  });
+  document.body.dataset.ready=1;
+ });
+});
+</script>
