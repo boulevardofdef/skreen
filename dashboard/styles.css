@@ -845,3 +845,13 @@ body.native p.native-only { display: block; }
 .sv.p1 .sv-stage.headlines, .sv.p2 .sv-stage.headlines { width: 100%; }
 .sv.p1 .sv-headline { justify-content: center; text-align: center; }
 .sv.p2 .sv-headline { justify-content: flex-end; text-align: right; }
+
+/* Big Skreen Mode: the forecast slide */
+.fc-days { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2.2vw; width: 100%; margin-top: 3vh; }
+.fc-day { display: flex; flex-direction: column; align-items: center; gap: 1.4vh; min-width: 0; padding: 3vh 0 2.4vh; border-top: 2px solid rgba(243, 238, 227, 0.22); }
+.fc-d { font: 700 max(1.3rem, 3.2vh)/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.fc-day .ico { width: 15vh; height: 15vh; color: var(--accent); }
+.fc-hi { font-size: calc(min(9vw, 14vh) * var(--scale)); font-weight: 800; font-stretch: var(--stretch); line-height: 0.9; letter-spacing: -0.03em; font-variation-settings: "opsz" 96; }
+.fc-lo { font: 600 max(2rem, 6vh)/1 var(--mono); color: var(--muted); }
+.fc-pop { font: 700 max(1.4rem, 3.4vh)/1 var(--mono); color: var(--accent); letter-spacing: 0.06em; }
+.sv.p1 .fc-days, .sv.p2 .fc-days { width: 100%; }

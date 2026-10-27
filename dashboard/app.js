@@ -1223,7 +1223,7 @@
 
   // ─── Big-screen tour (burn-in protection) ──────────────────────────────────
 
-  const TOUR_ALL = { time: 'clock', weather: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news', meals: 'meals', shop: 'shop', music: 'music' };
+  const TOUR_ALL = { time: 'clock', weather: 'weather', forecast: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news', meals: 'meals', shop: 'shop', music: 'music' };
   const SLIDE_NAMES = { time: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos', news: 'In the news', meals: 'Dinners', shop: 'Shopping list', music: 'Music (while playing)' };
   const slideSkipped = (v) => alwaysTour() && String(cfg.slideSkip || '').split(',').includes(v);
   const musicPlaying = () => !!((music.np && music.np.playing) || music.audio);
@@ -1231,14 +1231,16 @@
   let TOUR = Object.keys(TOUR_ALL);
   const ROTATING_TOUR = ['time', 'weather', 'agenda', 'todo'];   // the occasional tour is always these four, so it's always the same length
   // Is this slide switched on, and does it have something to show right now?
-  const viewOk = (v) => !slideSkipped(v) && (v === 'music' ? (alwaysTour() && musicPlaying()) : visibleWidgets().includes(TOUR_ALL[v])) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (!['agenda', 'todo'].includes(v) || state.loaded)
+  const viewOkBase = (v) => !slideSkipped(v) && (v === 'music' ? (alwaysTour() && musicPlaying()) : visibleWidgets().includes(TOUR_ALL[v])) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (!['agenda', 'todo'].includes(v) || state.loaded)
+  // The forecast slide has no switch of its own: choose Weather and you get both (Big Skreen Mode only), each for the full slide time.
+  const viewOk = (v) => (v === 'forecast' ? alwaysTour() && viewOkBase('weather') && !!(state.weather && state.weather.daily) : viewOkBase(v));
   // The occasional tour is always the same length (four slides' worth). If some of the usual four are off, the rest
   // are shown longer; if all four are off, it uses up to four of the other widgets you have on.
   const tourViews = () => {
     const all = Object.keys(TOUR_ALL).filter(viewOk);
     if (alwaysTour()) return all;
     const base = ROTATING_TOUR.filter(viewOk);
-    return base.length ? base : all.filter((v) => v !== 'music').slice(0, 4);
+    return base.length ? base : all.filter((v) => v !== 'music' && v !== 'forecast').slice(0, 4);
   };
   const tour = { on: false, i: 0, cycle: 0, timer: null, last: Date.now() };
 
@@ -1433,6 +1435,14 @@
     if (name === 'time') {
       const { hm, ap } = timeParts(now);
       return `<div class="kicker">Time</div><div class="big">${clockHtml(hm)}${ap ? `<small>${ap}</small>` : ''}</div><div class="bigdate">${esc(fmtDate(now, { weekday: 'long', month: 'long', day: 'numeric' }))}</div>`;
+    }
+    if (name === 'forecast') {   // Big Skreen Mode: the days ahead, one big card each
+      const w = state.weather, d = w.daily;
+      const cards = d.time.slice(1, 6).map((t, i) => {
+        const k = i + 1, info = Icons.weather(d.weather_code[k]), pop = d.precipitation_probability_max ? d.precipitation_probability_max[k] : 0;
+        return `<div class="fc-day"><div class="fc-d">${esc(i === 0 ? 'Tomorrow' : fmtDate(parseDate(t), { weekday: 'short' }))}</div>${info.svg}<div class="fc-hi">${Math.round(d.temperature_2m_max[k])}°</div><div class="fc-lo">${Math.round(d.temperature_2m_min[k])}°</div><div class="fc-pop">${pop >= 30 ? pop + '%' : '&nbsp;'}</div></div>`;
+      }).join('');
+      return `<div class="kicker">Forecast · ${esc(cfg.place || '')}</div><div class="fc-days">${cards}</div>`;
     }
     if (name === 'weather') {
       const w = state.weather;
