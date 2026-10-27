@@ -1,0 +1,50 @@
+<!doctype html><meta charset="utf-8">
+<style>
+@font-face{font-family:Bric;src:url(file:///home/user/skreen/dashboard/fonts/bricolage.woff2);font-weight:200 800;font-stretch:75% 100%}
+@font-face{font-family:Frau;src:url(file:///home/user/skreen/dashboard/fonts/fraunces.woff2);font-weight:100 900}
+@font-face{font-family:Arch;src:url(file:///home/user/skreen/dashboard/fonts/archivo.woff2);font-weight:100 900;font-stretch:62% 125%}
+@font-face{font-family:Space;src:url(file:///home/user/skreen/dashboard/fonts/space-grotesk.woff2);font-weight:300 700}
+@font-face{font-family:Big;src:url(file:///home/user/skreen/dashboard/fonts/big-shoulders.woff2);font-weight:100 900}
+@font-face{font-family:Mono;src:url(file:///home/user/skreen/dashboard/fonts/geist-mono.woff2);font-weight:100 900}
+body{margin:0;background:#f3eee3;font-family:Mono,monospace;width:1500px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.cell{padding:34px 44px 30px;border:1px solid rgba(14,13,11,.12);margin:-1px 0 0 -1px;display:flex;flex-direction:column;gap:22px}
+.cell.dk{background:#0e0d0b}
+.lab{font:600 18px Mono;letter-spacing:.14em;color:#5d574c;text-transform:uppercase}
+.dk .lab{color:#9a9184}
+.row{display:flex;align-items:center;gap:40px}
+.tab{width:210px;height:146px;border-radius:26px;background:#2a2723;box-shadow:inset 0 0 0 3px #4a453e;display:grid;place-items:center;position:relative;flex:none}
+.tab::before{content:"";position:absolute;inset:11px;border-radius:16px;background:#171513}
+.tab span{position:relative;color:#ff5b2e;line-height:1;white-space:nowrap}
+.word{display:flex;align-items:center;gap:0}
+.word .tab.lock::before{inset:10px;border-radius:12px}
+.word .rest{line-height:1;color:#0e0d0b}
+.dk .word .rest{color:#f3eee3}
+</style>
+<div class="grid" id="g"></div>
+<script>
+const F=[
+ ['A','Bricolage Grotesque (the site\u2019s font)','Bric',800,'font-stretch:80%','letter-spacing:-.02em'],
+ ['B','Fraunces (soft serif)','Frau',700,'','letter-spacing:-.02em'],
+ ['C','Archivo (clean, wide)','Arch',800,'font-stretch:100%','letter-spacing:-.03em'],
+ ['D','Space Grotesk (techy)','Space',700,'','letter-spacing:-.04em'],
+ ['E','Big Shoulders (tall, condensed)','Big',800,'','letter-spacing:0'],
+ ['F','Geist Mono (typewriter)','Mono',700,'','letter-spacing:-.06em'],
+];
+const FS=96, g=document.getElementById('g');
+F.forEach(([id,name,fam,w,extra,ls])=>{
+ const st=`font-family:${fam};font-weight:${w};${extra};${ls};font-size:${FS}px`;
+ const cell=(dark)=>`<div class="cell ${dark?'dk':''}"><div class="lab">${id} \u00b7 ${name}${dark?' \u00b7 on dark':''}</div>
+  <div class="row"><div class="tab"><span style="${st};font-size:${FS*1.15}px">Sk</span></div>
+  <div class="word"><div class="tab lock" style="height:${FS*1.42}px;border-radius:${FS*.2}px"><span class="sk" style="${st}">Sk</span></div><div class="rest" style="${st}">reen</div></div></div></div>`;
+ g.insertAdjacentHTML('beforeend',cell(false)+cell(true));
+});
+document.fonts.ready.then(()=>{
+ // the lockup tablet hugs the letters: "Sk" sits at its right edge, so the gap to "reen" reads as normal spacing
+ document.querySelectorAll('.tab.lock').forEach(t=>{
+  const sk=t.querySelector('.sk'), w=sk.getBoundingClientRect().width, bez=10, padL=FS*0.34, padR=FS*0.07;
+  t.style.width=(w+padL+padR+2*bez)+'px'; t.style.justifyContent='flex-end'; t.style.display='flex'; t.style.alignItems='center'; t.style.paddingRight=(bez+padR)+'px'; t.style.boxSizing='border-box';
+  t.style.setProperty('--b',bez+'px');
+ });
+ document.body.dataset.ready=1;});
+</script>
