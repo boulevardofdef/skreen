@@ -499,7 +499,8 @@ body.native .field.native-only { display: flex; }
 .sv-list .rn { font-size: max(2.6rem, 8vh); font-weight: 700; line-height: 1.02; letter-spacing: -0.025em; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sv-list .rn small { display: block; margin-top: 0.8vh; font: 400 0.34em/1.2 var(--mono); color: var(--muted); letter-spacing: 0; }
 .sv-list .row.now .rt, .sv-list .row.now .rn { color: var(--accent); }
-.sv-list .bullet { width: max(1.8rem, 4.6vh); height: max(1.8rem, 4.6vh); border: 0.5vh solid var(--ink); flex: none; align-self: center; }
+/* The box sits level with the FIRST line of the item, however many lines the item runs to (not floating in the middle of them). */
+.sv-list .bullet { width: max(1.8rem, 4.6vh); height: max(1.8rem, 4.6vh); border: 0.5vh solid var(--ink); border-radius: 0.5vh; flex: none; align-self: flex-start; margin-top: calc((max(2.6rem, 8vh) * 1.02 - max(1.8rem, 4.6vh)) / 2); }
 .sv-list .empty-big { font-size: max(3rem, 10vh); font-weight: 800; font-stretch: var(--stretch); letter-spacing: -0.03em; line-height: 1; }
 .sv-list .more { padding-top: 2.4vh; font: 600 max(1.2rem, 3vh)/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 
@@ -855,3 +856,5 @@ body.native p.native-only { display: block; }
 .fc-lo { font: 600 max(2rem, 6vh)/1 var(--mono); color: var(--muted); }
 .fc-pop { font: 700 max(1.4rem, 3.4vh)/1 var(--mono); color: var(--accent); letter-spacing: 0.06em; }
 .sv.p1 .fc-days, .sv.p2 .fc-days { width: 100%; }
+/* Big to-do slide: the "who" label sits snugly under its item, lined up with the text. */
+.sv-list .sv-who { display: block; margin: 1vh 0 0; line-height: 1.2; vertical-align: baseline; font-size: max(1.1rem, 2.6vh); }
