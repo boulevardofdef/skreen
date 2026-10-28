@@ -122,8 +122,12 @@ button { cursor: pointer; }
 
 .scroll {
   flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6rem), transparent);
-          mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6rem), transparent);
+  /* The bottom fade. It must not tile and must be fully clear before the very last pixel row: on screens where the box
+     height lands between two pixels, a repeated or half-faded edge showed up as a thin solid line under the fade. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6rem), transparent calc(100% - 2px));
+          mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6rem), transparent calc(100% - 2px));
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
 }
 .scroll::-webkit-scrollbar { display: none; }
 
