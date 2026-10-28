@@ -60,6 +60,7 @@
   // The accent is the one bright colour on the screen (the "now" event, weather icon, timers). Everything draws it from --accent.
   const ACCENTS = { orange: '#ff5b2e', amber: '#ffb020', mint: '#3ddc97', sky: '#4cc3ff', blue: '#7b93ff', violet: '#b58cff', rose: '#ff6fae', red: '#ff4d4d' };
   const applyAccent = (id) => {
+    if (id === 'auto') { const names = Object.keys(ACCENTS); id = names[Backgrounds.dayIndex() % names.length]; }   // "Surprise me": a new one each day, like the backgrounds
     const c = ACCENTS[id] || ACCENTS.orange, n = parseInt(c.slice(1), 16);
     const mix = (v) => Math.round(v + (255 - v) * 0.4);   // a lighter shade for the alarm's pulse
     const root = document.documentElement.style;
@@ -293,6 +294,7 @@
       renderTasks();           // retires checked-off items after 24 hours
       if (mealsShown()) { drawMeals(); if (now.getHours() === 0 && now.getMinutes() === 5) refreshMeals(); }
       applyBackground();       // new day → new background
+      if (cfg.accent === 'auto') applyAccent('auto');   // and a new accent colour
       updateNight(now);
       updateShowNow();
       nudgeLayout(now);

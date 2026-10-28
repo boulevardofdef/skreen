@@ -30,5 +30,5 @@ window.Backgrounds = (() => {
   // "auto" rotates through the list, one per day.
   const forDay = (d) => list[dayIndex(d) % list.length];
 
-  return { list, byId, forDay };
+  return { list, byId, forDay, dayIndex };
 })();
