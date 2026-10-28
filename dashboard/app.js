@@ -1089,7 +1089,7 @@
   // Now playing and the buttons come from Android's media sessions, so they work with Spotify, YouTube
   // Music and any other music app. Radio is searched through the relay and played by Skreen itself.
 
-  const music = { np: null, art: '', artKey: '', audio: null, station: null, results: [], searched: null };
+  const music = { np: null, art: '', artKey: '', audio: null, station: null, results: [], searched: null, npPlaying: false, radioAt: 0 };
   const hasMediaNative = () => !!(NATIVE && NATIVE.nowPlaying);
   const DEMO_NP = { access: true, active: true, playing: true, title: 'Something Lifted Her Up', artist: 'Parsons/Archer', album: 'Hydrophobia', app: 'Spotify', canPrev: true, canNext: true };
 
@@ -1099,6 +1099,15 @@
       const np = JSON.parse(NATIVE.nowPlaying());
       if (np.key !== music.artKey) { music.artKey = np.key || ''; music.art = np.key ? (NATIVE.nowPlayingArt() || '') : ''; }
       music.np = np;
+      // The music app started playing again while a radio station was on: the app wins, and the radio steps aside.
+      const playing = !!np.playing;
+      if (music.audio && playing && !music.npPlaying) {
+        // It had been paused (by us, when the radio started) and now plays again. Within the first moments of the radio, wait
+        // for the next reading before deciding, so the pause is never mistaken for a restart.
+        if (Date.now() - music.radioAt > 3000) { music.npPlaying = true; stopRadio(); }
+        return;
+      }
+      music.npPlaying = playing;
     } catch (_) { music.np = null; }
   }
   function updateMusicBtn() {
@@ -1106,7 +1115,7 @@
   }
   function renderNow() {
     const box = $('musicNow'), np = music.np;
-    if (music.audio && music.station && !(np && np.playing)) {   // a radio station is playing in Skreen itself
+    if (music.audio && music.station) {   // a radio station is playing in Skreen itself: it takes over the panel, with just a stop button
       $('songSearch').hidden = !(hasMediaNative() && np && np.access && np.active);
       box.innerHTML = `<div class="np"><div class="np-art">${Icons.music}</div><div><div class="np-title">${esc(music.station.name)}</div><div class="np-artist">Internet radio</div><div class="np-controls"><button type="button" class="main" data-radio-stop aria-label="Stop">${Icons.pause}</button></div></div></div>`;
       return;
@@ -1158,7 +1167,15 @@
   }
   function playStation(st) {
     stopRadio();
+    // Starting radio hands the speakers over: ask the music app to pause, so its song doesn't sit on screen as "now playing".
+    music.radioAt = Date.now();
+    music.npPlaying = !!(music.np && music.np.playing);
+    if (hasMediaNative() && music.np && music.np.playing) {
+      try { NATIVE.mediaControl('pause'); } catch (_) {}
+      [700, 1800].forEach((ms) => setTimeout(readNow, ms));   // note that it did pause, so a later play can be told apart
+    }
     const a = new Audio(st.url);
+    a.onpause = () => setTimeout(() => { if (music.audio === a && a.paused && !a.ended) stopRadio(); }, 400);   // something else took the audio: don't keep showing "stop"
     a.onerror = () => { if (music.audio === a) { stopRadio(); showToast('That station won’t play right now'); } };
     music.audio = a; music.station = st;
     renderRadioPlaying(); renderNow(); updateMusicBtn();
@@ -1283,6 +1300,7 @@
 
   function showTourView() {
     clearInterval(tour.subTimer);
+    releasePhotos();
     const body = $('showBody'), prev = body.firstElementChild;
     if (prev) { prev.classList.add('out'); setTimeout(() => prev.remove(), 600); }
     const name = TOUR[tour.i];
@@ -1295,6 +1313,7 @@
     fitToWidth(v.querySelector('.big'), v.clientWidth * 0.82);   // never wider than the space inside the side margins
     fitRows(v);
     if (alwaysTour()) startSubs(v); else clearInterval(tour.subTimer);
+    if (name === 'photos' && alwaysTour()) { photo.hold = true; tour.photoLocked = true; clearTimeout(photo.timer); planPhotoSwaps(); }
     tour.timer = setTimeout(() => {
       tour.i++;
       if (tour.i < TOUR.length) showTourView();
@@ -1320,8 +1339,9 @@
     }
     // A small player with its controls, while music is on (the Music slide has the big one).
     const el = $('showNow');
-    const np = music.np && music.np.active ? music.np : null;
-    const player = on && view !== 'music' && (np || music.audio);
+    const radio = !!(music.audio && music.station);
+    const np = !radio && music.np && music.np.active ? music.np : null;
+    const player = on && view !== 'music' && (np || radio);
     el.hidden = !player;
     if (!player) return;
     const title = np ? (np.title || 'Playing') : music.station.name;
@@ -1348,11 +1368,28 @@
     if (!tour.on) return;
     if (hasMediaNative()) readNow();
     updateShowNow();
-    const ph = document.querySelector('#showBody .sv:not(.out) .sv-photo');   // a long photo slide keeps changing pictures
+    mirrorPhotoSlide();
+  }, 3000);
+  // Put the current picture and caption on the photo slide (only ever called when the picture is meant to change).
+  function mirrorPhotoSlide() {
+    if (tour.on && tour.photoLocked) return;   // the picture stays put until a planned change
+    const ph = document.querySelector('#showBody .sv:not(.out) .sv-photo');
     if (ph && photo.current && !ph.style.backgroundImage.includes(photo.current)) { ph.style.backgroundImage = `url('${photo.current}')`; ph.style.setProperty('--img', `url('${photo.current}')`); }
     const cap = document.querySelector('#showBody .sv:not(.out) .sv-caption');
     if (cap && cap.textContent !== $('photoCaption').textContent) cap.textContent = $('photoCaption').textContent;
-  }, 3000);
+    if (tour.on && tour.photoLocked === false) tour.photoLocked = true;   // a planned change is done: lock again
+  }
+  // A photo slide never changes its picture unless it runs two minutes or more. Then the picture changes only between the
+  // 1-minute mark and the last minute (a 2-minute slide changes once, halfway), and each picture stays at least a minute.
+  function planPhotoSwaps() {
+    (tour.photoTimers || []).forEach(clearTimeout); tour.photoTimers = [];
+    const len = slideMs(), gap = Math.max(60000, (Number(cfg.photoSeconds) || 30) * 1000);
+    for (let t = 60000; t + 60000 <= len; t += gap) tour.photoTimers.push(setTimeout(() => { if (tour.on) { tour.photoLocked = false; nextPhoto(); } }, t));
+  }
+  function releasePhotos() {
+    (tour.photoTimers || []).forEach(clearTimeout); tour.photoTimers = [];
+    if (photo.hold) { photo.hold = false; if (photosShown()) nextPhoto(); }   // line up a fresh picture for next time
+  }
 
   // Lists on the big pages show only the rows that fit inside the margins, never one cut off at the edge.
   function fitRows(v) {
@@ -1376,7 +1413,7 @@
   }
 
   function endTour() {
-    clearTimeout(tour.timer); clearInterval(tour.subTimer);
+    clearTimeout(tour.timer); clearInterval(tour.subTimer); releasePhotos();
     tour.on = false; tour.last = tour.big ? 0 : Date.now();   // Big Skreen Mode comes straight back (after a dialog, or the night)
     tour.big = false;
     document.body.classList.remove('big-mode');
@@ -1431,7 +1468,8 @@
       return `<div class="kicker">In the news</div><div class="sv-list sv-news">${rows}</div>`;
     }
     if (name === 'music') {
-      const np = music.np && music.np.playing ? music.np : null;
+      const radio = !!(music.audio && music.station);
+      const np = !radio && music.np && music.np.playing ? music.np : null;
       const title = np ? (np.title || 'Playing') : (music.station ? music.station.name : 'Playing');
       const sub = np ? [np.artist, np.app].filter(Boolean).join(' \u00b7 ') : 'Internet radio';
       return `<div class="kicker">Now playing</div><div class="sv-musicrow"><div class="np-art big" ${np && music.art ? `style="background-image:url('${music.art}')"` : ''}>${np && music.art ? '' : Icons.music}</div><div class="sv-musictext"><div class="mt">${esc(title)}</div><div class="ma">${esc(sub)}</div></div></div>`;
@@ -2004,7 +2042,7 @@
 
   // ─── Photos widget (Skreen+) ────────────────────────────────────────────────
 
-  const photo = { items: [], order: [], i: -1, source: '', listedAt: 0, timer: null, front: 'B', current: '' };
+  const photo = { items: [], order: [], i: -1, source: '', listedAt: 0, timer: null, front: 'B', current: '', hold: false };
   const photosShown = () => hasPlus() && visibleWidgets().includes('photos');
   const photoSource = () => (cfg.photoSource === 'mine' && Photos.nativeOK() ? 'mine' : 'art');
 
@@ -2021,6 +2059,7 @@
       photo.current = img.src;
       $('photoCaption').textContent = item.caption || '';
       then(true);
+      mirrorPhotoSlide();
     };
     let triedSmall = false;
     img.onerror = () => { if (item.fallback && !triedSmall) { triedSmall = true; img.src = item.fallback; } else then(false); };   // the smaller copy of a painting, if the large one won't load
@@ -2035,7 +2074,7 @@
     showPhoto(item, (ok) => {
       if (!ok) return nextPhoto(failures + 1);
       $('photoNote').textContent = '';
-      photo.timer = setTimeout(() => nextPhoto(), Math.max(10, Number(cfg.photoSeconds) || 30) * 1000);
+      if (!photo.hold) photo.timer = setTimeout(() => nextPhoto(), Math.max(10, Number(cfg.photoSeconds) || 30) * 1000);   // held while Big Skreen Mode shows the photo slide: it changes pictures only on its own schedule
     });
   }
 
