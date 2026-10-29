@@ -9,7 +9,11 @@
 
 const MODEL = 'claude-sonnet-5-5';
 const KEEP = 8;            // the app shows the top 2 to 4
-const MAX_AGE_H = 36;      // a headline never outlives this, whatever its rank
+const LIFE_H = 4;          // an ordinary headline stays up this long, then makes way for others
+const MAJOR_LIFE_H = 24;  // a true front-page story can stay up to a day (until a follow-up headline replaces it)
+const RETIRED_H = 48;     // how long we remember retired headlines, so the same facts aren't put back up
+const lifeMs = (h) => (h && h.major ? MAJOR_LIFE_H : LIFE_H) * 36e5;
+const alive = (h, now) => now - Date.parse(h.at) <= lifeMs(h);
 const KEY = 'headlines';
 
 const entities = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
@@ -77,27 +81,30 @@ What to choose and how to rank (most significant first):
 4. Sports, culture and science only when the event is exceptional.
 Skip routine, local and niche items.
 
-Rolling list:
+Rolling list and freshness:
 - You also get the headlines you chose last time, each with its age and the source items it was built from.
-- Keep a previous headline, with its text unchanged, only when its facts are unchanged, it is still in the current items, and it is more significant than the new candidates it would displace, while still reasonably fresh (under about 24 hours unless it is clearly still the biggest story).
-- If the facts of a story have changed, write a new headline for it.
+- Headlines rotate. An ordinary headline stays up about ${LIFE_H} hours, then is retired, even if its story is still on the page, so that other stories get a turn. Retired headlines are listed for you: do not write them again unless the item has new facts.
+- A true front-page story may stay up to ${MAJOR_LIFE_H} hours. Mark it "major": true. Reserve this for stories every newsroom would lead with: a catastrophe with a large death toll, a war's major turning point, a national leader elected, deposed or killed. At most two at a time. Most headlines are not major.
+- When a story develops, write a new headline about the new facts (it replaces the old one). Do not keep a headline whose facts have been overtaken.
+- Keep a previous headline, text unchanged, only while its facts are unchanged, it is still in the current items, and it is still among the most significant choices.
 - If a previous headline's story is no longer in the current items, drop it.
 - Rank the list: most significant first. Return at most ${KEEP}.
 
 Reply with JSON only, no other text:
-{"headlines":[{"text":"...","lines":[3,7],"prev":null}]}
+{"headlines":[{"text":"...","lines":[3,7],"prev":null,"major":false}]}
 "lines" are the numbers of the current items the headline is built from. "prev" is the id of the previous headline you are keeping unchanged, or null.`;
 
-function buildPrompt(items, prev, now) {
+function buildPrompt(items, prev, now, retired = []) {
   const cur = items.map((it, i) => `${i + 1}. [${it.day}] ${it.cat}${it.topic ? ' / ' + it.topic : ''}: ${it.text}`).join('\n');
   const old = prev.length
-    ? prev.map((p, i) => `id ${i + 1} (${Math.round((now - Date.parse(p.at)) / 36e5)}h old): ${p.text}\n   from: ${p.src.join(' | ')}`).join('\n')
+    ? prev.map((p, i) => `id ${i + 1} (${(Math.round((now - Date.parse(p.at)) / 36e4) / 10)}h old${p.major ? ', major' : ''}): ${p.text}\n   from: ${p.src.join(' | ')}`).join('\n')
     : '(none yet)';
-  return `Current items:\n${cur}\n\nPrevious headlines:\n${old}`;
+  const gone = retired.length ? retired.map((r) => `- ${r.text}`).join('\n') : '(none)';
+  return `Current items:\n${cur}\n\nPrevious headlines:\n${old}\n\nRetired headlines (do not repeat):\n${gone}`;
 }
 
 // The model's reply → a clean list, or null when it can't be trusted.
-function checkReply(reply, items, prev, now) {
+function checkReply(reply, items, prev, now, retired = []) {
   let data;
   try { data = JSON.parse(reply.slice(reply.indexOf('{'), reply.lastIndexOf('}') + 1)); } catch (_) { return null; }
   if (!data || !Array.isArray(data.headlines)) return null;
@@ -108,12 +115,15 @@ function checkReply(reply, items, prev, now) {
     if (text.length < 15 || text.length > 90 || /https?:|www\./i.test(text) || !lines.length) continue;
     const before = Number.isInteger(h.prev) && prev[h.prev - 1] && prev[h.prev - 1].text === text ? prev[h.prev - 1] : null;
     const at = before ? before.at : new Date(now).toISOString();
-    if (now - Date.parse(at) > MAX_AGE_H * 36e5) continue;
+    const src = lines.map((n) => items[n - 1].text);
+    const major = !!h.major && out.filter((o) => o.major).length < 2;
+    if (!alive({ at, major }, now)) continue;
     if (out.some((o) => o.text === text)) continue;
-    out.push({ text, at, src: lines.map((n) => items[n - 1].text) });
+    if (retired.some((r) => src.every((t) => r.src.includes(t)))) continue;   // same facts as a retired headline: not news again
+    out.push({ text, at, src, major });
     if (out.length === KEEP) break;
   }
-  return out.length >= 3 ? out : null;
+  return out.length >= 2 ? out : null;   // the app shows two at the least
 }
 
 async function ask(env, system, user) {
@@ -134,19 +144,24 @@ async function refreshNews(env, contact, now = Date.now()) {
   const items = (await Promise.all(days.map((d) => fetchDay(d, contact)))).flat();
   if (items.length < 5) return 'too few items';
   const stored = await env.NEWS.get(KEY, 'json');
-  const prev = ((stored && stored.stories) || []).filter((p) => now - Date.parse(p.at) <= MAX_AGE_H * 36e5 && p.src && p.src.every((s) => items.some((it) => it.text === s)));   // a story whose source lines are gone, or that is too old, is gone
+  const onPage = (p) => p.src && p.src.every((s) => items.some((it) => it.text === s));
+  const prev = ((stored && stored.stories) || []).filter((p) => alive(p, now) && onPage(p));   // a story whose source lines are gone, or whose time is up, is gone
+  const retired = [
+    ...((stored && stored.retired) || []),
+    ...((stored && stored.stories) || []).filter((p) => !alive(p, now)),
+  ].filter((r) => now - Date.parse(r.at) <= RETIRED_H * 36e5).filter((r, i, all) => all.findIndex((x) => x.text === r.text) === i);
   const signature = JSON.stringify(items.map((i) => i.text));   // same page as last time and nothing expired or gone: no need to ask again
   if (stored && stored.signature === signature && prev.length === stored.stories.length) return 'unchanged';
-  const list = checkReply(await ask(env, SYSTEM, buildPrompt(items, prev, now)), items, prev, now);
+  const list = checkReply(await ask(env, SYSTEM, buildPrompt(items, prev, now, retired)), items, prev, now, retired);
   if (!list) return 'rejected reply';
-  await env.NEWS.put(KEY, JSON.stringify({ stories: list, signature, updated: new Date(now).toISOString() }));
+  await env.NEWS.put(KEY, JSON.stringify({ stories: list, retired, signature, updated: new Date(now).toISOString() }));
   return `wrote ${list.length}`;
 }
 
 async function storedHeadlines(env) {
   if (!env.NEWS) return null;
   const s = await env.NEWS.get(KEY, 'json');
-  const fresh = ((s && s.stories) || []).filter((x) => Date.now() - Date.parse(x.at) <= MAX_AGE_H * 36e5);   // if refreshing stalls, old headlines age out and the Wikipedia box takes over
+  const fresh = ((s && s.stories) || []).filter((x) => alive(x, Date.now()));   // if refreshing stalls, old headlines age out and the Wikipedia box takes over
   return fresh.length ? fresh.map((x) => ({ text: x.text, url: '' })) : null;
 }
 // Skreen relay (Cloudflare Worker, free tier).
