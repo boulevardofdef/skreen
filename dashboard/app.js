@@ -8,7 +8,7 @@
     lat: null, lon: null, place: '',
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage', accent: 'orange',
-    showcaseMinutes: '5', refreshMinutes: '10', bigMode: '0', slideSeconds: '60', slideSkip: '', pixelShift: '1',
+    showcaseMinutes: '5', refreshMinutes: '10', bigMode: '0', bigTap: '1', bigResume: '1', slideSeconds: '60', slideSkip: '', pixelShift: '1',
     layout: 'clock,weather,agenda,todo', photoSource: 'art', photoSeconds: '30', mealList: '', shopList: '', pageSeconds: '60',
     ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
@@ -304,6 +304,7 @@
       // Fresh start every night: picks up app updates and keeps memory tidy.
       if (now.getHours() === 3 && now.getMinutes() === 30) location.reload();
     }
+    maybeResumeBig();
     setTimeout(tick, 1000 - now.getMilliseconds() + 5);
   }
 
@@ -1263,12 +1264,13 @@
   };
   const tour = { on: false, i: 0, cycle: 0, timer: null, last: Date.now() };
 
-  // Skreen+: the tour can run all the time. A tap ends it for two minutes, then it resumes.
+  // Skreen+: the tour can run all the time. If "tap to return" is on, a tap hands the screen back to regular mode until
+  // it has been left alone for the chosen time (1, 5, 15 or 30 minutes), then Big Skreen Mode comes back.
   const alwaysTour = () => cfg.bigMode === '1' && hasPlus();   // Big Skreen Mode
 
   function maybeStartTour(now = new Date()) {
     const mins = alwaysTour() ? 2 : Number(cfg.showcaseMinutes);
-    if (!mins || tour.on || isNight(now) || dialogOpen()) return;
+    if (!mins || tour.on || tour.tapped || isNight(now) || dialogOpen()) return;
     // Always-on: begin shortly after the app opens (the two-minute wait is only for resuming after a tap).
     if (alwaysTour() && !tour.everStarted && performance.now() > 8000) { startTour(); return; }
     if (now.getTime() - tour.last >= mins * 60000) startTour();
@@ -1416,13 +1418,26 @@
 
   function endTour() {
     clearTimeout(tour.timer); clearInterval(tour.subTimer); releasePhotos();
-    tour.on = false; tour.last = tour.big ? 0 : Date.now();   // Big Skreen Mode comes straight back (after a dialog, or the night)
+    tour.on = false; tour.last = tour.big && !tour.tapped ? 0 : Date.now();   // Big Skreen Mode comes straight back (after a dialog, or the night), unless a tap sent it away
     tour.big = false;
     document.body.classList.remove('big-mode');
     $('showcase').hidden = true;
     $('showBody').innerHTML = '';
   }
-  $('showcase').addEventListener('click', () => { if (!tour.big) endTour(); });   // Big Skreen Mode is left only through Settings
+  $('showcase').addEventListener('click', (e) => {
+    if (!tour.big) { endTour(); return; }
+    if (cfg.bigTap !== '1' || e.target.closest('#showNow, button, a')) return;   // the player's own buttons don't count as a tap on the screen
+    tour.tapped = true; endTour();
+  });
+  // After a tap, Big Skreen Mode returns once nobody has touched the screen for the chosen time.
+  ['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, () => { tour.touch = Date.now(); }, true));
+  function maybeResumeBig() {
+    if (!tour.tapped) return;
+    if (!alwaysTour() || cfg.bigTap !== '1') { tour.tapped = false; return; }
+    const wait = (Number(cfg.bigResume) || 1) * 60000;
+    if (tour.on || isNight(new Date()) || dialogOpen() || Date.now() - Math.max(tour.touch || 0, tour.last) < wait) return;
+    tour.tapped = false; startTour();
+  }
 
   // A big slide that swipes up through several parts, each given an equal share of the slide's time.
   function stageHtml(kicker, panels, kind) {
@@ -2470,6 +2485,7 @@
   // ─── Settings sheet ────────────────────────────────────────────────────────
 
   const settingsSheet = $('settingsSheet'), form = $('settingsForm');
+  form.elements.bigTap.addEventListener('change', () => { $('bigResumeField').hidden = form.elements.bigTap.value !== '1'; });
   form.elements.bigMode.addEventListener('change', (e) => {
     if (e.target.value === '1' && !hasPlus()) { e.target.value = '0'; offerPlus('Big Skreen Mode is part of Skreen+.'); }
     drawSlideOpts();
@@ -2478,6 +2494,7 @@
   function drawSlideOpts() {
     const on = form.elements.bigMode.value === '1' && hasPlus();
     $('alwaysOpts').hidden = !on;
+    $('bigResumeField').hidden = form.elements.bigTap.value !== '1';
     const skip = String(cfg.slideSkip || '').split(',');
     // Say why a slide won't appear: its widget is off (that switch lives under Widgets), or it has nothing to show yet.
     const note = (id) => {

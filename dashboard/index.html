@@ -415,12 +415,16 @@
         <section class="stab" data-tab="big">
         <div class="group">Big Skreen Mode <span class="plus-chip" data-plus-logo></span></div>
         <div class="field" id="bigField">
-          <span>A different way to use Skreen, like a smart display: one big slide at a time, rotating through everything you've set up, with the time, weather, timers and music always in view. Tap the screen to pause it for two minutes.</span>
+          <span>A different way to use Skreen, like a smart display: one big slide at a time, rotating through everything you've set up, with the time, weather, timers and music always in view. Tap the screen to step back to the regular display for a while.</span>
           <label class="field"><span>Big Skreen Mode</span>
             <select name="bigMode"><option value="0">Off</option><option value="1">On</option></select></label>
         <div class="field" id="alwaysOpts" hidden>
           <label class="field"><span>Time on each slide</span>
             <select name="slideSeconds"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option></select></label>
+          <label class="field"><span>Tap the screen to return to regular mode</span>
+            <select name="bigTap"><option value="1">On</option><option value="0">Off</option></select></label>
+          <label class="field" id="bigResumeField"><span>Big Skreen Mode comes back after no touches for</span>
+            <select name="bigResume"><option value="1">1 minute</option><option value="5">5 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option></select></label>
           <span class="sub">Show these slides</span>
           <div class="checks" id="slideChecks"></div>
         </div>
