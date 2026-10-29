@@ -22,7 +22,7 @@
 <main>
   <div class="logo"><svg viewBox="64 80 384 352" aria-hidden="true"><rect x="96" y="112" width="240" height="72" fill="#ff5b2e"/><rect x="176" y="220" width="240" height="72" fill="#f3eee3"/><rect x="96" y="328" width="240" height="72" fill="#f3eee3" opacity=".5"/></svg><span>Skreen</span></div>
   <h1>Skreen privacy policy</h1>
-  <p class="meta">Last updated: October 2026 (music, shopping list and dinner planner added)</p>
+  <p class="meta">Last updated: October 29, 2026 (data protection, retention and deletion sections added; news widget described)</p>
 
   <p>Skreen is a wall display that shows your calendar, a to-do list, the weather and the time. This policy explains what it does with your information. The short version: <b>your Google data goes from Google to your device and nowhere else.</b></p>
 
@@ -44,11 +44,30 @@
     <li><b>Music.</b> Skreen can show what your tablet's music app (for example Spotify or YouTube Music) is playing, with play, pause and skip buttons. This uses Android's <b>Notification access</b>, which you grant yourself in Android settings and can switch off at any time. Skreen only looks at the music player's title, artist, cover picture and controls. It does not read, store or send any notifications or messages, and what is playing never leaves your device.</li>
     <li><b>Radio.</b> If you search for internet radio stations, the words you type are sent through Skreen's relay to the community directory radio-browser.info, which returns stations. When you play a station, your device connects to that station's own stream. Skreen does not collect what you listen to.</li>
     <li><b>Voice.</b> The microphone buttons (timers, searches, new items) use Android's speech recognition, which is provided by your device and Google. Skreen does not record or keep your voice.</li>
-    <li>If you use the Skreen+ news widget, the relay fetches Wikipedia's "In the news" list and passes it to your device. No information about you is sent.</li>
+    <li>If you use the Skreen+ news widget, Skreen's relay reads Wikipedia's public "Current events" pages every 30 minutes and uses an AI model (Anthropic's Claude) to choose and write short headlines from that public text, which the relay keeps in a small store and passes to your device. Only public Wikipedia text goes to the AI model. No information about you, and none of your Google data, is ever sent to it.</li>
     <li>Buying Skreen+ is handled entirely by Google Play. Skreen never sees your payment details.</li>
     <li>To get the weather, your device sends the coordinates of your chosen location, rounded to about a kilometre, to Skreen's weather relay (hosted on Cloudflare), which passes them to MET Norway, the Norwegian national weather service, and returns the forecast. No account details, and nothing about your calendar or tasks, are sent. Cloudflare may keep standard request logs, such as IP addresses, for a short time.</li>
     <li>If you search for a city or ZIP code in Settings, the text you type is sent through the same relay to OpenStreetMap's Nominatim search service to find its coordinates.</li>
     <li>Skreen contains no advertising and no analytics, and does not sell or share your information.</li>
+  </ul>
+
+  <h2 id="protection">How we protect your data</h2>
+  <ul>
+    <li><b>Your Google data stays between Google and your device.</b> Calendar and Tasks data is requested directly from Google over an encrypted (HTTPS) connection and is never sent to a Skreen server, to Skreen's relay, or to any other third party.</li>
+    <li><b>Sign-in is handled by Google.</b> Skreen never sees your Google password. Google issues a short-lived access token (it expires in about an hour), which Skreen keeps in the app's memory only and does not write to storage. Skreen never receives a long-lived refresh token.</li>
+    <li><b>Minimal permissions.</b> Skreen requests only the two permissions it needs: read-only access to Google Calendar, and access to Google Tasks so you can view, add and complete items.</li>
+    <li><b>Nothing for others to reach.</b> Because Skreen has no server that holds your Google data, there is no database of it that anyone at Skreen, or anyone who breaches Skreen, could access. Skreen's staff cannot read your calendar or tasks.</li>
+    <li><b>Kept in the app's private area.</b> Your settings are stored in Skreen's private storage on your device, which Android keeps separate from other apps. Calendar and task data is held in the app's memory while it is shown, and Skreen does not save it to storage.</li>
+    <li><b>No AI training.</b> Google user data is not used to develop, improve or train any AI or machine-learning model, and is not sent to any AI service.</li>
+  </ul>
+
+  <h2 id="retention">Data retention and deletion</h2>
+  <ul>
+    <li><b>On Skreen's servers:</b> none of your Google data is collected or retained, so there is nothing to delete there. The only things the relay holds briefly are a calendar link's fetched copy (about five minutes) and standard request logs kept by Cloudflare for a short time.</li>
+    <li><b>On your device:</b> Google calendar and task data lives only in memory while Skreen is running, and disappears when you close the app. The sign-in token expires within about an hour and is cleared immediately when you sign out or remove an account.</li>
+    <li><b>Delete it yourself, any time:</b> in Skreen's Settings, sign out or remove an account. This removes that account and its saved choices from Skreen. To remove everything Skreen stored, uninstall the app, or clear its data in Android's app settings.</li>
+    <li><b>Revoke Skreen's access at Google:</b> in your Google Account under <b>Security → Your connections to third-party apps and services</b>, choose Skreen and remove access. Skreen can no longer read or change your Google data from that moment.</li>
+    <li><b>Ask us:</b> to request deletion of anything we might hold about you, email <a href="mailto:support@skreen.fyi">support@skreen.fyi</a>. We'll confirm within 30 days. Since Skreen keeps no copy of your Google data, the practical answer is usually that nothing is held.</li>
   </ul>
 
   <h2>Google API Services User Data Policy</h2>
