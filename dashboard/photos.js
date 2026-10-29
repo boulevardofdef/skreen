@@ -8,7 +8,7 @@ const Photos = (() => {
   const nativeOK = () => !!(window.SkreenNative && window.SkreenNative.pickPhotos);
 
   // Commons often has no artist, and says "Unknown author", sometimes twice run together. Drop that.
-  const clean = (s) => String(s || '').replace(/\b(unknown|anonymous)\s*(author|artist)s?\b/gi, '').replace(/\s+/g, ' ').trim();
+  const clean = (s) => String(s || '').replace(/\b(unknown|anonymous)\s*(author|artist)s?/gi, '').replace(/\s+/g, ' ').trim();
 
   async function art() {
     const res = await fetch(`${Weather.relay}/art?v=2`, { cache: 'no-cache' });   // v=2: skip the old list the tablet may have kept
