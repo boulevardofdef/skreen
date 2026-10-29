@@ -10,10 +10,12 @@ const Photos = (() => {
   // Commons often has no artist, and says "Unknown author", sometimes twice run together. Drop that.
   const clean = (s) => String(s || '').replace(/\b(unknown|anonymous)\s*(author|artist)s?/gi, '').replace(/\s+/g, ' ').trim();
 
+  const short = (s, n = 60) => (s.length > n ? s.slice(0, n - 1).replace(/[\s,;:(·-]+\S*$/, '') + '\u2026' : s);
+
   async function art() {
     const res = await fetch(`${Weather.relay}/art?v=2`, { cache: 'no-cache' });   // v=2: skip the old list the tablet may have kept
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    return ((await res.json()).items || []).map((a) => ({ url: a.image, caption: [a.title, clean(a.artist)].filter(Boolean).join(' · '), art: true }));
+    return ((await res.json()).items || []).map((a) => ({ url: a.image, caption: short([a.title, clean(a.artist)].filter(Boolean).join(' · ')), art: true }));
   }
 
   function mine() {
