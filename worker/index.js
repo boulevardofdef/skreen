@@ -3,11 +3,13 @@
 //   /geocode?q=…                               → city / ZIP search (OpenStreetMap Nominatim)
 //   /reverse?lat=…&lon=…                       → coordinates to a place name
 //   /ics?u=<https calendar link>               → fetches a published calendar (ICS) for the browser
-//   /news                                      → today's "In the news" stories from Wikipedia (CC BY-SA)
+//   /news                                      → headlines written from Wikipedia's Current events (see news.js); the "In the news" box is the fallback
 //   /radio?q=…                                 → internet radio stations (radio-browser.info) to search and play
 //   /art                                       → public-domain paintings (Wikimedia Commons) for the photo slideshow
 // The services we call want every request to identify the app and a contact address, and ask
 // clients to cache. Browsers can't set User-Agent, so this does both, and stores nothing else.
+import { refreshNews, storedHeadlines } from './news.js';
+
 const CONTACT = 'Skreen/1.0 (+https://github.com/boulevardofdef/skreen; tiszenkel@gmail.com)';
 const FORECAST_PATH = '/weatherapi/locationforecast/2.0/complete';
 
@@ -39,6 +41,10 @@ const place = (r) => {
 };
 
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(refreshNews(env, CONTACT).then((r) => console.log('news:', r), (e) => console.log('news failed:', e.message)));
+  },
+
   async fetch(request, env, ctx) {
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
     const url = new URL(request.url);
@@ -84,6 +90,8 @@ export default {
     }
 
     if (url.pathname === '/news') {
+      const written = await storedHeadlines(env).catch(() => null);
+      if (written) return json({ stories: written }, 200, { 'Cache-Control': 'public, max-age=600' });
       // Wikipedia's featured feed carries the "In the news" box: a few current stories, each with links.
       const entities = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
       const plain = (html) => html.replace(/<[^>]+>/g, '').replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (m, e) => {
