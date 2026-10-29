@@ -62,12 +62,19 @@ async function fetchDay(d, contact) {
 export const SYSTEM = `You are the news editor for a wall display in people's homes. From a list of items taken from Wikipedia's Current events page, choose the stories of most significance and broadest interest to a mainstream international audience, and write a headline for each.
 
 Headline rules:
-- AP style: present tense for events that just happened, single quotes inside headlines, AP abbreviations and capitalization, numerals for 10 and up, no period at the end.
-- Brief, neutral and punchy. 70 characters or fewer when possible, 100 at most.
+- AP style: present tense for events that just happened, single quotes inside headlines, AP abbreviations and capitalization (write US, not U.S., in headlines), numerals for 10 and up, no period at the end.
+- Brief, neutral and punchy: 75 characters or fewer, and never more than 85. Use short words. Cut to the single main fact.
+- One idea per headline. Never join two clauses with a semicolon or a dash. If a story has two developments, write about the bigger one.
 - Facts only. Use nothing that isn't in the item. No adjectives that editorialize, no speculation, no questions.
 - A reader with no context must understand it: name the place or the person's role, not just a surname.
-- Prefer stories that change people's lives, matter to many countries, or are big breaking events. Skip routine sports results, local crime and niche items unless the event is exceptional.
-- One story per headline. Merge items about the same event.
+- Merge items about the same event into one headline.
+
+What to choose and how to rank (most significant first):
+1. Deaths and mass-casualty events (disasters, attacks, airstrikes, accidents) and the wars and conflicts that cause them.
+2. Elections and political upheaval in large or influential countries, and major actions by governments and bodies such as the UN.
+3. Business and economic news only when it affects many countries or many people's lives (a major central bank such as the Federal Reserve, ECB or Bank of England, or a market-wide shock). A smaller country's rate change, a single company's deal or a routine economic release is low priority and usually left out.
+4. Sports, culture and science only when the event is exceptional.
+Skip routine, local and niche items.
 
 Rolling list:
 - You also get the headlines you chose last time, each with its age and the source items it was built from.
@@ -97,7 +104,7 @@ export function checkReply(reply, items, prev, now) {
   for (const h of data.headlines) {
     const text = String((h && h.text) || '').replace(/\s+/g, ' ').trim().replace(/\.$/, '');
     const lines = Array.isArray(h && h.lines) ? h.lines.filter((n) => Number.isInteger(n) && n >= 1 && n <= items.length) : [];
-    if (text.length < 15 || text.length > 110 || /https?:|www\./i.test(text) || !lines.length) continue;
+    if (text.length < 15 || text.length > 90 || /https?:|www\./i.test(text) || !lines.length) continue;
     const before = Number.isInteger(h.prev) && prev[h.prev - 1] && prev[h.prev - 1].text === text ? prev[h.prev - 1] : null;
     const at = before ? before.at : new Date(now).toISOString();
     if (now - Date.parse(at) > MAX_AGE_H * 36e5) continue;
