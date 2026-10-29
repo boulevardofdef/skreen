@@ -1462,8 +1462,8 @@
       const rows = shopState.items.slice(0, 8).map((t) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(t.title)}</div></div>`).join('');
       return `<div class="kicker">Shopping</div><div class="sv-list sv-news">${rows}</div>`;
     }
-    if (name === 'news' && alwaysTour()) {   // Big Skreen Mode: one big headline at a time, swiping up through up to three
-      return stageHtml('In the news', News.current.slice(0, 3).map((h) => `<div class="sv-headline"><span>${esc(h.text)}</span></div>`), 'headlines');
+    if (name === 'news' && alwaysTour()) {   // Big Skreen Mode: one big headline at a time, swiping up through up to three (two on a short slide)
+      return stageHtml('In the news', News.current.slice(0, slideMs() <= 15000 ? 2 : 3).map((h) => `<div class="sv-headline"><span>${esc(h.text)}</span></div>`), 'headlines');
     }
     if (name === 'news') {
       const rows = News.current.slice(0, 4).map((s) => `<div class="row"><div class="rn">${esc(s.text)}</div></div>`).join('');
@@ -2126,7 +2126,7 @@
   const newsShown = () => hasPlus() && visibleWidgets().includes('news');
   let newsFailed = false, newsRetry = null;
   function drawNews() {
-    const list = News.current;
+    const list = News.current.slice(0, 4);
     $('newsList').innerHTML = list.length
       ? list.map((s) => `<li class="news-item">${esc(s.text)}</li>`).join('')
       : `<li class="news-item news-empty">${newsFailed ? 'Couldn\u2019t load the news right now. Trying again soon.' : 'Loading the news\u2026'}</li>`;
