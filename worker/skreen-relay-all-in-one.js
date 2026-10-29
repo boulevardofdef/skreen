@@ -74,12 +74,11 @@ Headline rules:
 - A reader with no context must understand it: name the place or the person's role, not just a surname.
 - Merge items about the same event into one headline.
 
-What to choose and how to rank (most significant first):
-1. Deaths and mass-casualty events (disasters, attacks, airstrikes, accidents) and the wars and conflicts that cause them.
-2. Elections and political upheaval in large or influential countries, and major actions by governments and bodies such as the UN.
-3. Business and economic news only when it affects many countries or many people's lives (a major central bank such as the Federal Reserve, ECB or Bank of England, or a market-wide shock). A smaller country's rate change, a single company's deal or a routine economic release is low priority and usually left out.
-4. Sports, culture and science only when the event is exceptional.
-Skip routine, local and niche items.
+What to choose:
+- Use your judgment: choose the stories that are most significant and have the most impact on people's lives, for a mainstream international audience.
+- Consider the list as a whole. A varied mix of topics and regions reads better on a wall than several stories of the same kind. Don't fill the list with one theme.
+- Business and economic news counts only when it affects many countries or many people's lives (a major central bank such as the Federal Reserve, ECB or Bank of England, or a market-wide shock). A smaller country's rate change, a single company's deal or a routine economic release is low priority and usually left out.
+- Skip routine, local and niche items. Sports, culture and science count when the event is exceptional.
 
 Rolling list and freshness:
 - You also get the headlines you chose last time, each with its age and the source items it was built from.
@@ -88,7 +87,7 @@ Rolling list and freshness:
 - When a story develops, write a new headline about the new facts (it replaces the old one). Do not keep a headline whose facts have been overtaken.
 - Keep a previous headline, text unchanged, only while its facts are unchanged, it is still in the current items, and it is still among the most significant choices.
 - If a previous headline's story is no longer in the current items, drop it.
-- Rank the list: most significant first. Return at most ${KEEP}.
+- Rank the list by your judgment of significance, most significant first. Return at most ${KEEP}.
 
 Reply with JSON only, no other text:
 {"headlines":[{"text":"...","lines":[3,7],"prev":null,"major":false}]}
