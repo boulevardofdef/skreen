@@ -862,3 +862,7 @@ body.native p.native-only { display: block; }
 .sv.p1 .fc-days, .sv.p2 .fc-days { width: 100%; }
 /* Big to-do slide: the "who" label sits snugly under its item, lined up with the text. */
 .sv-list .sv-who { display: block; margin: 1vh 0 0; line-height: 1.2; vertical-align: baseline; font-size: max(1.1rem, 2.6vh); }
+
+/* A shopping item that has been ticked slides away. */
+#shopList .task { transition: opacity .3s ease, transform .3s ease; }
+#shopList .task.leaving { opacity: 0; transform: translateX(14px); }

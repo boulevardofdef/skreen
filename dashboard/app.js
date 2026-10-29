@@ -2249,10 +2249,18 @@
     const it = shopState.items.find((x) => x.id === id), t = shopTarget();
     if (!it || (!t && !isDemo())) return;
     it.done = !it.done;
+    clearTimeout(shopLeave[id]);
+    if (it.done) shopLeave[id] = setTimeout(() => leaveShop(id), 10000);   // crossed out for 10 seconds, so a slip can be undone, then it goes
     drawShop();
     if (isDemo()) return;
     try { await Google.setDone(t.a, t.l, id, it.done); }
-    catch (e) { it.done = !it.done; drawShop(); showToast('Couldn\u2019t update the list'); }
+    catch (e) { it.done = !it.done; clearTimeout(shopLeave[id]); drawShop(); showToast('Couldn\u2019t update the list'); }
+  }
+  const shopLeave = {};
+  function leaveShop(id) {
+    const row = $('shopList').querySelector(`[data-id="${CSS.escape(id)}"]`);
+    if (row) row.classList.add('leaving');
+    setTimeout(() => { shopState.items = shopState.items.filter((x) => !(x.id === id && x.done)); drawShop(); }, 320);
   }
 
   async function addShop() {
