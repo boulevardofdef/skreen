@@ -8,7 +8,7 @@
 // sees the headlines it wrote last time, so a story stays while it is still news and makes way when its time
 // is up. Wikipedia text is CC BY-SA; the app carries the credit.
 
-const MODEL = 'claude-sonnet-5-5';
+const MODEL = 'claude-haiku-5-5';    // about $2 a month; claude-sonnet-5-5 (at low effort) is the step up if the headlines need more judgment
 const KEEP = 8;             // the app shows the top 2 to 4
 const LIFE_H = 4;           // an ordinary headline stays up this long, then makes way for others
 const MAJOR_LIFE_H = 24;    // a true front-page story can stay up to a day (until a follow-up headline replaces it)
