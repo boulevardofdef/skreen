@@ -11,9 +11,10 @@ A tiny Cloudflare Worker (free tier) in front of MET Norway's forecast API. It a
 
 ## Headlines (`news.js`)
 
-Every 30 minutes a cron trigger reads Wikipedia's Current events pages (today and yesterday, UTC), asks a Claude
-model for short AP-style headlines, and keeps them in one KV entry (`NEWS`). `/news` serves them; until there are
-some, or if they go stale, it falls back to Wikipedia's "In the news" box.
+Every 30 minutes a cron trigger reads the top-stories feeds of about a dozen news outlets (and Wikipedia's Current events
+pages), asks a Claude model which stories matter (how many outlets carry a story, and how high, is the signal) and to write
+its own short AP-style headlines, and keeps them in one KV entry (`NEWS`). Outlets' wording and links are never passed on.
+`/news` serves the list; until there is one, or if it goes stale, it falls back to Wikipedia's "In the news" box.
 
 One-time setup, from this folder:
 1. `wrangler kv namespace create NEWS`, then paste the printed `id` into `wrangler.toml`.
