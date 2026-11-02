@@ -15,6 +15,7 @@ const MAJOR_LIFE_H = 24;    // a true front-page story can stay up to a day (unt
 const MAJOR_OUTLETS = 6;    // "front page" means at least this many outlets are carrying it
 const STRONG_OUTLETS = 5;   // a retired story may come back if this many outlets are still carrying it...
 const COOLDOWN_H = 6;       // ...once it has been off for this long
+const GRACE_H = 12;         // if refreshing fails, the last list is still served this long, then nothing
 const RETIRED_H = 48;       // how long we remember retired headlines, so the same facts aren't put back up
 const PER_FEED = 15;        // titles read from the top of each feed
 const MIN_FEEDS = 4;        // fewer feeds than this answering and we don't trust the picture
@@ -199,10 +200,11 @@ async function ask(env, system, user) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 2000, system, messages: [{ role: 'user', content: user }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: 8000, system, messages: [{ role: 'user', content: user }] }),
   });
   if (!res.ok) throw new Error(`Anthropic ${res.status}`);
   const body = await res.json();
+  if (body.stop_reason === 'max_tokens') throw new Error('the model ran out of room before finishing its reply');
   return (body.content || []).map((b) => b.text || '').join('');
 }
 
@@ -229,7 +231,7 @@ async function refreshNews(env, contact, now = Date.now()) {
 async function storedHeadlines(env) {
   if (!env.NEWS) return null;
   const s = await env.NEWS.get(KEY, 'json');
-  const fresh = ((s && s.stories) || []).filter((x) => alive(x, Date.now()));   // if refreshing stalls, old headlines age out and the Wikipedia box takes over
+  const fresh = ((s && s.stories) || []).filter((x) => Date.now() - Date.parse(x.at) <= GRACE_H * 36e5);   // if refreshing stalls, the last list keeps showing for a while, then the app says it can't load the news
   return fresh.length ? fresh.map((x) => ({ text: x.text, url: '' })) : null;
 }
 // Skreen relay (Cloudflare Worker, free tier).
@@ -237,7 +239,7 @@ async function storedHeadlines(env) {
 //   /geocode?q=…                               → city / ZIP search (OpenStreetMap Nominatim)
 //   /reverse?lat=…&lon=…                       → coordinates to a place name
 //   /ics?u=<https calendar link>               → fetches a published calendar (ICS) for the browser
-//   /news                                      → headlines written from Wikipedia's Current events (see news.js); the "In the news" box is the fallback
+//   /news                                      → headlines written from outlets' top stories (see news.js); /news/status says what the last run did
 //   /radio?q=…                                 → internet radio stations (radio-browser.info) to search and play
 //   /art                                       → public-domain paintings (Wikimedia Commons) for the photo slideshow
 // The services we call want every request to identify the app and a contact address, and ask
@@ -275,7 +277,12 @@ const place = (r) => {
 
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(refreshNews(env, CONTACT).then((r) => console.log('news:', r), (e) => console.log('news failed:', e.message)));
+    ctx.waitUntil((async () => {
+      let result;
+      try { result = await refreshNews(env, CONTACT); } catch (e) { result = 'failed: ' + e.message; }
+      console.log('news:', result);
+      if (env.NEWS) await env.NEWS.put('status', JSON.stringify({ at: new Date().toISOString(), result })).catch(() => {});
+    })());
   },
 
   async fetch(request, env, ctx) {
@@ -322,29 +329,18 @@ export default {
       return json(place(await res.json()), 200, { 'Cache-Control': 'public, max-age=86400' });
     }
 
+    if (url.pathname === '/news/status') {
+      // What the last scheduled run did, for finding out why there are no headlines.
+      const st = env.NEWS ? await env.NEWS.get('status', 'json').catch(() => null) : null;
+      return json(st || { result: 'no run recorded yet' }, 200, { 'Cache-Control': 'no-store' });
+    }
+
     if (url.pathname === '/news') {
+      // Headlines written from the outlets' top stories (news.js). With none, say so: the app shows its own
+      // "couldn't load" message and tries again, instead of showing stale or lower-quality stories.
       const written = await storedHeadlines(env).catch(() => null);
       if (written) return json({ stories: written }, 200, { 'Cache-Control': 'public, max-age=600' });
-      // Wikipedia's featured feed carries the "In the news" box: a few current stories, each with links.
-      const entities = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
-      const plain = (html) => html.replace(/<[^>]+>/g, '').replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (m, e) => {
-        if (e[0] === '#') return String.fromCodePoint(e[1].toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10));
-        return entities[e.toLowerCase()] ?? m;
-      }).replace(/\s*\(pictured\)/gi, '').replace(/\s+/g, ' ').trim();
-      for (let back = 0; back < 2; back++) {
-        const d = new Date(Date.now() - back * 86400000);
-        const day = `${d.getUTCFullYear()}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(d.getUTCDate()).padStart(2, '0')}`;
-        const res = await cached(ctx, 'n/' + day, 1800, () =>
-          fetch(`https://en.wikipedia.org/api/rest_v1/feed/featured/${day}`, { headers: { 'User-Agent': CONTACT, Accept: 'application/json' } }));
-        if (!res) continue;
-        const stories = ((await res.json()).news || []).map((n) => {
-          const link = (n.links || []).find((l) => l.content_urls && l.content_urls.desktop) || (n.links || [])[0];
-          const page = link && ((link.content_urls && link.content_urls.desktop && link.content_urls.desktop.page) || `https://en.wikipedia.org/wiki/${encodeURIComponent(link.title)}`);
-          return { text: plain(n.story || ''), url: page || '' };
-        }).filter((s) => s.text).slice(0, 8);
-        if (stories.length) return json({ stories }, 200, { 'Cache-Control': 'public, max-age=900' });
-      }
-      return json({ error: 'upstream' }, 502);
+      return json({ error: 'no headlines yet' }, 503, { 'Cache-Control': 'no-store' });
     }
 
     if (url.pathname === '/art') {

@@ -14,6 +14,7 @@ const MAJOR_LIFE_H = 24;    // a true front-page story can stay up to a day (unt
 const MAJOR_OUTLETS = 6;    // "front page" means at least this many outlets are carrying it
 const STRONG_OUTLETS = 5;   // a retired story may come back if this many outlets are still carrying it...
 const COOLDOWN_H = 6;       // ...once it has been off for this long
+const GRACE_H = 12;         // if refreshing fails, the last list is still served this long, then nothing
 const RETIRED_H = 48;       // how long we remember retired headlines, so the same facts aren't put back up
 const PER_FEED = 15;        // titles read from the top of each feed
 const MIN_FEEDS = 4;        // fewer feeds than this answering and we don't trust the picture
@@ -198,10 +199,11 @@ async function ask(env, system, user) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 2000, system, messages: [{ role: 'user', content: user }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: 8000, system, messages: [{ role: 'user', content: user }] }),
   });
   if (!res.ok) throw new Error(`Anthropic ${res.status}`);
   const body = await res.json();
+  if (body.stop_reason === 'max_tokens') throw new Error('the model ran out of room before finishing its reply');
   return (body.content || []).map((b) => b.text || '').join('');
 }
 
@@ -228,6 +230,6 @@ export async function refreshNews(env, contact, now = Date.now()) {
 export async function storedHeadlines(env) {
   if (!env.NEWS) return null;
   const s = await env.NEWS.get(KEY, 'json');
-  const fresh = ((s && s.stories) || []).filter((x) => alive(x, Date.now()));   // if refreshing stalls, old headlines age out and the Wikipedia box takes over
+  const fresh = ((s && s.stories) || []).filter((x) => Date.now() - Date.parse(x.at) <= GRACE_H * 36e5);   // if refreshing stalls, the last list keeps showing for a while, then the app says it can't load the news
   return fresh.length ? fresh.map((x) => ({ text: x.text, url: '' })) : null;
 }
