@@ -831,6 +831,15 @@
     });
   }
 
+  // The on-screen keyboard covers about half the screen on a tablet, so dialogs that ask you to type sit near the top
+  // (the Android app also shrinks the page for the keyboard), and a field you tap is scrolled into view.
+  document.querySelectorAll('dialog.sheet:not(.settings)').forEach((d) => { if (d.querySelector('input:not([type=checkbox]):not([type=radio]), textarea')) d.classList.add('kb'); });
+  document.addEventListener('focusin', (e) => {
+    const t = e.target;
+    if (!t || !t.matches || !t.matches('input:not([type=checkbox]):not([type=radio]), textarea, select') || !t.closest('dialog')) return;
+    setTimeout(() => { try { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {} }, 350);
+  });
+
   // ─── Weather (providers live in weather.js) ────────────────────────────────
 
   const isWet = (code) => code >= 51;

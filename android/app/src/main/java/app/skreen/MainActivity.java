@@ -155,10 +155,16 @@ public class MainActivity extends Activity {
         web.setLongClickable(false);
         web.setHapticFeedbackEnabled(false);
         setContentView(web);
-        // Edge-to-edge windows don't resize for the keyboard by themselves; make room for it.
+        // Edge-to-edge windows don't resize for the keyboard by themselves, so make room for it. This is a margin, not
+        // padding: a WebView keeps laying its page out at full size under padding, so the keyboard still covered dialogs.
+        // With a margin the WebView itself gets shorter, the page's viewport shrinks, and dialogs re-center above the keyboard.
         ViewCompat.setOnApplyWindowInsetsListener(web, (v, insets) -> {
             Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
-            v.setPadding(0, 0, 0, ime.bottom);
+            android.view.ViewGroup.LayoutParams lp = v.getLayoutParams();
+            if (lp instanceof android.view.ViewGroup.MarginLayoutParams) {
+                android.view.ViewGroup.MarginLayoutParams mp = (android.view.ViewGroup.MarginLayoutParams) lp;
+                if (mp.bottomMargin != ime.bottom) { mp.bottomMargin = ime.bottom; v.setLayoutParams(mp); }
+            }
             return insets;
         });
 

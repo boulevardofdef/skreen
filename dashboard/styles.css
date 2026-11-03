@@ -958,3 +958,6 @@ body.native p.native-only { display: block; }
 .sv.p1 .sv-list { padding: 0 2vw; }
 .sv.p2 .sv-list { padding-left: 4vw; }
 .sv-stage.list { width: 100%; }
+
+/* Dialogs you type into sit near the top, clear of the on-screen keyboard. */
+.sheet.kb { margin: 2.5vh auto auto; max-height: 95vh; }
