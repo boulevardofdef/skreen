@@ -140,7 +140,9 @@ window.Google = (() => {
   // date as midnight UTC of that day, so the date part is the day itself.
   async function mealTasks(acct, listId, from, to) {
     const base = `${TASKS}/lists/${encodeURIComponent(listId)}/tasks`;
-    const q = new URLSearchParams({ showCompleted: 'true', showHidden: 'true', maxResults: '100', dueMin: `${from}T00:00:00.000Z`, dueMax: `${to}T23:59:59.000Z`, fields: 'items(id,title,notes,due,status,parent)' });
+    // Google treats dueMax as exclusive at the day level, so ask up to the day AFTER the last one (the caller only reads its own days).
+    const after = new Date(`${to}T00:00:00.000Z`); after.setUTCDate(after.getUTCDate() + 1);
+    const q = new URLSearchParams({ showCompleted: 'true', showHidden: 'true', maxResults: '100', dueMin: `${from}T00:00:00.000Z`, dueMax: after.toISOString(), fields: 'items(id,title,notes,due,status,parent)' });
     const res = await call(acct, `${base}?${q}`);
     return (res.items || []).filter((t) => t.title && t.due && !t.parent).map((t) => ({ id: t.id, title: t.title, date: t.due.slice(0, 10), done: t.status === 'completed', type: mealType(t.notes) }));
   }

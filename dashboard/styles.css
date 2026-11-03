@@ -940,3 +940,21 @@ body.native p.native-only { display: block; }
 .meal-types .mt { flex: 1; padding: 0.7rem 0.5rem; border: 1px solid var(--rule); background: transparent; color: var(--ink); font: 700 0.85rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
 .meal-types .mt.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .mline small { display: inline-block; min-width: 6.5rem; font-size: 0.55em; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+
+/* Settings: tidier nav groups, and the chores editor */
+.settings-nav button.gap { margin-top: 1.1rem; }
+.chore-row { margin: 0.5rem 0; }
+.chore-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.chore-line .chore-name { flex: 3; min-width: 11rem; }
+.chore-line select { flex: 1; min-width: 8rem; width: auto; }
+.chore-line .btn { flex: none; }
+.chore-cfg.reward { margin-top: 0.8rem; padding-top: 0.7rem; border-top: 1px dashed var(--rule); }
+.sv-cols .sv-list .row { padding: 1.5vh 0; gap: 1.6vw; }
+.sv-cols .sv-list .rn { font-size: max(1.9rem, 4.8vh); }
+.sv-cols .sv-list .rt { font-size: max(1.7rem, 4.4vh); min-width: 4.2em; }
+.sv-cols .sv-list .bullet { width: max(1.4rem, 3.4vh); height: max(1.4rem, 3.4vh); margin-top: calc((max(1.9rem, 4.8vh) * 1.02 - max(1.4rem, 3.4vh)) / 2); }
+.empty-col { font-size: max(1.9rem, 4.8vh); font-weight: 600; line-height: 1.1; color: var(--muted); padding-top: 1.5vh; }
+.sv.p1 .sv-list, .sv.p2 .sv-list { width: 100%; max-width: 100%; }
+.sv.p1 .sv-list { padding: 0 2vw; }
+.sv.p2 .sv-list { padding-left: 4vw; }
+.sv-stage.list { width: 100%; }
