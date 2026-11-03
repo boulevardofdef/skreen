@@ -910,3 +910,21 @@ body.native p.native-only { display: block; }
 .sv-cols { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 3vw; width: 100%; margin-top: 2vh; }
 .sv-col { min-width: 0; }
 .sv-colhead { margin-bottom: 1.6vh; padding: 0.9vh 1.2vw; background: var(--p); color: #140d08; font: 700 clamp(1rem, 2.4vh, 1.8rem)/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
+
+/* ─── Chores (Skreen+) ─────────────────────────────────────────────────── */
+.chore-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); align-content: start; gap: 1.4rem; padding-bottom: 2rem; }
+.chore-person { min-width: 0; }
+.chore-head { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.5rem 0.7rem; background: var(--p); color: #140d08; font: 700 0.95rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
+.chore-head small { font-weight: 500; opacity: 0.7; }
+.cp-bar { height: 0.45rem; margin: 0.4rem 0 0.2rem; background: var(--wash); }
+.cp-bar i { display: block; height: 100%; background: var(--p, var(--accent)); }
+.cp-bar.big { height: 0.8vh; margin: 0 0 1.4vh; }
+.cp-claim { display: block; width: 100%; margin: 0.5rem 0 0.2rem; padding: 0.8rem; border: 0; background: var(--accent); color: var(--accent-ink); font: 700 0.9rem/1.1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.chore-person .tasks { padding-bottom: 0.4rem; }
+.chore-person .task { font-size: 1.25rem; }
+.cstars { flex: none; margin-left: auto; font: 700 0.9rem/1 var(--mono); color: var(--muted); letter-spacing: 0.04em; }
+.task.done .cstars { opacity: 0.5; }
+.chore-cfg { display: flex; flex-wrap: wrap; gap: 0.8rem; margin: 0.2rem 0 0.7rem; }
+.chore-cfg label { flex: 1; min-width: 9rem; }
+.chore-cfg input, .chore-cfg select { margin-top: 0.3rem; }
+.day-picks { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin-bottom: 0.6rem; }

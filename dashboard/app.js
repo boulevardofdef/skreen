@@ -295,6 +295,7 @@
       renderAgenda();
       renderTasks();           // retires checked-off items after 24 hours
       if (boardShown()) drawBoard();   // the "2h" on each note
+      if (choresShown()) drawChores();   // a new day starts with a fresh list
       if (mealsShown()) { drawMeals(); if (now.getHours() === 0 && now.getMinutes() === 5) refreshMeals(); }
       applyBackground();       // new day → new background
       if (cfg.accent === 'auto') applyAccent('auto');   // and a new accent colour
@@ -527,6 +528,7 @@
   // Who is "in the household" right now: everyone named on a task we can see (open, or done in the
   // last 24 hours), plus anyone just typed into a dialog that is still open. Nothing is stored.
   const board = { notes: [] };   // Whiteboard notes (below); on this device only
+  const chores = { list: [], done: {}, stars: {}, goals: {} };   // Chores and stars (below); on this device only
   const sessionNames = new Map();   // key → display, cleared whenever a dialog opens
   function knownPeople() {
     const known = new Map();
@@ -1267,8 +1269,8 @@
 
   // ─── Big-screen tour (burn-in protection) ──────────────────────────────────
 
-  const TOUR_ALL = { time: 'clock', weather: 'weather', forecast: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news', meals: 'meals', shop: 'shop', board: 'board', music: 'music' };
-  const SLIDE_NAMES = { time: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos', news: 'In the news', meals: 'Dinners', shop: 'Shopping list', board: 'Whiteboard', music: 'Music (while playing)' };
+  const TOUR_ALL = { time: 'clock', weather: 'weather', forecast: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news', meals: 'meals', shop: 'shop', board: 'board', chores: 'chores', music: 'music' };
+  const SLIDE_NAMES = { time: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos', news: 'In the news', meals: 'Dinners', shop: 'Shopping list', board: 'Whiteboard', chores: 'Chores', music: 'Music (while playing)' };
   const widgetOf = (v) => TOUR_ALL[v] || v;   // the widget a slide belongs to (an extra schedule or list is its own widget)
   const tourKeys = () => Object.keys(TOUR_ALL).flatMap((k) => (k === 'todo' ? [k, ...extrasOf().map((x) => x.id)] : [k]));
   const slideEntries = () => Object.entries(SLIDE_NAMES).flatMap(([id, name]) => (id === 'todo' ? [[id, name], ...extrasOf().map((x) => [x.id, x.name])] : [[id, name]]));
@@ -1278,7 +1280,7 @@
   let TOUR = Object.keys(TOUR_ALL);
   const ROTATING_TOUR = ['time', 'weather', 'agenda', 'todo'];   // the occasional tour is always these four, so it's always the same length
   // Is this slide switched on, and does it have something to show right now?
-  const viewOkBase = (v) => !slideSkipped(v) && (v === 'music' ? (alwaysTour() && musicPlaying()) : visibleWidgets().includes(widgetOf(v))) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (v !== 'board' || (boardShown() && board.notes.length)) && (!['agenda', 'todo'].includes(v) || state.loaded) && (!extraById(v) || extraReady())
+  const viewOkBase = (v) => !slideSkipped(v) && (v === 'music' ? (alwaysTour() && musicPlaying()) : visibleWidgets().includes(widgetOf(v))) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (v !== 'board' || (boardShown() && board.notes.length)) && (v !== 'chores' || (choresShown() && choresToday().length)) && (!['agenda', 'todo'].includes(v) || state.loaded) && (!extraById(v) || extraReady())
   // The forecast slide has no switch of its own: choose Weather and you get both (Big Skreen Mode only), each for the full slide time.
   const viewOk = (v) => (v === 'forecast' ? alwaysTour() && viewOkBase('weather') && !!(state.weather && state.weather.daily) : viewOkBase(v));
   // The occasional tour is always the same length (four slides' worth). If some of the usual four are off, the rest
@@ -1504,6 +1506,7 @@
       const rows = shopState.items.slice(0, 8).map((t) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(t.title)}</div></div>`).join('');
       return `<div class="kicker">Shopping</div><div class="sv-list sv-news">${rows}</div>`;
     }
+    if (name === 'chores') return choresSlide();
     if (name === 'board' && alwaysTour()) {   // Big Skreen Mode: one note at a time, swiping up through the newest few
       return stageHtml('Whiteboard', board.notes.slice(0, slideMs() <= 15000 ? 2 : 4).map((n) => `<div class="sv-headline sv-note"><span>${esc(n.text)}${n.who.length ? `<em class="sv-from">\u2014 ${esc(n.who.join(', '))}</em>` : ''}</span></div>`), 'headlines');
     }
@@ -1931,8 +1934,8 @@
   // cfg.layout is the order, with hidden widgets prefixed "-": "agenda,todo,-weather,clock".
   // Clock and weather sit in one column when they're next to each other.
 
-  const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos (Skreen+)', news: 'In the news (Skreen+)', meals: 'Dinners (Skreen+)', shop: 'Shopping list (Skreen+)', board: 'Whiteboard (Skreen+)' };
-  const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92, photos: 1.15, news: 1.1, meals: 1.1, shop: 1, board: 1.05 };
+  const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos (Skreen+)', news: 'In the news (Skreen+)', meals: 'Dinners (Skreen+)', shop: 'Shopping list (Skreen+)', board: 'Whiteboard (Skreen+)', chores: 'Chores (Skreen+)' };
+  const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92, photos: 1.15, news: 1.1, meals: 1.1, shop: 1, board: 1.05, chores: 1.15 };
   const hasPlus = () => Plus.active();
 
   // ─── More schedules and to-do lists (Skreen+) ──────────────────────────────
@@ -1969,7 +1972,7 @@
       const off = raw.trim().startsWith('-'), id = raw.trim().replace(/^-/, '');
       if (isWidget(id) && !seen.has(id)) { seen.add(id); out.push({ id, on: !off }); }
     }
-    for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: !['photos', 'news', 'meals', 'shop', 'board'].includes(id) });   // the Plus widgets start hidden
+    for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: !['photos', 'news', 'meals', 'shop', 'board', 'chores'].includes(id) });   // the Plus widgets start hidden
     for (const x of extrasOf()) if (!seen.has(x.id)) out.push({ id: x.id, on: true });   // one just added shows right away
     if (!out.some((w) => w.on)) out.forEach((w) => { w.on = true; });
     return out;
@@ -2046,6 +2049,7 @@
     if (typeof refreshMeals === 'function') { drawMeals(); refreshMeals(); }
     if (typeof refreshShop === 'function') { drawShop(); refreshShop(); }
     if (typeof drawBoard === 'function') drawBoard();
+    if (typeof drawChores === 'function') drawChores();
   }
 
   const PAGE_GAP = 3;   // rem of empty space between skreens, so one never shows at the edge of its neighbour
@@ -2442,6 +2446,125 @@
     });
     renderExtras();
   }
+
+  // ─── Chores (Skreen+) ──────────────────────────────────────────────────────
+  // Chores repeat on a schedule, earn stars when ticked off, and the stars build toward a reward each person
+  // picks. Everything lives in this device's private storage, never in Google or anywhere else.
+  // chores.list: [{ id, name, who, stars, rule: { type: 'daily' } | { type: 'days', days: [0-6] } | { type: 'every', n, since } }]
+  // chores.done: { 'YYYY-MM-DD': { choreId: starsAwarded } }; chores.stars: { personKey: balance }; chores.goals: { personKey: { stars, label } }
+
+  const CHORES_KEY = 'skreen-chores';
+  const choresShown = () => hasPlus() && visibleWidgets().includes('chores');
+  const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  function loadChores() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(CHORES_KEY)); } catch (_) {}
+    if (saved && typeof saved === 'object') {
+      chores.list = (Array.isArray(saved.list) ? saved.list : []).filter((c) => c && c.id && c.name && c.who && c.rule);
+      chores.done = saved.done && typeof saved.done === 'object' ? saved.done : {};
+      chores.stars = saved.stars && typeof saved.stars === 'object' ? saved.stars : {};
+      chores.goals = saved.goals && typeof saved.goals === 'object' ? saved.goals : {};
+    }
+    const keep = new Set([dayKey(), dayKey(addDays(new Date(), -1))]);   // yesterday is kept so a late undo still works
+    Object.keys(chores.done).forEach((k) => { if (!keep.has(k)) delete chores.done[k]; });
+    if (!chores.list.length && isDemo()) {
+      chores.list = [
+        { id: 'c1', name: 'Make your bed', who: 'Mia', stars: 1, rule: { type: 'daily' } },
+        { id: 'c2', name: 'Empty the dishwasher', who: 'Mia', stars: 2, rule: { type: 'daily' } },
+        { id: 'c3', name: 'Take out the recycling', who: 'Dan', stars: 2, rule: { type: 'daily' } },
+        { id: 'c4', name: 'Feed the cat', who: 'Dan', stars: 1, rule: { type: 'daily' } },
+        { id: 'c5', name: 'Walk the dog', who: 'Dan', stars: 3, rule: { type: 'daily' } },
+      ];
+      chores.stars = { mia: 12, dan: 7 };
+      chores.goals = { mia: { stars: 20, label: 'Movie night' }, dan: { stars: 10, label: 'Ice cream' } };
+      chores.done[dayKey()] = { c1: 1 };
+    }
+  }
+  function saveChores() { try { localStorage.setItem(CHORES_KEY, JSON.stringify(chores)); } catch (_) { showToast('Couldn’t save the chores'); } }
+  const dayNumber = (d) => Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+  function choreDue(c, d = new Date()) {
+    const r = c.rule || {};
+    if (r.type === 'daily') return true;
+    if (r.type === 'days') return (r.days || []).includes(d.getDay());
+    if (r.type === 'every') { const since = parseDate(r.since || dayKey(d)); const n = Math.max(1, Number(r.n) || 1); return (dayNumber(d) - dayNumber(since)) % n === 0 && dayNumber(d) >= dayNumber(since); }
+    return false;
+  }
+  const choresToday = () => chores.list.filter((c) => choreDue(c));
+  const choreDoneToday = (c) => !!(chores.done[dayKey()] || {})[c.id];
+  const starsOf = (who) => Math.max(0, Number(chores.stars[nameKey(who)]) || 0);
+  const goalOf = (who) => { const g = chores.goals[nameKey(who)]; return g && Number(g.stars) > 0 ? g : null; };
+  // Today's chores grouped by person, in the order the people first appear.
+  function choreGroups() {
+    const groups = new Map();
+    choresToday().forEach((c) => { const k = nameKey(c.who); if (!groups.has(k)) groups.set(k, { key: k, name: c.who, items: [] }); groups.get(k).items.push(c); });
+    return [...groups.values()];
+  }
+  function toggleChore(id) {
+    const c = chores.list.find((x) => x.id === id);
+    if (!c) return;
+    const day = chores.done[dayKey()] = chores.done[dayKey()] || {}, k = nameKey(c.who);
+    if (day[id]) {
+      chores.stars[k] = Math.max(0, starsOf(c.who) - day[id]);
+      delete day[id];
+    } else {
+      day[id] = c.stars;
+      chores.stars[k] = starsOf(c.who) + c.stars;
+      const g = goalOf(c.who);
+      showToast(g && starsOf(c.who) >= g.stars ? `${c.who} has earned ${g.label || 'a reward'}!` : `+${c.stars} ★ ${c.who}`);
+    }
+    saveChores(); drawChores();
+  }
+  const starsLine = (who) => { const g = goalOf(who); return `★ ${starsOf(who)}${g ? `<small> / ${g.stars}</small>` : ''}`; };
+  function drawChores() {
+    const box = $('choreList');
+    if (!choresShown() && !tour.on) return;
+    const groups = choreGroups();
+    const left = choresToday().filter((c) => !choreDoneToday(c)).length;
+    $('choreCount').textContent = left || '';
+    if (!groups.length) { box.innerHTML = `<div class="board-empty">${chores.list.length ? 'No chores today.' : 'No chores yet. Add some in <b>Settings → Widgets → Chores</b>.'}</div>`; return; }
+    box.innerHTML = groups.map((g) => {
+      const goal = goalOf(g.name), bal = starsOf(g.name), ready = goal && bal >= goal.stars;
+      return `<div class="chore-person" style="--p:${personColor(g.name)}">
+        <div class="chore-head"><span class="cp-name">${esc(g.name)}</span><span class="cp-stars">${starsLine(g.name)}</span></div>
+        ${goal ? `<div class="cp-bar"><i style="width:${Math.min(100, (bal / goal.stars) * 100).toFixed(0)}%"></i></div>` : ''}
+        ${ready ? `<button type="button" class="cp-claim" data-claim="${esc(g.key)}">Reward ready: ${esc(goal.label || 'claim it')}</button>` : ''}
+        <ul class="tasks">${g.items.map((c) => { const done = choreDoneToday(c); return `<li class="task${done ? ' done' : ''}" data-chore="${esc(c.id)}"><span class="box">${Icons.check}</span><span class="body"><span class="label">${esc(c.name)}</span></span><span class="cstars">★${c.stars}</span></li>`; }).join('')}</ul>
+      </div>`;
+    }).join('');
+  }
+  const claimSheet = $('claimSheet');
+  let claiming = null;
+  $('choreList').addEventListener('click', (e) => {
+    const li = e.target.closest('[data-chore]');
+    if (li) { toggleChore(li.dataset.chore); return; }
+    const cl = e.target.closest('[data-claim]');
+    if (!cl) return;
+    const g = choreGroups().find((x) => x.key === cl.dataset.claim);
+    const goal = g && goalOf(g.name);
+    if (!goal) return;
+    claiming = g;
+    $('claimText').textContent = `${g.name} has ${starsOf(g.name)} stars. Claim ${goal.label || 'the reward'} and use ${goal.stars} of them?`;
+    claimSheet.showModal();
+  });
+  $('claimCancel').addEventListener('click', () => claimSheet.close());
+  claimSheet.addEventListener('click', (e) => { if (e.target === claimSheet) claimSheet.close(); });
+  $('claimOk').addEventListener('click', () => {
+    const goal = claiming && goalOf(claiming.name);
+    if (goal) { chores.stars[claiming.key] = Math.max(0, starsOf(claiming.name) - goal.stars); saveChores(); drawChores(); showToast(`Enjoy: ${goal.label || 'your reward'}!`); }
+    claimSheet.close();
+  });
+  // Big Skreen Mode: each person's chores left for today, with their stars.
+  function choresSlide() {
+    const groups = choreGroups();
+    const cols = groups.map((g) => {
+      const goal = goalOf(g.name), bal = starsOf(g.name), todo = g.items.filter((c) => !choreDoneToday(c));
+      const rows = todo.slice(0, 4).map((c) => `<div class="row"><div class="bullet"></div><div class="rn"><span class="ttl">${esc(c.name)}</span></div></div>`).join('') || '<div class="empty-big">All done ★</div>';
+      const bar = goal ? `<div class="cp-bar big"><i style="width:${Math.min(100, (bal / goal.stars) * 100).toFixed(0)}%"></i></div>` : '';
+      return `<div class="sv-col"><div class="sv-colhead" style="--p:${personColor(g.name)}">${esc(g.name)} · ${starsLine(g.name)}</div>${bar}<div class="sv-list">${rows}</div></div>`;
+    }).join('');
+    return `<div class="kicker">Chores</div><div class="sv-cols" style="--n:${Math.max(1, groups.length)}">${cols}</div>`;
+  }
+  loadChores();
 
   // ─── Whiteboard (Skreen+) ──────────────────────────────────────────────────
   // Notes for the household. They live in this device's private storage and nowhere else: they are never sent
@@ -2963,6 +3086,84 @@
     drawLayoutEditor(); setTimeout(drawExtras, 0);
   });
 
+  // Chores, in Settings (Skreen+): the chores themselves, and each person's reward.
+  let draftChores = [], draftGoals = {};
+  const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  function ruleKind(r) {
+    if (!r || r.type === 'daily') return 'daily';
+    if (r.type === 'every') return 'every' + r.n;
+    const d = [...(r.days || [])].sort().join(',');
+    return d === '1,2,3,4,5' ? 'weekdays' : d === '0,6' ? 'weekends' : 'days';
+  }
+  function ruleFrom(kind, prev) {
+    if (kind === 'daily') return { type: 'daily' };
+    if (kind === 'weekdays') return { type: 'days', days: [1, 2, 3, 4, 5] };
+    if (kind === 'weekends') return { type: 'days', days: [0, 6] };
+    if (kind === 'days') return { type: 'days', days: prev && prev.type === 'days' ? prev.days : [1] };
+    const n = Number(kind.replace('every', '')) || 2;
+    return { type: 'every', n, since: dayKey() };
+  }
+  function drawChoresCfg() {
+    $('choresField').hidden = !hasPlus();
+    if (!hasPlus()) return;
+    $('choreNames').innerHTML = rosterNames().map((n) => `<option value="${esc(n)}"></option>`).join('');
+    $('choresCfg').innerHTML = draftChores.map((c) => {
+      const kind = ruleKind(c.rule);
+      return `<div class="extra" data-c="${esc(c.id)}">
+        <div class="extra-head"><i class="extra-dot" style="background:${personColor(c.who || '?')}"></i><input class="extra-name" type="text" maxlength="40" value="${esc(c.name)}" placeholder="Chore, e.g. Feed the cat" data-cname aria-label="Chore"><button type="button" class="btn ghost small" data-crm>Remove</button></div>
+        <div class="chore-cfg">
+          <label><span class="sub">Who</span><input type="text" maxlength="20" list="choreNames" value="${esc(c.who)}" placeholder="Name" data-cwho></label>
+          <label><span class="sub">Stars</span><select data-cstars>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${n === c.stars ? 'selected' : ''}>★ ${n}</option>`).join('')}</select></label>
+          <label><span class="sub">Repeats</span><select data-crule>
+            ${[['daily', 'Every day'], ['weekdays', 'Weekdays'], ['weekends', 'Weekends'], ['days', 'Certain days'], ['every2', 'Every 2 days'], ['every3', 'Every 3 days'], ['every7', 'Every week'], ['every14', 'Every 2 weeks']].map(([v, l]) => `<option value="${v}" ${v === kind || (kind.startsWith('every') && v === kind) ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        </div>
+        ${kind === 'days' ? `<div class="checks day-picks">${DAY_LETTERS.map((l, i) => `<label class="check"><input type="checkbox" data-cday="${i}" ${(c.rule.days || []).includes(i) ? 'checked' : ''}><span>${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][i]}</span></label>`).join('')}</div>` : ''}
+      </div>`;
+    }).join('');
+    const people = [...new Map(draftChores.filter((c) => c.who.trim()).map((c) => [nameKey(c.who), c.who.trim()]))];
+    $('choreGoals').innerHTML = people.length ? '<span class="sub">Rewards</span>' + people.map(([k, name]) => {
+      const g = draftGoals[k] || {};
+      return `<div class="extra" data-g="${esc(k)}"><div class="extra-head"><i class="extra-dot" style="background:${personColor(name)}"></i><b class="extra-kind" style="color:var(--ink)">${esc(name)}</b></div>
+        <div class="chore-cfg"><label><span class="sub">Stars to earn it</span><input type="number" min="1" max="999" value="${esc(g.stars || '')}" placeholder="20" data-ggoal></label>
+        <label style="flex:2"><span class="sub">Reward</span><input type="text" maxlength="40" value="${esc(g.label || '')}" placeholder="Movie night" data-glabel></label></div></div>`;
+    }).join('') : '';
+  }
+  $('choreAdd').addEventListener('click', () => {
+    draftChores.push({ id: 'c' + Date.now().toString(36), name: '', who: (draftChores[draftChores.length - 1] || {}).who || '', stars: 1, rule: { type: 'daily' } });
+    drawChoresCfg();
+    const last = $('choresCfg').querySelector('.extra:last-child [data-cname]'); if (last) last.focus();
+  });
+  $('choresCfg').addEventListener('input', (e) => {
+    const c = draftChores.find((y) => y.id === e.target.closest('.extra').dataset.c);
+    if (!c) return;
+    if (e.target.matches('[data-cname]')) c.name = e.target.value;
+    if (e.target.matches('[data-cwho]')) { c.who = e.target.value; const dot = e.target.closest('.extra').querySelector('.extra-dot'); if (dot) dot.style.background = personColor(c.who || '?'); }
+  });
+  $('choresCfg').addEventListener('change', (e) => {
+    const c = draftChores.find((y) => y.id === e.target.closest('.extra').dataset.c);
+    if (!c) return;
+    if (e.target.matches('[data-cwho]')) { setTimeout(drawChoresCfg, 0); return; }   // the rewards list follows the names
+    if (e.target.matches('[data-cstars]')) c.stars = Number(e.target.value) || 1;
+    else if (e.target.matches('[data-crule]')) { c.rule = ruleFrom(e.target.value, c.rule); setTimeout(drawChoresCfg, 0); }
+    else if (e.target.matches('[data-cday]')) {
+      const days = new Set(c.rule.days || []), d = Number(e.target.dataset.cday);
+      if (e.target.checked) days.add(d); else days.delete(d);
+      if (!days.size) { e.target.checked = true; days.add(d); showToast('Pick at least one day'); }
+      c.rule = { type: 'days', days: [...days].sort() };
+    }
+  });
+  $('choresCfg').addEventListener('click', (e) => {
+    if (!e.target.closest('[data-crm]')) return;
+    draftChores = draftChores.filter((y) => y.id !== e.target.closest('.extra').dataset.c);
+    setTimeout(drawChoresCfg, 0);
+  });
+  $('choreGoals').addEventListener('input', (e) => {
+    const k = e.target.closest('.extra').dataset.g;
+    const g = draftGoals[k] = draftGoals[k] || {};
+    if (e.target.matches('[data-ggoal]')) g.stars = Math.max(0, Math.floor(Number(e.target.value) || 0));
+    if (e.target.matches('[data-glabel]')) g.label = e.target.value;
+  });
+
   // ─── Settings sheet ────────────────────────────────────────────────────────
 
   const settingsSheet = $('settingsSheet'), form = $('settingsForm');
@@ -2986,6 +3187,7 @@
       if (id === 'meals' && !(mealState.ready && Object.keys(mealState.byDate).length)) return { text: 'Not showing yet: no dinners are planned' };
       if (id === 'shop' && !shopState.items.length) return { text: 'Not showing yet: your shopping list is empty' };
       if (id === 'board' && !board.notes.length) return { text: 'Not showing yet: there are no notes' };
+      if (id === 'chores' && !choresToday().length) return { text: 'Not showing yet: no chores are due today' };
       if ((['agenda', 'todo'].includes(id) || extraById(id)) && !extraReady()) return { text: 'Not showing yet: nothing has loaded' };
       return null;
     };
@@ -3078,6 +3280,9 @@
     drawIcs();
     $('icsResult').textContent = '';
     draftExtras = extrasOf().map((x) => ({ ...x, cals: [...(x.cals || [])], lists: [...(x.lists || [])], people: [...(x.people || [])] }));
+    draftChores = chores.list.map((c) => ({ ...c, rule: { ...c.rule, days: c.rule.days ? [...c.rule.days] : undefined } }));
+    draftGoals = JSON.parse(JSON.stringify(chores.goals));
+    drawChoresCfg();
     draftPeople = peopleOf().map((p) => ({ ...p, cals: [...(p.cals || [])], lists: [...(p.lists || [])] }));
     draftLayout = parseLayout(cfg.layout);
     drawLayoutEditor();
@@ -3235,6 +3440,12 @@
       cfg.household = draftPeople.map((p) => ({ ...p, name: (p.name || '').trim() })).filter((p) => p.name);
       const keep = new Set(cfg.household.map((p) => p.id));
       cfg.extras = draftExtras.map((x) => ({ ...x, name: (x.name || '').trim() || (x.kind === 'agenda' ? 'Schedule' : 'To-do list'), people: (x.people || []).filter((id) => keep.has(id)) }));
+    }
+    if (hasPlus()) {
+      chores.list = draftChores.map((c) => ({ ...c, name: c.name.trim(), who: c.who.trim().replace(/\s+/g, ' ') })).filter((c) => c.name && c.who);
+      Object.keys(draftGoals).forEach((k) => { const g = draftGoals[k]; if (!g || !(g.stars > 0)) delete draftGoals[k]; });
+      chores.goals = draftGoals;
+      saveChores();
     }
     if (draftLayout && hasPlus()) cfg.layout = serializeLayout(draftLayout);
     document.querySelectorAll('#acctBox .acct').forEach((el) => {

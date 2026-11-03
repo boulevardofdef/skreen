@@ -86,6 +86,11 @@
       <button class="add-btn" id="boardAdd" type="button"><span id="boardAddIcon"></span>Add note</button>
     </section>
 
+    <section class="w col chores" data-w="chores">
+      <div class="col-head"><span>Chores</span><span class="count" id="choreCount"></span></div>
+      <div class="scroll chore-list" id="choreList"></div>
+    </section>
+
     <section class="w w-photos" data-w="photos">
       <div class="photo-frame" id="photoFrame"><div class="pf" id="pfA"></div><div class="pf" id="pfB"></div><div class="pf-caption" id="photoCaption"></div><div class="pf-note" id="photoNote"></div></div>
     </section>
@@ -308,6 +313,19 @@
     </form>
   </dialog>
 
+  <!-- Chore reward -->
+  <dialog class="sheet" id="claimSheet">
+    <form method="dialog">
+      <div class="brand-row sm" data-brand></div>
+      <h3>Claim the reward?</h3>
+      <p class="hint" id="claimText" style="font-size:1.1rem;color:var(--muted)"></p>
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" id="claimCancel">Not yet</button>
+        <button type="button" class="btn primary" id="claimOk">Claim</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- First-run welcome (Android app) -->
   <dialog class="sheet welcome" id="welcome">
     <div class="brand-row" data-brand></div>
@@ -431,6 +449,14 @@
             <button type="button" class="btn ghost small" id="extraAddAgenda">+ Schedule</button>
             <button type="button" class="btn ghost small" id="extraAddTodo">+ To-do list</button>
           </div>
+        </div>
+        <div class="field" id="choresField" hidden>
+          <span class="sub">Chores</span>
+          <span>Chores repeat on the days you choose and earn stars when ticked off on the Chores widget (switch it on under Layout above). Each person's stars build toward a reward you set. Everything stays on this tablet.</span>
+          <div id="choresCfg"></div>
+          <div class="loc-row"><button type="button" class="btn ghost small" id="choreAdd">+ Chore</button></div>
+          <div id="choreGoals"></div>
+          <datalist id="choreNames"></datalist>
         </div>
         <div class="group">Photos <span class="plus-chip" data-plus-logo></span></div>
         <div class="field" id="photoField">
