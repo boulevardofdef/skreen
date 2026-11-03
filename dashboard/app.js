@@ -8,7 +8,7 @@
     lat: null, lon: null, place: '',
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage', accent: 'orange',
-    showcaseMinutes: '5', refreshMinutes: '10', bigMode: '0', bigTap: '1', bigResume: '1', extras: [], slideSeconds: '60', slideSkip: '', pixelShift: '1',
+    showcaseMinutes: '5', refreshMinutes: '10', bigMode: '0', bigTap: '1', bigResume: '1', extras: [], household: [], slideSeconds: '60', slideSkip: '', pixelShift: '1',
     layout: 'clock,weather,agenda,todo', photoSource: 'art', photoSeconds: '30', mealList: '', shopList: '', pageSeconds: '60',
     ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
@@ -531,6 +531,7 @@
   function knownPeople() {
     const known = new Map();
     state.tasks.forEach((t) => (t.who || []).forEach((n) => { if (!known.has(nameKey(n))) known.set(nameKey(n), n); }));
+    (Array.isArray(cfg.household) && hasPlus() ? cfg.household : []).forEach((p) => { if (p && p.name && !known.has(nameKey(p.name))) known.set(nameKey(p.name), p.name); });
     board.notes.forEach((nt) => nt.who.forEach((n) => { if (!known.has(nameKey(n))) known.set(nameKey(n), n); }));
     sessionNames.forEach((n, k) => { if (!known.has(k)) known.set(k, n); });
     return known;
@@ -1548,7 +1549,7 @@
         ${r ? `<div class="rain">${r.wet ? Icons.umbrella : Icons.check}${esc(r.text)}</div>` : ''}</div>`;
     }
     const xw = extraById(name);
-    if (xw) return xw.kind === 'agenda' ? agendaSlide(extraEvents(xw), xw.name) : todoSlide(extraTasks(xw), xw.name);
+    if (xw) return colsOf(xw).length ? peopleSlide(xw) : (xw.kind === 'agenda' ? agendaSlide(extraEvents(xw), xw.name) : todoSlide(extraTasks(xw), xw.name));
     if (name === 'agenda') return agendaSlide(state.events, 'Next up');
     return todoSlide(state.tasks, 'To-do');
   }
@@ -1573,6 +1574,22 @@
     let rows = soon.map(rowHtml).join('');
     if (!rows) rows = '<div class="empty-big">Nothing on the calendar</div>';
     return `<div class="kicker">${esc(kicker)}</div><div class="sv-list">${rows}</div>`;
+  }
+  // Big Skreen Mode: a widget that shows people side by side, one column each (the next few events, or the top to-dos).
+  function peopleSlide(x) {
+    const now = new Date(), cols = colsOf(x);
+    const rows = cols.map((c, i) => {
+      let inner;
+      if (x.kind === 'agenda') {
+        const evs = colEvents(x, c, i).map(normalizeEvent).filter((e) => e.e > now).sort((a, b) => (a.allDay === b.allDay ? a.s - b.s : a.allDay ? -1 : 1)).slice(0, 3);
+        inner = evs.map((e) => `<div class="row${!e.allDay && e.s <= now ? ' now' : ''}"><div class="rt">${e.allDay ? 'All day' : fmtTime(e.s, { small: true })}</div><div class="rn"><span class="ttl">${esc(e.title)}</span></div></div>`).join('') || '<div class="empty-big">Nothing coming up</div>';
+      } else {
+        const { open } = taskGroups(colTasks(x, c, i));
+        inner = open.slice(0, 5).map((t) => `<div class="row"><div class="bullet"></div><div class="rn"><span class="ttl">${esc(t.title)}</span></div></div>`).join('') || '<div class="empty-big">All caught up</div>';
+      }
+      return `<div class="sv-col"><div class="sv-colhead" style="--p:${c.color || 'var(--ink)'}">${esc(c.label)}</div><div class="sv-list">${inner}</div></div>`;
+    }).join('');
+    return `<div class="kicker">${esc(x.name)}</div><div class="sv-cols" style="--n:${cols.length}">${rows}</div>`;
   }
   function todoSlide(taskList, kicker) {
     const { open } = taskGroups(taskList);
@@ -1929,7 +1946,22 @@
   const widgetKind = (id) => { const x = extraById(id); return x ? (x.kind === 'agenda' ? 'agenda' : 'todo') : id; };
   const srcOf = (str) => { const i = String(str).indexOf('|'); return { a: str.slice(0, i), id: str.slice(i + 1) }; };
   const extra = { events: {}, tasks: {}, listNames: {} };   // by widget id
-  const allTasks = () => [...state.tasks, ...Object.values(extra.tasks).flat()];
+  const peopleData = {};   // person id → { events, tasks }, for the people shown side by side
+  const allTasks = () => [...state.tasks, ...Object.values(extra.tasks).flat(), ...Object.values(peopleData).flatMap((p) => p.tasks || [])];
+
+  // People (Skreen+): each has a name (and so a colour, the same as their chips), calendars and lists.
+  // cfg.household: [{ id, name, cals: ['account|calendarId'], lists: ['account|listId'] }].
+  const peopleOf = () => (hasPlus() && Array.isArray(cfg.household) ? cfg.household.filter((p) => p && p.id && p.name) : []);
+  const personById = (id) => peopleOf().find((p) => p.id === id) || null;
+  // An extra widget can show people side by side (by: 'person'): an optional "Everyone" column, made of the widget's
+  // own calendars or lists, then one column for each person chosen (all of them, if none is chosen).
+  function colsOf(x) {
+    if (!x || x.by !== 'person') return [];
+    const chosen = Array.isArray(x.people) && x.people.length ? x.people.map(personById).filter(Boolean) : peopleOf();
+    const shared = (x.kind === 'agenda' ? x.cals : x.lists) || [];
+    return [...(shared.length ? [{ pid: null, label: 'Everyone', color: null }] : []), ...chosen.map((p) => ({ pid: p.id, label: p.name, color: personColor(p.name) }))];
+  }
+  const personCols = (id) => { const x = extraById(id); return x ? colsOf(x).length : 0; };
 
   function parseLayout(str) {
     const seen = new Set(), out = [];
@@ -1960,10 +1992,19 @@
     }
     return lanes;
   }
+  // A widget that shows people side by side takes up as many lanes as it has columns (at most a whole screen).
+  const laneWeight = (l) => (l.kind === 'pair' ? 1 : Math.min(MAX_LANES, Math.max(1, personCols(l.kind))));
+  const laneFr = (l) => (LAYOUT_FR[l.kind] ?? LAYOUT_FR[widgetKind(l.kind)] ?? 1) * (laneWeight(l) > 1 ? laneWeight(l) * 0.85 : 1);
   const paginate = (lanes) => {
     if (phoneLayout()) return [lanes];          // a phone scrolls one long screen instead
     const pages = [];
-    for (let i = 0; i < lanes.length; i += MAX_LANES) pages.push(lanes.slice(i, i + MAX_LANES));
+    let cur = [], w = 0;
+    for (const l of lanes) {
+      const lw = laneWeight(l);
+      if (cur.length && w + lw > MAX_LANES) { pages.push(cur); cur = []; w = 0; }
+      cur.push(l); w += lw;
+    }
+    if (cur.length) pages.push(cur);
     return pages.length ? pages : [[]];
   };
   const pager = { index: 0, count: 1, changedAt: Date.now(), dragging: false };
@@ -1988,7 +2029,7 @@
         l.ids.forEach((id) => lane.appendChild(els[id]));
         page.appendChild(lane);
       }
-      page.style.setProperty('--cols', lanes.map((l) => `minmax(0, ${LAYOUT_FR[l.kind] ?? LAYOUT_FR[widgetKind(l.kind)] ?? 1}fr)`).join(' '));
+      page.style.setProperty('--cols', lanes.map((l) => `minmax(0, ${laneFr(l)}fr)`).join(' '));
       track.appendChild(page);
     }
     const view = document.createElement('div');
@@ -2224,14 +2265,18 @@
     const want = new Map(extrasOf().map((x) => [x.id, x]));
     document.querySelectorAll('#dash .xw').forEach((el) => { if (!want.has(el.dataset.w)) el.remove(); });
     for (const x of want.values()) {
+      const mode = colsOf(x).length ? 'cols' : 'one';
       let el = document.querySelector(`#dash .xw[data-w="${CSS.escape(x.id)}"]`);
+      if (el && el.dataset.mode !== mode) { el.remove(); el = null; }   // switched between one list and people side by side
       if (!el) {
         el = document.createElement('section');
         el.className = `w col xw xw-${x.kind}`;
-        el.dataset.w = x.id;
-        el.innerHTML = x.kind === 'agenda'
-          ? '<div class="col-head"><span class="xw-name"></span></div><div class="scroll xw-body"></div>'
-          : '<div class="col-head"><span class="xw-name"></span><span class="count"></span></div><ul class="scroll tasks xw-body"></ul><button class="add-btn" type="button" data-xadd><span class="xw-plus"></span>Add to list</button>';
+        el.dataset.w = x.id; el.dataset.mode = mode;
+        el.innerHTML = mode === 'cols'
+          ? '<div class="col-head"><span class="xw-name"></span></div><div class="xw-body pcols"></div>'
+          : x.kind === 'agenda'
+            ? '<div class="col-head"><span class="xw-name"></span></div><div class="scroll xw-body"></div>'
+            : '<div class="col-head"><span class="xw-name"></span><span class="count"></span></div><ul class="scroll tasks xw-body"></ul><button class="add-btn" type="button" data-xadd><span class="xw-plus"></span>Add to list</button>';
         const plus = el.querySelector('.xw-plus'); if (plus) plus.innerHTML = Icons.plus || '+';
         $('shelf').appendChild(el);
       }
@@ -2239,38 +2284,71 @@
     }
   }
 
+  // Sample data (?demo) has no real people, so each column gets a share: to-dos signed with the person's name, events dealt out in turn.
+  function demoCol(x, c, i) {
+    const n = colsOf(x).length;
+    return x.kind === 'agenda'
+      ? state.events.filter((_, k) => k % n === i)
+      : state.tasks.filter((t) => (t.who || []).some((w) => nameKey(w) === nameKey(c.label)) || (!c.pid && !(t.who || []).length));
+  }
+  function colEvents(x, c, i = 0) {
+    if (isDemo()) return c.pid ? demoCol(x, c, i) : extraEvents(x);
+    return c.pid ? ((peopleData[c.pid] || {}).events || []) : (extra.events[x.id] || []);
+  }
+  function colTasks(x, c, i = 0) {
+    if (isDemo()) return c.pid ? demoCol(x, c, i) : state.tasks;
+    return c.pid ? ((peopleData[c.pid] || {}).tasks || []) : (extra.tasks[x.id] || []);
+  }
   const extraEvents = (x) => (isDemo() ? state.events : (extra.events[x.id] || []));
   const extraTasks = (x) => (isDemo() ? state.tasks : (extra.tasks[x.id] || []));
   const extraReady = () => isDemo() || state.loaded;
 
-  // Fetch what each extra widget needs (only its own calendars or lists), a widget at a time so one failing doesn't stop the rest.
+  // Fetch the events of some calendars, or the tasks of some lists ('account|id' each), from the signed-in accounts.
+  async function fetchEvents(cals, known) {
+    const byAcct = new Map();
+    for (const c of (cals || []).map(srcOf)) if (known.has(c.a)) byAcct.set(c.a, [...(byAcct.get(c.a) || []), c.id]);
+    const sets = await Promise.all([...byAcct].map(([a, ids]) => Google.events(a, ids, AGENDA_DAYS)));
+    const seen = new Set(), events = [];
+    for (const ev of sets.flat()) { const k = (ev.uid || ev.id) + '|' + ev.start; if (!seen.has(k)) { seen.add(k); events.push(ev); } }
+    return events;
+  }
+  async function fetchTasks(lists, known, tag) {
+    const ls = (lists || []).map(srcOf).filter((l) => known.has(l.a));
+    const sets = await Promise.all(ls.map(async (l) => {
+      const names = await listNames(l.a).catch(() => ({}));
+      extra.listNames[`${l.a}|${l.id}`] = names[l.id] || '';
+      const tasks = await Google.tasks(l.a, l.id);
+      return tasks.map((t) => ({ ...withRef(t, l.a, l.id, names[l.id]), tag: tag && ls.length > 1 ? (names[l.id] || '') : '' }));
+    }));
+    return decorateTasks(sets.flat());
+  }
+
+  // Fetch what each extra widget needs (only its own calendars or lists, and each person's), one at a time so a failure doesn't stop the rest.
   async function refreshExtras() {
     const xs = extrasOf();
     if (!xs.length) { extra.events = {}; extra.tasks = {}; return; }
     if (isDemo()) { renderExtras(); return; }
     if (!usingGoogle()) return;
     const known = new Set(accountList());
-    await Promise.all(xs.map(async (x) => {
-      try {
-        if (x.kind === 'agenda') {
-          const byAcct = new Map();
-          for (const c of (x.cals || []).map(srcOf)) if (known.has(c.a)) byAcct.set(c.a, [...(byAcct.get(c.a) || []), c.id]);
-          const sets = await Promise.all([...byAcct].map(([a, ids]) => Google.events(a, ids, AGENDA_DAYS)));
-          const seen = new Set(), events = [];
-          for (const ev of sets.flat()) { const k = (ev.uid || ev.id) + '|' + ev.start; if (!seen.has(k)) { seen.add(k); events.push(ev); } }
-          extra.events[x.id] = events;
-        } else if (!state.mutating && Date.now() - state.lastMutation > 4000) {
-          const lists = (x.lists || []).map(srcOf).filter((l) => known.has(l.a));
-          const sets = await Promise.all(lists.map(async (l) => {
-            const names = await listNames(l.a).catch(() => ({}));
-            extra.listNames[`${l.a}|${l.id}`] = names[l.id] || '';
-            const tasks = await Google.tasks(l.a, l.id);
-            return tasks.map((t) => ({ ...withRef(t, l.a, l.id, names[l.id]), tag: lists.length > 1 ? (names[l.id] || '') : '' }));
-          }));
-          extra.tasks[x.id] = decorateTasks(sets.flat());
-        }
-      } catch (err) { console.warn('Extra widget sync failed', x.name, err); }
-    }));
+    const idle = () => !state.mutating && Date.now() - state.lastMutation > 4000;
+    const needEv = new Set(), needTk = new Set();
+    for (const x of xs) colsOf(x).forEach((c) => { if (c.pid) (x.kind === 'agenda' ? needEv : needTk).add(c.pid); });
+    await Promise.all([
+      ...xs.map(async (x) => {
+        try {
+          if (x.kind === 'agenda') extra.events[x.id] = await fetchEvents(x.cals, known);
+          else if (idle()) extra.tasks[x.id] = await fetchTasks(x.lists, known, true);
+        } catch (err) { console.warn('Extra widget sync failed', x.name, err); }
+      }),
+      ...[...needEv].map(async (pid) => {
+        const p = personById(pid); if (!p) return;
+        try { const d = peopleData[pid] = peopleData[pid] || {}; d.events = await fetchEvents(p.cals, known); } catch (err) { console.warn('Person sync failed', p.name, err); }
+      }),
+      ...[...needTk].map(async (pid) => {
+        const p = personById(pid); if (!p || !idle()) return;
+        try { const d = peopleData[pid] = peopleData[pid] || {}; d.tasks = await fetchTasks(p.lists, known, true); } catch (err) { console.warn('Person sync failed', p.name, err); }
+      }),
+    ]);
     renderExtras();
   }
 
@@ -2279,9 +2357,23 @@
       const el = document.querySelector(`#dash .xw[data-w="${CSS.escape(x.id)}"]`);
       if (!el) continue;
       const body = el.querySelector('.xw-body');
+      const cols = colsOf(x);
       let html;
-      if (!isDemo() && skeletonOn()) html = x.kind === 'agenda' ? skeletonAgenda() : skeletonTasks();
-      else if (x.kind === 'agenda') html = (isDemo() || (x.cals || []).length) ? agendaHtml(extraEvents(x)) : '<div class="empty">Choose calendars for this schedule in Settings</div>';
+      if (!isDemo() && skeletonOn()) html = cols.length ? '' : x.kind === 'agenda' ? skeletonAgenda() : skeletonTasks();
+      else if (cols.length) {
+        html = `<div class="pcols-grid" style="--n:${cols.length}">` + cols.map((c, i) => {
+          const sources = c.pid ? ((personById(c.pid) || {})[x.kind === 'agenda' ? 'cals' : 'lists'] || []) : ((x.kind === 'agenda' ? x.cals : x.lists) || []);
+          const none = !isDemo() && !sources.length;
+          let inner, count = '';
+          if (x.kind === 'agenda') inner = none ? `<div class="empty">No calendar chosen for ${esc(c.label)} yet</div>` : agendaHtml(colEvents(x, c, i));
+          else {
+            const r = todoHtml(colTasks(x, c, i), { empty: none ? `No list chosen for ${c.label} yet` : '' });
+            inner = `<ul class="tasks">${r.html}</ul>`;
+            count = none ? '' : (r.open || '');
+          }
+          return `<div class="pcol" data-p="${esc(c.pid || '')}"><div class="pcol-head" style="--p:${c.color || 'var(--ink)'}"><span>${esc(c.label)}</span>${count !== '' ? `<b>${count}</b>` : ''}</div><div class="pcol-body scroll">${inner}</div>${x.kind === 'todo' ? '<button class="add-btn small" type="button" data-padd>+ Add</button>' : ''}</div>`;
+        }).join('') + '</div>';
+      } else if (x.kind === 'agenda') html = (isDemo() || (x.cals || []).length) ? agendaHtml(extraEvents(x)) : '<div class="empty">Choose calendars for this schedule in Settings</div>';
       else {
         const none = !isDemo() && !(x.lists || []).length;
         const r = todoHtml(extraTasks(x), { empty: none ? 'Choose a list for this one in Settings' : '' });
@@ -2292,48 +2384,61 @@
     }
   }
 
+  // Open the Add box for an extra to-do widget, or for one person's column in it.
+  function openExtraAdd(x, pid) {
+    const person = pid ? personById(pid) : null;
+    const lists = ((person ? person.lists : x.lists) || []).map(srcOf);
+    if (!usingGoogle() && !isDemo()) { showToast('Sign in with Google to use the to-do list'); return; }
+    if (!isDemo() && !lists.length) { showToast(person ? `Choose a list for ${person.name} in Settings` : 'Choose a list for this one in Settings'); return; }
+    addCtx = isDemo() ? null : { id: x.id, pid: pid || null };
+    $('addInput').value = '';
+    addWho.reset();
+    $('addToRow').hidden = isDemo() || lists.length < 2;
+    if (!isDemo() && lists.length > 1) {
+      const several = new Set(lists.map((l) => l.a)).size > 1;
+      $('addToSel').innerHTML = lists.map((l) => `<option value="${esc(l.a + '|' + l.id)}">${esc(extra.listNames[`${l.a}|${l.id}`] || 'List')}${several ? ' · ' + esc(l.a) : ''}</option>`).join('');
+    }
+    addSheet.showModal();
+    setTimeout(() => $('addInput').focus(), 50);
+  }
+
   // Taps on the extra widgets: events open their details, to-dos behave as on the main list, Add opens the Add box.
   $('dash').addEventListener('click', (e) => {
     const el = e.target.closest('.xw');
     if (!el) return;
     const x = extraById(el.dataset.w);
     if (!x) return;
+    const colEl = e.target.closest('.pcol');
+    const cols = colsOf(x);
+    const ci = colEl ? cols.findIndex((c) => (c.pid || '') === colEl.dataset.p) : -1;
+    const col = ci >= 0 ? cols[ci] : null;
     if (x.kind === 'agenda') {
       const k = e.target.closest('[data-key]');
       const ev = k && agendaIndex.get(k.dataset.key);
       if (ev) showEvent(ev);
-    } else if (e.target.closest('[data-xadd]')) {
-      if (!usingGoogle() && !isDemo()) { showToast('Sign in with Google to use the to-do list'); return; }
-      if (!isDemo() && !(x.lists || []).length) { showToast('Choose a list for this one in Settings'); return; }
-      addCtx = isDemo() ? null : x.id;
-      $('addInput').value = '';
-      addWho.reset();
-      const lists = (x.lists || []).map(srcOf);
-      $('addToRow').hidden = isDemo() || lists.length < 2;
-      if (!isDemo() && lists.length > 1) {
-        const several = new Set(lists.map((l) => l.a)).size > 1;
-        $('addToSel').innerHTML = lists.map((l) => `<option value="${esc(l.a + '|' + l.id)}">${esc(extra.listNames[`${l.a}|${l.id}`] || 'List')}${several ? ' · ' + esc(l.a) : ''}</option>`).join('');
-      }
-      addSheet.showModal();
-      setTimeout(() => $('addInput').focus(), 50);
+    } else if (e.target.closest('[data-xadd]') || e.target.closest('[data-padd]')) {
+      openExtraAdd(x, col ? col.pid : null);
     } else {
-      taskTap(e, extraTasks(x));
+      taskTap(e, col ? colTasks(x, col, ci) : extraTasks(x));
     }
   });
 
-  function addExtraTasks(id, text, who = []) {
-    const x = extraById(id);
+  function addExtraTasks(ctx, text, who = []) {
+    const x = extraById(ctx.id);
     if (!x) return;
-    const picked = !$('addToRow').hidden && $('addToSel').value ? $('addToSel').value : (x.lists || [])[0];
+    const person = ctx.pid ? personById(ctx.pid) : null;
+    const lists = (person ? person.lists : x.lists) || [];
+    const picked = !$('addToRow').hidden && $('addToSel').value ? $('addToSel').value : lists[0];
     const dest = picked && srcOf(picked);
     if (!dest) return;
-    const pool = extra.tasks[x.id] = extra.tasks[x.id] || [];
+    const holder = person ? (peopleData[person.id] = peopleData[person.id] || {}) : extra;
+    const pool = person ? (holder.tasks = holder.tasks || []) : (extra.tasks[x.id] = extra.tasks[x.id] || []);
     text.split(/[,\n]/).map((t) => t.trim()).filter(Boolean).reverse().forEach((title) => {
       const tmp = { id: 'tmp-' + Math.random().toString(36).slice(2), title, who, done: false, pending: true };
       pool.unshift(tmp);
       mutate(() => Google.addTask(dest.a, dest.id, title, buildNotes(who)))
-        .then((t) => { Object.assign(tmp, withRef(t, dest.a, dest.id, extra.listNames[picked] || ''), { pending: false, who, tag: (x.lists || []).length > 1 ? (extra.listNames[picked] || '') : '' }); renderExtras(); })
-        .catch(() => { extra.tasks[x.id] = extra.tasks[x.id].filter((y) => y !== tmp); renderExtras(); showToast(`Couldn’t add “${title}” — check your connection`); });
+        .then((t) => { Object.assign(tmp, withRef(t, dest.a, dest.id, extra.listNames[picked] || ''), { pending: false, who, tag: lists.length > 1 ? (extra.listNames[picked] || '') : '' }); renderExtras(); })
+        .catch(() => { const cur = person ? holder.tasks : extra.tasks[x.id]; if (cur) { const i = cur.indexOf(tmp); if (i >= 0) cur.splice(i, 1); } renderExtras(); showToast(`Couldn’t add “${title}” — check your connection`); });
     });
     renderExtras();
   }
@@ -2753,24 +2858,70 @@
     drawLayoutEditor();
   });
 
-  // The extra schedules and to-do lists, in Settings (Skreen+).
-  let draftExtras = [];
+  // People, and the extra schedules and to-do lists, in Settings (Skreen+).
+  let draftExtras = [], draftPeople = [];
+  const sourceChecks = (accts, several, kind, chosen, attr) => accts.map((a) => (kind === 'cal' ? acctChoices[a].cals : acctChoices[a].lists).map((c) => {
+    const v = a + '|' + c.id;
+    return `<label class="check"><input type="checkbox" ${attr}="${esc(v)}" ${chosen.includes(v) ? 'checked' : ''}>${kind === 'cal' ? `<i style="background:${esc(c.color)}"></i>` : ''}<span>${esc(kind === 'cal' ? c.name : c.title)}${several ? ' · ' + esc(a) : ''}</span></label>`;
+  }).join('')).join('') || '<span class="hint">Sign in with Google (above) to choose.</span>';
+
+  function drawPeople() {
+    $('peopleField').hidden = !hasPlus();
+    if (!hasPlus()) return;
+    const accts = Object.keys(acctChoices), several = accountList().length > 1;
+    $('peopleList').innerHTML = draftPeople.map((p) => `<div class="extra" data-p="${esc(p.id)}">
+      <div class="extra-head"><i class="extra-dot" style="background:${personColor(p.name || '?')}"></i><input class="extra-name" type="text" maxlength="20" value="${esc(p.name)}" placeholder="Name" aria-label="Name"><button type="button" class="btn ghost small" data-prm>Remove</button></div>
+      <span class="sub">Calendars</span><div class="checks">${sourceChecks(accts, several, 'cal', p.cals, 'data-psrc-cal')}</div>
+      <span class="sub">To-do lists</span><div class="checks">${sourceChecks(accts, several, 'list', p.lists, 'data-psrc-list')}</div>
+    </div>`).join('');
+  }
   function drawExtras() {
+    drawPeople();
     $('extrasField').hidden = !hasPlus();
     if (!hasPlus()) return;
-    const accts = Object.keys(acctChoices);
-    const several = accountList().length > 1;
+    const accts = Object.keys(acctChoices), several = accountList().length > 1;
     $('extrasList').innerHTML = draftExtras.map((x) => {
-      const checks = x.kind === 'agenda'
-        ? accts.map((a) => acctChoices[a].cals.map((c) => `<label class="check"><input type="checkbox" data-xsrc="${esc(a + '|' + c.id)}" ${x.cals.includes(a + '|' + c.id) ? 'checked' : ''}><i style="background:${esc(c.color)}"></i><span>${esc(c.name)}${several ? ' · ' + esc(a) : ''}</span></label>`).join('')).join('')
-        : accts.map((a) => acctChoices[a].lists.map((l) => `<label class="check"><input type="checkbox" data-xsrc="${esc(a + '|' + l.id)}" ${x.lists.includes(a + '|' + l.id) ? 'checked' : ''}><span>${esc(l.title)}${several ? ' · ' + esc(a) : ''}</span></label>`).join('')).join('');
+      const mine = x.kind === 'agenda' ? x.cals : x.lists;
+      const allPeople = draftPeople.filter((p) => p.name.trim());
+      const side = allPeople.length ? `<label class="check"><input type="checkbox" data-xby ${x.by === 'person' ? 'checked' : ''}><span>Show people side by side, one column each</span></label>` : '';
+      const picks = x.by === 'person' ? `<div class="checks">${allPeople.map((p) => `<label class="check"><input type="checkbox" data-xperson="${esc(p.id)}" ${!(x.people || []).length || x.people.includes(p.id) ? 'checked' : ''}><i style="background:${personColor(p.name)}"></i><span>${esc(p.name)}</span></label>`).join('')}</div>
+        <span class="hint">Anything you tick below becomes an extra “Everyone” column, for shared calendars or lists. Leave it all unticked for none.</span>` : '';
       return `<div class="extra" data-x="${esc(x.id)}">
         <div class="extra-head"><span class="extra-kind">${x.kind === 'agenda' ? 'Schedule' : 'To-do list'}</span><input class="extra-name" type="text" maxlength="24" value="${esc(x.name)}" aria-label="Name"><button type="button" class="btn ghost small" data-xrm>Remove</button></div>
-        <span class="sub">${x.kind === 'agenda' ? 'Calendars to show' : 'Lists to show'}</span>
-        <div class="checks">${checks || '<span class="hint">Sign in with Google (above) to choose.</span>'}</div>
+        ${side}${picks}
+        <span class="sub">${x.by === 'person' ? (x.kind === 'agenda' ? 'Shared calendars' : 'Shared lists') : (x.kind === 'agenda' ? 'Calendars to show' : 'Lists to show')}</span>
+        <div class="checks">${sourceChecks(accts, several, x.kind === 'agenda' ? 'cal' : 'list', mine, 'data-xsrc')}</div>
       </div>`;
     }).join('');
   }
+  function addPerson() {
+    draftPeople.push({ id: 'p' + Date.now().toString(36), name: '', cals: [], lists: [] });
+    drawPeople();
+    const last = $('peopleList').querySelector('.extra:last-child .extra-name');
+    if (last) last.focus();
+  }
+  $('personAdd').addEventListener('click', addPerson);
+  $('peopleList').addEventListener('input', (e) => {
+    if (!e.target.matches('.extra-name')) return;
+    const p = draftPeople.find((y) => y.id === e.target.closest('.extra').dataset.p);
+    if (p) { p.name = e.target.value; const dot = e.target.closest('.extra').querySelector('.extra-dot'); if (dot) dot.style.background = personColor(p.name || '?'); }
+  });
+  $('peopleList').addEventListener('change', (e) => {
+    const p = draftPeople.find((y) => y.id === e.target.closest('.extra').dataset.p);
+    if (!p) return;
+    if (e.target.matches('.extra-name')) { setTimeout(drawExtras, 0); return; }   // names appear in the widgets' people lists (redrawn after the field loses focus)
+    const key = e.target.hasAttribute('data-psrc-cal') ? 'cals' : e.target.hasAttribute('data-psrc-list') ? 'lists' : '';
+    if (!key) return;
+    const v = e.target.getAttribute(key === 'cals' ? 'data-psrc-cal' : 'data-psrc-list');
+    p[key] = e.target.checked ? [...new Set([...p[key], v])] : p[key].filter((y) => y !== v);
+  });
+  $('peopleList').addEventListener('click', (e) => {
+    if (!e.target.closest('[data-prm]')) return;
+    const id = e.target.closest('.extra').dataset.p;
+    draftPeople = draftPeople.filter((y) => y.id !== id);
+    draftExtras.forEach((x) => { x.people = (x.people || []).filter((y) => y !== id); });
+    setTimeout(drawExtras, 0);
+  });
   function addExtra(kind) {
     const id = 'x' + Date.now().toString(36);
     draftExtras.push({ id, kind, name: kind === 'agenda' ? 'Schedule' : 'To-do list', cals: [], lists: [] });
@@ -2788,9 +2939,18 @@
     if (x) { x.name = e.target.value; drawLayoutEditor(); }
   });
   $('extrasList').addEventListener('change', (e) => {
-    if (!e.target.matches('[data-xsrc]')) return;
     const x = draftExtras.find((y) => y.id === e.target.closest('.extra').dataset.x);
     if (!x) return;
+    if (e.target.matches('[data-xby]')) { x.by = e.target.checked ? 'person' : ''; setTimeout(drawExtras, 0); return; }
+    if (e.target.matches('[data-xperson]')) {
+      const all = draftPeople.filter((p) => p.name.trim()).map((p) => p.id);
+      const now = new Set(!(x.people || []).length ? all : x.people);
+      if (e.target.checked) now.add(e.target.dataset.xperson); else now.delete(e.target.dataset.xperson);
+      if (!now.size) { e.target.checked = true; showToast('Keep at least one person'); return; }
+      x.people = all.every((id) => now.has(id)) ? [] : all.filter((id) => now.has(id));   // none stored means everyone, including people added later
+      return;
+    }
+    if (!e.target.matches('[data-xsrc]')) return;
     const key = x.kind === 'agenda' ? 'cals' : 'lists', v = e.target.dataset.xsrc;
     x[key] = e.target.checked ? [...new Set([...x[key], v])] : x[key].filter((y) => y !== v);
   });
@@ -2800,7 +2960,7 @@
     draftExtras = draftExtras.filter((y) => y.id !== id);
     draftLayout = draftLayout.filter((w) => w.id !== id);
     if (!draftLayout.some((w) => w.on)) draftLayout.forEach((w) => { w.on = true; });
-    drawLayoutEditor(); drawExtras();
+    drawLayoutEditor(); setTimeout(drawExtras, 0);
   });
 
   // ─── Settings sheet ────────────────────────────────────────────────────────
@@ -2917,7 +3077,8 @@
     draftIcs = (cfg.ics || []).map((c) => ({ ...c }));
     drawIcs();
     $('icsResult').textContent = '';
-    draftExtras = extrasOf().map((x) => ({ ...x, cals: [...(x.cals || [])], lists: [...(x.lists || [])] }));
+    draftExtras = extrasOf().map((x) => ({ ...x, cals: [...(x.cals || [])], lists: [...(x.lists || [])], people: [...(x.people || [])] }));
+    draftPeople = peopleOf().map((p) => ({ ...p, cals: [...(p.cals || [])], lists: [...(p.lists || [])] }));
     draftLayout = parseLayout(cfg.layout);
     drawLayoutEditor();
     drawExtras();
@@ -3070,7 +3231,11 @@
     if (draftLoc) Object.assign(cfg, draftLoc);
     cfg.ics = draftIcs;
     if (hasPlus()) cfg.slideSkip = Array.from($('slideChecks').querySelectorAll('input:not(:checked)')).map((i) => i.dataset.slide).join(',');
-    if (hasPlus()) cfg.extras = draftExtras.map((x) => ({ ...x, name: (x.name || '').trim() || (x.kind === 'agenda' ? 'Schedule' : 'To-do list') }));
+    if (hasPlus()) {
+      cfg.household = draftPeople.map((p) => ({ ...p, name: (p.name || '').trim() })).filter((p) => p.name);
+      const keep = new Set(cfg.household.map((p) => p.id));
+      cfg.extras = draftExtras.map((x) => ({ ...x, name: (x.name || '').trim() || (x.kind === 'agenda' ? 'Schedule' : 'To-do list'), people: (x.people || []).filter((id) => keep.has(id)) }));
+    }
     if (draftLayout && hasPlus()) cfg.layout = serializeLayout(draftLayout);
     document.querySelectorAll('#acctBox .acct').forEach((el) => {
       const acct = el.dataset.a;

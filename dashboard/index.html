@@ -417,6 +417,12 @@
           <label class="field"><span>Switch skreens by itself</span>
             <select name="pageSeconds"><option value="0">Off, I'll swipe</option><option value="30">Every 30 seconds</option><option value="60">Every minute</option><option value="120">Every 2 minutes</option><option value="300">Every 5 minutes</option><option value="600">Every 10 minutes</option></select></label>
         </div>
+        <div class="field" id="peopleField" hidden>
+          <span class="sub">People</span>
+          <span>Add each person once, with their own calendars and to-do list. A schedule or to-do widget below can then show everyone side by side, one column each.</span>
+          <div id="peopleList"></div>
+          <div class="loc-row"><button type="button" class="btn ghost small" id="personAdd">+ Person</button></div>
+        </div>
         <div class="field" id="extrasField" hidden>
           <span class="sub">More schedules and to-do lists</span>
           <span>Add as many as you like, each with its own name and only the calendars or lists you choose. They join the list above, where you can place, hide or reorder them.</span>
