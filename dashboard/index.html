@@ -80,6 +80,12 @@
       <button class="add-btn" id="shopAdd" type="button"><span id="shopAddIcon"></span>Add item</button>
     </section>
 
+    <section class="w col board" data-w="board">
+      <div class="col-head"><span>Whiteboard</span><span class="count" id="boardCount"></span></div>
+      <div class="scroll board-list" id="boardList"></div>
+      <button class="add-btn" id="boardAdd" type="button"><span id="boardAddIcon"></span>Add note</button>
+    </section>
+
     <section class="w w-photos" data-w="photos">
       <div class="photo-frame" id="photoFrame"><div class="pf" id="pfA"></div><div class="pf" id="pfB"></div><div class="pf-caption" id="photoCaption"></div><div class="pf-note" id="photoNote"></div></div>
     </section>
@@ -272,6 +278,32 @@
       <div class="sheet-actions">
         <button type="button" class="btn ghost" id="addCancel">Cancel</button>
         <button type="submit" class="btn primary" id="addSubmit">Add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Whiteboard note sheet -->
+  <dialog class="sheet" id="noteSheet">
+    <form method="dialog" id="noteForm">
+      <div class="brand-row sm" data-brand></div>
+      <h3 id="noteHeading">Leave a note</h3>
+      <div class="add-row">
+        <textarea id="noteInput" rows="3" maxlength="400" autocomplete="off" placeholder="e.g. Back by 6. Dinner is in the fridge."></textarea>
+        <button type="button" class="mic" id="noteMic" aria-label="Speak"></button>
+      </div>
+      <div class="who">
+        <span class="who-label">From</span>
+        <div class="who-pills" id="notePills"></div>
+      </div>
+      <div class="who-new" id="noteNew" hidden>
+        <input id="noteWhoInput" type="text" autocomplete="off" placeholder="Name" maxlength="20">
+        <button type="button" class="btn ghost small" id="noteWhoAdd">Add person</button>
+      </div>
+      <p class="hint">Notes stay on this tablet until you delete them.</p>
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" id="noteDelete" hidden>Delete</button>
+        <button type="button" class="btn ghost" id="noteCancel">Cancel</button>
+        <button type="submit" class="btn primary" id="noteSave">Post</button>
       </div>
     </form>
   </dialog>

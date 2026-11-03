@@ -292,6 +292,7 @@
       lastMinute = now.getMinutes();
       renderAgenda();
       renderTasks();           // retires checked-off items after 24 hours
+      if (boardShown()) drawBoard();   // the "2h" on each note
       if (mealsShown()) { drawMeals(); if (now.getHours() === 0 && now.getMinutes() === 5) refreshMeals(); }
       applyBackground();       // new day → new background
       if (cfg.accent === 'auto') applyAccent('auto');   // and a new accent colour
@@ -517,10 +518,12 @@
 
   // Who is "in the household" right now: everyone named on a task we can see (open, or done in the
   // last 24 hours), plus anyone just typed into a dialog that is still open. Nothing is stored.
+  const board = { notes: [] };   // Whiteboard notes (below); on this device only
   const sessionNames = new Map();   // key → display, cleared whenever a dialog opens
   function knownPeople() {
     const known = new Map();
     state.tasks.forEach((t) => (t.who || []).forEach((n) => { if (!known.has(nameKey(n))) known.set(nameKey(n), n); }));
+    board.notes.forEach((nt) => nt.who.forEach((n) => { if (!known.has(nameKey(n))) known.set(nameKey(n), n); }));
     sessionNames.forEach((n, k) => { if (!known.has(k)) known.set(k, n); });
     return known;
   }
@@ -703,7 +706,7 @@
   // Add sheet
   const addSheet = $('addSheet');
   // The "Who?" picker, used by both the Add dialog and the item details dialog.
-  function whoPicker({ pills, box, input, addBtn }) {
+  function whoPicker({ pills, box, input, addBtn, anyone = 'Anyone' }) {
     let selected = new Map();   // key → display name
     const picker = {
       reset(names = []) {
@@ -718,7 +721,7 @@
         selected.forEach((n, k) => { if (!known.has(k)) known.set(k, n); });
         const all = Array.from(known.values()).sort((a, b) => nameKey(a).localeCompare(nameKey(b)));
         pills.innerHTML =
-          `<button type="button" class="who-pill${selected.size ? '' : ' on'}" data-anyone="1">Anyone</button>` +
+          `<button type="button" class="who-pill${selected.size ? '' : ' on'}" data-anyone="1">${anyone}</button>` +
           all.map((n) => `<button type="button" class="who-pill${selected.has(nameKey(n)) ? ' on' : ''}" data-who="${esc(n)}" style="--p:${personColor(n)}"><i></i>${esc(n)}</button>`).join('') +
           '<button type="button" class="who-pill ghost" data-act="new">+ Someone</button>';
       },
@@ -1243,15 +1246,15 @@
 
   // ─── Big-screen tour (burn-in protection) ──────────────────────────────────
 
-  const TOUR_ALL = { time: 'clock', weather: 'weather', forecast: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news', meals: 'meals', shop: 'shop', music: 'music' };
-  const SLIDE_NAMES = { time: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos', news: 'In the news', meals: 'Dinners', shop: 'Shopping list', music: 'Music (while playing)' };
+  const TOUR_ALL = { time: 'clock', weather: 'weather', forecast: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news', meals: 'meals', shop: 'shop', board: 'board', music: 'music' };
+  const SLIDE_NAMES = { time: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos', news: 'In the news', meals: 'Dinners', shop: 'Shopping list', board: 'Whiteboard', music: 'Music (while playing)' };
   const slideSkipped = (v) => alwaysTour() && String(cfg.slideSkip || '').split(',').includes(v);
   const musicPlaying = () => !!((music.np && music.np.playing) || music.audio);
   const slideMs = () => (alwaysTour() ? Math.max(5, Number(cfg.slideSeconds) || 60) * 1000 : Math.round(4 * TOUR_VIEW_MS / Math.max(1, TOUR.length)));   // the tour always lasts four slides' worth
   let TOUR = Object.keys(TOUR_ALL);
   const ROTATING_TOUR = ['time', 'weather', 'agenda', 'todo'];   // the occasional tour is always these four, so it's always the same length
   // Is this slide switched on, and does it have something to show right now?
-  const viewOkBase = (v) => !slideSkipped(v) && (v === 'music' ? (alwaysTour() && musicPlaying()) : visibleWidgets().includes(TOUR_ALL[v])) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (!['agenda', 'todo'].includes(v) || state.loaded)
+  const viewOkBase = (v) => !slideSkipped(v) && (v === 'music' ? (alwaysTour() && musicPlaying()) : visibleWidgets().includes(TOUR_ALL[v])) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (v !== 'board' || (boardShown() && board.notes.length)) && (!['agenda', 'todo'].includes(v) || state.loaded)
   // The forecast slide has no switch of its own: choose Weather and you get both (Big Skreen Mode only), each for the full slide time.
   const viewOk = (v) => (v === 'forecast' ? alwaysTour() && viewOkBase('weather') && !!(state.weather && state.weather.daily) : viewOkBase(v));
   // The occasional tour is always the same length (four slides' worth). If some of the usual four are off, the rest
@@ -1476,6 +1479,13 @@
     if (name === 'shop') {
       const rows = shopState.items.slice(0, 8).map((t) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(t.title)}</div></div>`).join('');
       return `<div class="kicker">Shopping</div><div class="sv-list sv-news">${rows}</div>`;
+    }
+    if (name === 'board' && alwaysTour()) {   // Big Skreen Mode: one note at a time, swiping up through the newest few
+      return stageHtml('Whiteboard', board.notes.slice(0, slideMs() <= 15000 ? 2 : 4).map((n) => `<div class="sv-headline sv-note"><span>${esc(n.text)}${n.who.length ? `<em class="sv-from">\u2014 ${esc(n.who.join(', '))}</em>` : ''}</span></div>`), 'headlines');
+    }
+    if (name === 'board') {
+      const rows = board.notes.slice(0, 5).map((n) => `<div class="row"><div class="rn">${esc(n.text)}${n.who.length ? `<span class="sv-who">${n.who.map(esc).join(' \u00b7 ')}</span>` : ''}</div></div>`).join('');
+      return `<div class="kicker">Whiteboard</div><div class="sv-list sv-news">${rows}</div>`;
     }
     if (name === 'news' && alwaysTour()) {   // Big Skreen Mode: one big headline at a time, swiping up through up to three (two on a short slide)
       return stageHtml('In the news', News.current.slice(0, slideMs() <= 15000 ? 2 : 3).map((h) => `<div class="sv-headline"><span>${esc(h.text)}</span></div>`), 'headlines');
@@ -1872,8 +1882,8 @@
   // cfg.layout is the order, with hidden widgets prefixed "-": "agenda,todo,-weather,clock".
   // Clock and weather sit in one column when they're next to each other.
 
-  const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos (Skreen+)', news: 'In the news (Skreen+)', meals: 'Dinners (Skreen+)', shop: 'Shopping list (Skreen+)' };
-  const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92, photos: 1.15, news: 1.1, meals: 1.1, shop: 1 };
+  const WIDGETS = { clock: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos (Skreen+)', news: 'In the news (Skreen+)', meals: 'Dinners (Skreen+)', shop: 'Shopping list (Skreen+)', board: 'Whiteboard (Skreen+)' };
+  const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92, photos: 1.15, news: 1.1, meals: 1.1, shop: 1, board: 1.05 };
   const hasPlus = () => Plus.active();
 
   function parseLayout(str) {
@@ -1882,7 +1892,7 @@
       const off = raw.trim().startsWith('-'), id = raw.trim().replace(/^-/, '');
       if (WIDGETS[id] && !seen.has(id)) { seen.add(id); out.push({ id, on: !off }); }
     }
-    for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: !['photos', 'news', 'meals', 'shop'].includes(id) });   // the Plus widgets start hidden
+    for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: !['photos', 'news', 'meals', 'shop', 'board'].includes(id) });   // the Plus widgets start hidden
     if (!out.some((w) => w.on)) out.forEach((w) => { w.on = true; });
     return out;
   }
@@ -1947,6 +1957,7 @@
     if (typeof syncNews === 'function') syncNews();
     if (typeof refreshMeals === 'function') { drawMeals(); refreshMeals(); }
     if (typeof refreshShop === 'function') { drawShop(); refreshShop(); }
+    if (typeof drawBoard === 'function') drawBoard();
   }
 
   const PAGE_GAP = 3;   // rem of empty space between skreens, so one never shows at the edge of its neighbour
@@ -2159,6 +2170,99 @@
     }
     drawNews();
   }
+
+  // ─── Whiteboard (Skreen+) ──────────────────────────────────────────────────
+  // Notes for the household. They live in this device's private storage and nowhere else: they are never sent
+  // to Google, to Skreen or to another tablet, and they stay until someone deletes them.
+
+  const BOARD_KEY = 'skreen-board';
+  const boardShown = () => hasPlus() && visibleWidgets().includes('board');
+  function loadBoard() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(BOARD_KEY)); } catch (_) {}
+    board.notes = (Array.isArray(saved) ? saved : []).filter((n) => n && typeof n.text === 'string' && n.text.trim())
+      .map((n) => ({ id: String(n.id || Math.random().toString(36).slice(2)), text: n.text, who: Array.isArray(n.who) ? n.who.map(String) : [], at: Number(n.at) || Date.now() }));
+    if (!board.notes.length && isDemo()) {
+      const ago = (h) => Date.now() - h * 3600000;
+      board.notes = [
+        { id: 'demo-1', text: 'Back by 6. Dinner is in the fridge.', who: ['Dan'], at: ago(1) },
+        { id: 'demo-2', text: 'Please feed the cat before school.', who: ['Mia'], at: ago(5) },
+        { id: 'demo-3', text: 'Piano lesson moved to Thursday at 4.', who: [], at: ago(26) },
+      ];
+    }
+  }
+  function saveBoard() {
+    try { localStorage.setItem(BOARD_KEY, JSON.stringify(board.notes)); } catch (_) { showToast('Couldn’t save the note'); }
+  }
+  function noteWhen(ms) {
+    const m = Math.round((Date.now() - ms) / 60000);
+    if (m < 1) return 'Now';
+    if (m < 60) return `${m}m`;
+    if (m < 24 * 60) return `${Math.floor(m / 60)}h`;
+    return fmtDate(new Date(ms), { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  const noteHtml = (n) => `<button type="button" class="note" data-note="${esc(n.id)}" style="--p:${n.who.length ? personColor(n.who[0]) : 'var(--rule)'}"><span class="note-text">${esc(n.text)}</span><span class="note-foot">${chipsHtml(n.who)}<span class="note-when">${esc(noteWhen(n.at))}</span></span></button>`;
+  function drawBoard() {
+    const box = $('boardList');
+    if (!boardShown() && !tour.on) return;
+    $('boardCount').textContent = board.notes.length ? String(board.notes.length) : '';
+    box.innerHTML = board.notes.length ? board.notes.map(noteHtml).join('') : '<div class="board-empty">Nothing here yet. Tap <b>Add note</b> to leave one for the household.</div>';
+  }
+
+  const noteSheet = $('noteSheet');
+  const noteWho = whoPicker({ pills: $('notePills'), box: $('noteNew'), input: $('noteWhoInput'), addBtn: $('noteWhoAdd'), anyone: 'No name' });
+  let noteEditing = null;
+  function openNote(id) {
+    const n = id ? board.notes.find((x) => x.id === id) : null;
+    noteEditing = n || null;
+    $('noteHeading').textContent = n ? 'Edit note' : 'Leave a note';
+    $('noteSave').textContent = n ? 'Save' : 'Post';
+    $('noteDelete').hidden = !n;
+    $('noteInput').value = n ? n.text : '';
+    noteWho.reset(n ? n.who : []);
+    noteSheet.showModal();
+    if (!n) setTimeout(() => $('noteInput').focus(), 50);
+  }
+  $('boardAddIcon').innerHTML = Icons.plus || '+';
+  $('noteMic').innerHTML = Icons.mic;
+  $('boardAdd').addEventListener('click', () => openNote(null));
+  $('boardList').addEventListener('click', (e) => { const b = e.target.closest('[data-note]'); if (b) openNote(b.dataset.note); });
+  $('noteCancel').addEventListener('click', () => noteSheet.close());
+  noteSheet.addEventListener('click', (e) => { if (e.target === noteSheet) noteSheet.close(); });
+  $('noteForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = $('noteInput').value.replace(/\s+\n/g, '\n').trim();
+    if (!text) { $('noteInput').focus(); return; }
+    noteWho.commit();
+    const who = noteWho.names();
+    if (noteEditing) { noteEditing.text = text; noteEditing.who = who; }
+    else board.notes.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), text, who, at: Date.now() });
+    saveBoard(); drawBoard();
+    noteSheet.close();
+  });
+  $('noteDelete').addEventListener('click', () => {
+    if (noteEditing) board.notes = board.notes.filter((x) => x !== noteEditing);
+    saveBoard(); drawBoard();
+    noteSheet.close();
+  });
+  // Speaking a note, the same way the Add box does.
+  if (NATIVE && NATIVE.startVoice) {
+    $('noteMic').addEventListener('click', () => { voiceSink = (t) => { $('noteInput').value = ($('noteInput').value ? $('noteInput').value + ' ' : '') + capFirst(t); $('noteInput').focus(); }; NATIVE.startVoice(); });
+  } else if (!SR) {
+    $('noteMic').hidden = true;
+  } else {
+    let nrec = null;
+    $('noteMic').addEventListener('click', () => {
+      if (nrec) { nrec.stop(); return; }
+      nrec = new SR(); nrec.lang = navigator.language || 'en-US'; nrec.interimResults = true;
+      nrec.onresult = (e) => { $('noteInput').value = capFirst(Array.from(e.results).map((r) => r[0].transcript).join('')); };
+      nrec.onend = () => { nrec = null; $('noteMic').classList.remove('listening'); };
+      nrec.onerror = nrec.onend;
+      $('noteMic').classList.add('listening');
+      nrec.start();
+    });
+  }
+  loadBoard();
 
   // ─── Dinner planner (Skreen+) ───────────────────────────────────────────────
   // One Google Tasks list holds the dinners: each task is a meal and its due date is the day it's for.
@@ -2504,6 +2608,7 @@
       if (id === 'news' && !News.current.length) return { text: 'Not showing yet: no headlines have loaded' };
       if (id === 'meals' && !(mealState.ready && Object.keys(mealState.byDate).length)) return { text: 'Not showing yet: no dinners are planned' };
       if (id === 'shop' && !shopState.items.length) return { text: 'Not showing yet: your shopping list is empty' };
+      if (id === 'board' && !board.notes.length) return { text: 'Not showing yet: there are no notes' };
       if (['agenda', 'todo'].includes(id) && !state.loaded) return { text: 'Not showing yet: nothing has loaded' };
       return null;
     };
