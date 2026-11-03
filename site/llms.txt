@@ -4,7 +4,7 @@
 
 ## What it does
 - Free: clock, weather, calendar (Google, Outlook, Apple or any calendar link), to-do list that syncs with Google Tasks, up to four timers, now-playing music controls, and live internet radio.
-- Skreen+ ($14.99 once, no subscription): dinner planner, shopping list, world news headlines, art and photo gallery, custom layouts, multiple Google accounts, and Big Skreen Mode (large, rotating slides readable from across the room).
+- Skreen+ ($14.99 once, no subscription): a column for each family member (their own calendar and to-do list, side by side), extra named schedules and to-do lists, chores that earn stars toward rewards, a whiteboard for household notes (kept on the tablet only), a meal planner for dinner (and optionally breakfast and lunch), shopping list, world news headlines, art and photo gallery, custom layouts, multiple Google accounts, and Big Skreen Mode (large, rotating slides readable from across the room).
 - Privacy: no Skreen accounts; calendars and lists stay in the user's Google account and on the tablet. No ads, no tracking.
 - Not a voice assistant: no smart-home control and no video calls.
 
