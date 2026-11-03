@@ -961,3 +961,9 @@ body.native p.native-only { display: block; }
 
 /* Dialogs you type into sit near the top, clear of the on-screen keyboard. */
 .sheet.kb { margin: 2.5vh auto auto; max-height: 95vh; }
+
+/* Settings menu: eleven items must fit beside the page and scroll rather than run into Cancel / Save. */
+.settings-nav { min-height: 0; overflow-y: auto; scrollbar-width: none; gap: 0.15rem; }
+.settings-nav::-webkit-scrollbar { display: none; }
+.settings-nav button { padding: 0.7rem 0.9rem; font-size: 0.88rem; }
+.settings-nav button.gap { margin-top: 0.7rem; }
