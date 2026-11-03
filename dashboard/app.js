@@ -8,7 +8,7 @@
     lat: null, lon: null, place: '',
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage', accent: 'orange',
-    showcaseMinutes: '5', refreshMinutes: '10', bigMode: '0', bigTap: '1', bigResume: '1', slideSeconds: '60', slideSkip: '', pixelShift: '1',
+    showcaseMinutes: '5', refreshMinutes: '10', bigMode: '0', bigTap: '1', bigResume: '1', extras: [], slideSeconds: '60', slideSkip: '', pixelShift: '1',
     layout: 'clock,weather,agenda,todo', photoSource: 'art', photoSeconds: '30', mealList: '', shopList: '', pageSeconds: '60',
     ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
@@ -202,7 +202,7 @@
   let dataTimer = null, quotaUntil = 0;
   function pollData() {
     if (Date.now() < quotaUntil) return;   // Google asked us to slow down
-    const nothingShown = !['agenda', 'todo'].some((w) => visibleWidgets().includes(w));
+    const nothingShown = !['agenda', 'todo', ...extrasOf().map((x) => x.id)].some((w) => visibleWidgets().includes(w));
     const asleep = isNight() && !$('night').hidden;
     if (nothingShown || asleep) return;
     refreshData();
@@ -218,6 +218,7 @@
       state.tasks = decorateTasks(demoTasks.load());
       state.lastSync = new Date();
       state.loaded = true;
+      await refreshExtras();
       renderAll();
       return;
     }
@@ -243,6 +244,7 @@
       console.warn('Sync failed', err);
     }
     renderAll();
+    refreshExtras();   // the extra schedules and lists (Skreen+), after the main ones are on screen
   }
 
   function renderAll() {
@@ -363,9 +365,15 @@
     const el = $('agenda');
     if (skeletonOn()) { agendaIndex = new Map(); el.innerHTML = skeletonAgenda(); delete el.dataset.html; return; }
     agendaIndex = new Map();
+    const html = agendaHtml(state.events);
+    if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }   // untouched when nothing changed, so it can't flicker
+  }
+
+  // The days and events of a schedule, as HTML (the main Schedule and any extra ones in Skreen+ use this).
+  function agendaHtml(eventList) {
     const now = new Date();
     const today = startOfDay(now);
-    const events = state.events.map(normalizeEvent);
+    const events = eventList.map(normalizeEvent);
     let html = '';
 
     for (let i = 0; i < AGENDA_DAYS; i++) {
@@ -391,7 +399,7 @@
       html += timed.map((ev) => eventCard(ev, now, dayStart, dayEnd)).join('');
       html += '</div>';
     }
-    if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }   // untouched when nothing changed, so it can't flicker
+    return html;
   }
 
   function eventCard(ev, now, dayStart, dayEnd) {
@@ -552,11 +560,11 @@
   const completedMs = (t) => Date.parse(t.completed) || 0;
 
   // Open items in list order; checked-off items from the last 24 hours, newest first.
-  function taskGroups() {
+  function taskGroups(tasks = state.tasks) {
     const now = Date.now();
     return {
-      open: state.tasks.filter((t) => !t.done).sort(byPosition),
-      done: state.tasks.filter((t) => t.done && now - completedMs(t) < DONE_KEEP_MS).sort((a, b) => completedMs(b) - completedMs(a)),
+      open: tasks.filter((t) => !t.done).sort(byPosition),
+      done: tasks.filter((t) => t.done && now - completedMs(t) < DONE_KEEP_MS).sort((a, b) => completedMs(b) - completedMs(a)),
     };
   }
   function ago(ms) {
@@ -565,11 +573,19 @@
   }
 
   function renderTasks() {
-    if (skeletonOn()) { $('taskCount').textContent = ''; $('tasks').innerHTML = skeletonTasks(); delete $('tasks').dataset.html; return; }
-    const { open, done } = taskGroups();
-    $('taskCount').textContent = open.length || '';
+    if (skeletonOn()) { $('taskCount').textContent = ''; $('tasks').innerHTML = skeletonTasks(); delete $('tasks').dataset.html; renderExtras(); return; }
+    const { html, open } = todoHtml(state.tasks);
+    $('taskCount').textContent = open || '';
+    if ($('tasks').dataset.html !== html) { $('tasks').innerHTML = html; $('tasks').dataset.html = html; }
+    renderExtras();
+  }
+
+  // A to-do list as HTML (the main one and any extra ones in Skreen+ use this).
+  function todoHtml(tasks, { empty = '' } = {}) {
+    const { open, done } = taskGroups(tasks);
     let html = '';
     if (!usingGoogle() && !isDemo()) html += `<li class="task task-empty">Sign in with Google to show a to-do list here.</li>`;
+    else if (empty) html += `<li class="task task-empty">${esc(empty)}</li>`;
     else if (!open.length) html += `<li class="task task-empty">${Icons.check}All caught up</li>`;
     html += open.map((t) => `
       <li class="task${t.pending ? ' pending' : ''}" data-id="${esc(t.id)}">
@@ -582,7 +598,7 @@
           <span class="box">${Icons.check}</span><span class="body"><span class="label">${esc(t.title)}</span>${chipsHtml(t.who)}</span><span class="ago">${ago(completedMs(t))}</span>
         </li>`).join('');
     }
-    if ($('tasks').dataset.html !== html) { $('tasks').innerHTML = html; $('tasks').dataset.html = html; }
+    return { html, open: open.length };
   }
 
   async function mutate(fn) {
@@ -649,7 +665,7 @@
     clearTimeout(taskTimer);
     taskTimer = setTimeout(() => { if (taskSheet.open) taskSheet.close(); }, 90000);
   }
-  const openedTask = () => state.tasks.find((x) => x.id === openTaskId);
+  const openedTask = () => allTasks().find((x) => x.id === openTaskId);
 
   function saveWho(t, who) {
     const prev = { who: t.who, notes: t.notes };
@@ -663,14 +679,15 @@
     });
   }
 
-  $('tasks').addEventListener('click', (e) => {
+  function taskTap(e, tasks) {
     const li = e.target.closest('.task[data-id]');
-    const t = li && state.tasks.find((x) => x.id === li.dataset.id);
+    const t = li && tasks.find((x) => x.id === li.dataset.id);
     if (!t) return;
     if (e.target.closest('.box')) { if (t.done) restoreTask(t); else completeTask(t); return; }
     if (t.pending) { showToast('Still saving that one…'); return; }
     openTask(t);
-  });
+  }
+  $('tasks').addEventListener('click', (e) => taskTap(e, state.tasks));
   function saveTitle(t, title) {
     const prev = t.title;
     t.title = title;
@@ -756,8 +773,10 @@
   const addWho = whoPicker({ pills: $('whoPills'), box: $('whoNew'), input: $('whoInput'), addBtn: $('whoAdd') });
 
   $('addToSel').addEventListener('change', (e) => { cfg.addTo = e.target.value; saveSettings(); });
+  let addCtx = null;   // an extra to-do widget (Skreen+) the Add box is open for; null is the main list
   $('addBtn').addEventListener('click', () => {
     if (!usingGoogle() && !isDemo()) { showToast('Sign in with Google to use the to-do list'); return; }
+    addCtx = null;
     $('addInput').value = '';
     addWho.reset();
     const lists = state.lists || [];
@@ -777,9 +796,10 @@
     addWho.commit();                       // a name typed but not confirmed still counts
     const v = $('addInput').value.trim();
     if (!v) { e.preventDefault(); return; }
-    addTasks(v, addWho.names());
+    if (addCtx) addExtraTasks(addCtx, v, addWho.names()); else addTasks(v, addWho.names());
   });
   addSheet.addEventListener('click', (e) => { if (e.target === addSheet) addSheet.close(); });
+  addSheet.addEventListener('close', () => { addCtx = null; });
 
   // Voice input: the Android app uses the system recognizer; Chrome uses its own.
   let voiceSink = null;   // who asked: the timer sheet sets this, otherwise the Add box gets the words
@@ -1248,19 +1268,22 @@
 
   const TOUR_ALL = { time: 'clock', weather: 'weather', forecast: 'weather', agenda: 'agenda', todo: 'todo', photos: 'photos', news: 'news', meals: 'meals', shop: 'shop', board: 'board', music: 'music' };
   const SLIDE_NAMES = { time: 'Clock', weather: 'Weather', agenda: 'Schedule', todo: 'To-do list', photos: 'Photos', news: 'In the news', meals: 'Dinners', shop: 'Shopping list', board: 'Whiteboard', music: 'Music (while playing)' };
+  const widgetOf = (v) => TOUR_ALL[v] || v;   // the widget a slide belongs to (an extra schedule or list is its own widget)
+  const tourKeys = () => Object.keys(TOUR_ALL).flatMap((k) => (k === 'todo' ? [k, ...extrasOf().map((x) => x.id)] : [k]));
+  const slideEntries = () => Object.entries(SLIDE_NAMES).flatMap(([id, name]) => (id === 'todo' ? [[id, name], ...extrasOf().map((x) => [x.id, x.name])] : [[id, name]]));
   const slideSkipped = (v) => alwaysTour() && String(cfg.slideSkip || '').split(',').includes(v);
   const musicPlaying = () => !!((music.np && music.np.playing) || music.audio);
   const slideMs = () => (alwaysTour() ? Math.max(5, Number(cfg.slideSeconds) || 60) * 1000 : Math.round(4 * TOUR_VIEW_MS / Math.max(1, TOUR.length)));   // the tour always lasts four slides' worth
   let TOUR = Object.keys(TOUR_ALL);
   const ROTATING_TOUR = ['time', 'weather', 'agenda', 'todo'];   // the occasional tour is always these four, so it's always the same length
   // Is this slide switched on, and does it have something to show right now?
-  const viewOkBase = (v) => !slideSkipped(v) && (v === 'music' ? (alwaysTour() && musicPlaying()) : visibleWidgets().includes(TOUR_ALL[v])) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (v !== 'board' || (boardShown() && board.notes.length)) && (!['agenda', 'todo'].includes(v) || state.loaded)
+  const viewOkBase = (v) => !slideSkipped(v) && (v === 'music' ? (alwaysTour() && musicPlaying()) : visibleWidgets().includes(widgetOf(v))) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (v !== 'board' || (boardShown() && board.notes.length)) && (!['agenda', 'todo'].includes(v) || state.loaded) && (!extraById(v) || extraReady())
   // The forecast slide has no switch of its own: choose Weather and you get both (Big Skreen Mode only), each for the full slide time.
   const viewOk = (v) => (v === 'forecast' ? alwaysTour() && viewOkBase('weather') && !!(state.weather && state.weather.daily) : viewOkBase(v));
   // The occasional tour is always the same length (four slides' worth). If some of the usual four are off, the rest
   // are shown longer; if all four are off, it uses up to four of the other widgets you have on.
   const tourViews = () => {
-    const all = Object.keys(TOUR_ALL).filter(viewOk);
+    const all = tourKeys().filter(viewOk);
     if (alwaysTour()) return all;
     const base = ROTATING_TOUR.filter(viewOk);
     return base.length ? base : all.filter((v) => v !== 'music' && v !== 'forecast').slice(0, 4);
@@ -1524,29 +1547,38 @@
         <div class="hl">H ${Math.round(d.temperature_2m_max[0])}° · L ${Math.round(d.temperature_2m_min[0])}° · Feels ${Math.round(c.apparent_temperature)}°</div>
         ${r ? `<div class="rain">${r.wet ? Icons.umbrella : Icons.check}${esc(r.text)}</div>` : ''}</div>`;
     }
-    if (name === 'agenda') {
-      const events = state.events.map(normalizeEvent).filter((e) => e.e > now).sort((a, b) => (a.allDay === b.allDay ? a.s - b.s : a.allDay ? -1 : 1));
-      const today = startOfDay(now), tomorrow = addDays(today, 1), after = addDays(today, 2);
-      const soon = events.filter((e) => e.s < after).slice(0, alwaysTour() ? 6 : 4);   // Big Skreen Mode: three at a time, up to two screens of them
-      const rowHtml = (e) => {
-        const running = !e.allDay && e.s <= now;
-        const when = e.allDay ? 'All day' : fmtTime(e.s, { small: true });
-        const sub = [e.s >= tomorrow && !e.allDay ? 'Tomorrow' : '', e.location ? e.location.split('\n')[0] : e.calendar || ''].filter(Boolean).join(' · ');
-        return `<div class="row${running ? ' now' : ''}"><div class="rt">${when}</div><div class="rn"><span class="ttl">${esc(e.title)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>`;
-      };
-      if (alwaysTour() && soon.length) {
-        const pages = [];
-        for (let i = 0; i < soon.length; i += 3) pages.push(soon.slice(i, i + 3).map(rowHtml).join(''));
-        return stageHtml('Next up', pages, 'agenda');
-      }
-      let rows = soon.map(rowHtml).join('');
-      if (!rows) rows = '<div class="empty-big">Nothing on the calendar</div>';
-      return `<div class="kicker">Next up</div><div class="sv-list">${rows}</div>`;
+    const xw = extraById(name);
+    if (xw) return xw.kind === 'agenda' ? agendaSlide(extraEvents(xw), xw.name) : todoSlide(extraTasks(xw), xw.name);
+    if (name === 'agenda') return agendaSlide(state.events, 'Next up');
+    return todoSlide(state.tasks, 'To-do');
+  }
+
+  // Big Skreen Mode: the "next up" slide and the to-do slide (the main ones, and one for each extra widget).
+  function agendaSlide(eventList, kicker) {
+    const now = new Date();
+    const events = eventList.map(normalizeEvent).filter((e) => e.e > now).sort((a, b) => (a.allDay === b.allDay ? a.s - b.s : a.allDay ? -1 : 1));
+    const today = startOfDay(now), tomorrow = addDays(today, 1), after = addDays(today, 2);
+    const soon = events.filter((e) => e.s < after).slice(0, alwaysTour() ? 6 : 4);   // Big Skreen Mode: three at a time, up to two screens of them
+    const rowHtml = (e) => {
+      const running = !e.allDay && e.s <= now;
+      const when = e.allDay ? 'All day' : fmtTime(e.s, { small: true });
+      const sub = [e.s >= tomorrow && !e.allDay ? 'Tomorrow' : '', e.location ? e.location.split('\n')[0] : e.calendar || ''].filter(Boolean).join(' · ');
+      return `<div class="row${running ? ' now' : ''}"><div class="rt">${when}</div><div class="rn"><span class="ttl">${esc(e.title)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>`;
+    };
+    if (alwaysTour() && soon.length) {
+      const pages = [];
+      for (let i = 0; i < soon.length; i += 3) pages.push(soon.slice(i, i + 3).map(rowHtml).join(''));
+      return stageHtml(esc(kicker), pages, 'agenda');
     }
-    const { open } = taskGroups();
+    let rows = soon.map(rowHtml).join('');
+    if (!rows) rows = '<div class="empty-big">Nothing on the calendar</div>';
+    return `<div class="kicker">${esc(kicker)}</div><div class="sv-list">${rows}</div>`;
+  }
+  function todoSlide(taskList, kicker) {
+    const { open } = taskGroups(taskList);
     const rows = open.slice(0, 6).map((t) => `<div class="row"><div class="bullet"></div><div class="rn"><span class="ttl">${esc(t.title)}</span>${t.who && t.who.length ? `<span class="sv-who">${t.who.map(esc).join(' · ')}</span>` : ''}</div></div>`).join('')
       || '<div class="empty-big">All caught up</div>';
-    return `<div class="kicker">To-do · ${open.length}</div><div class="sv-list">${rows}${open.length > 6 ? `<div class="more">+ ${open.length - 6} more</div>` : ''}</div>`;
+    return `<div class="kicker">${esc(kicker)} · ${open.length}</div><div class="sv-list">${rows}${open.length > 6 ? `<div class="more">+ ${open.length - 6} more</div>` : ''}</div>`;
   }
 
   // ─── Night mode ────────────────────────────────────────────────────────────
@@ -1886,13 +1918,27 @@
   const LAYOUT_FR = { pair: 1.06, clock: 1.06, weather: 1.06, agenda: 1.3, todo: 0.92, photos: 1.15, news: 1.1, meals: 1.1, shop: 1, board: 1.05 };
   const hasPlus = () => Plus.active();
 
+  // ─── More schedules and to-do lists (Skreen+) ──────────────────────────────
+  // cfg.extras: [{ id, kind: 'agenda' | 'todo', name, cals: ['account|calendarId'], lists: ['account|listId'] }].
+  // Each one is a widget of its own in the layout (by id), with its own name and its own calendars or lists.
+  // The main Schedule and To-do list are untouched; none of this exists until someone adds one.
+
+  const extrasOf = () => (hasPlus() && Array.isArray(cfg.extras) ? cfg.extras.filter((x) => x && x.id && (x.kind === 'agenda' || x.kind === 'todo')) : []);
+  const extraById = (id) => extrasOf().find((x) => x.id === id) || null;
+  const isWidget = (id) => !!WIDGETS[id] || !!extraById(id);
+  const widgetKind = (id) => { const x = extraById(id); return x ? (x.kind === 'agenda' ? 'agenda' : 'todo') : id; };
+  const srcOf = (str) => { const i = String(str).indexOf('|'); return { a: str.slice(0, i), id: str.slice(i + 1) }; };
+  const extra = { events: {}, tasks: {}, listNames: {} };   // by widget id
+  const allTasks = () => [...state.tasks, ...Object.values(extra.tasks).flat()];
+
   function parseLayout(str) {
     const seen = new Set(), out = [];
     for (const raw of String(str || '').split(',')) {
       const off = raw.trim().startsWith('-'), id = raw.trim().replace(/^-/, '');
-      if (WIDGETS[id] && !seen.has(id)) { seen.add(id); out.push({ id, on: !off }); }
+      if (isWidget(id) && !seen.has(id)) { seen.add(id); out.push({ id, on: !off }); }
     }
     for (const id of Object.keys(WIDGETS)) if (!seen.has(id)) out.push({ id, on: !['photos', 'news', 'meals', 'shop', 'board'].includes(id) });   // the Plus widgets start hidden
+    for (const x of extrasOf()) if (!seen.has(x.id)) out.push({ id: x.id, on: true });   // one just added shows right away
     if (!out.some((w) => w.on)) out.forEach((w) => { w.on = true; });
     return out;
   }
@@ -1924,6 +1970,7 @@
 
   function applyLayout() {
     const dash = $('dash'), shelf = $('shelf');
+    syncExtraWidgets();
     const items = activeLayout();
     const els = {};
     dash.querySelectorAll('[data-w]').forEach((el) => { els[el.dataset.w] = el; });
@@ -1941,7 +1988,7 @@
         l.ids.forEach((id) => lane.appendChild(els[id]));
         page.appendChild(lane);
       }
-      page.style.setProperty('--cols', lanes.map((l) => `minmax(0, ${LAYOUT_FR[l.kind]}fr)`).join(' '));
+      page.style.setProperty('--cols', lanes.map((l) => `minmax(0, ${LAYOUT_FR[l.kind] ?? LAYOUT_FR[widgetKind(l.kind)] ?? 1}fr)`).join(' '));
       track.appendChild(page);
     }
     const view = document.createElement('div');
@@ -2169,6 +2216,126 @@
       newsRetry = setTimeout(() => syncNews(true), 3 * 60000);
     }
     drawNews();
+  }
+
+  // ─── Extra schedules and to-do lists: the widgets, their data and their taps ──
+
+  function syncExtraWidgets() {
+    const want = new Map(extrasOf().map((x) => [x.id, x]));
+    document.querySelectorAll('#dash .xw').forEach((el) => { if (!want.has(el.dataset.w)) el.remove(); });
+    for (const x of want.values()) {
+      let el = document.querySelector(`#dash .xw[data-w="${CSS.escape(x.id)}"]`);
+      if (!el) {
+        el = document.createElement('section');
+        el.className = `w col xw xw-${x.kind}`;
+        el.dataset.w = x.id;
+        el.innerHTML = x.kind === 'agenda'
+          ? '<div class="col-head"><span class="xw-name"></span></div><div class="scroll xw-body"></div>'
+          : '<div class="col-head"><span class="xw-name"></span><span class="count"></span></div><ul class="scroll tasks xw-body"></ul><button class="add-btn" type="button" data-xadd><span class="xw-plus"></span>Add to list</button>';
+        const plus = el.querySelector('.xw-plus'); if (plus) plus.innerHTML = Icons.plus || '+';
+        $('shelf').appendChild(el);
+      }
+      el.querySelector('.xw-name').textContent = x.name;
+    }
+  }
+
+  const extraEvents = (x) => (isDemo() ? state.events : (extra.events[x.id] || []));
+  const extraTasks = (x) => (isDemo() ? state.tasks : (extra.tasks[x.id] || []));
+  const extraReady = () => isDemo() || state.loaded;
+
+  // Fetch what each extra widget needs (only its own calendars or lists), a widget at a time so one failing doesn't stop the rest.
+  async function refreshExtras() {
+    const xs = extrasOf();
+    if (!xs.length) { extra.events = {}; extra.tasks = {}; return; }
+    if (isDemo()) { renderExtras(); return; }
+    if (!usingGoogle()) return;
+    const known = new Set(accountList());
+    await Promise.all(xs.map(async (x) => {
+      try {
+        if (x.kind === 'agenda') {
+          const byAcct = new Map();
+          for (const c of (x.cals || []).map(srcOf)) if (known.has(c.a)) byAcct.set(c.a, [...(byAcct.get(c.a) || []), c.id]);
+          const sets = await Promise.all([...byAcct].map(([a, ids]) => Google.events(a, ids, AGENDA_DAYS)));
+          const seen = new Set(), events = [];
+          for (const ev of sets.flat()) { const k = (ev.uid || ev.id) + '|' + ev.start; if (!seen.has(k)) { seen.add(k); events.push(ev); } }
+          extra.events[x.id] = events;
+        } else if (!state.mutating && Date.now() - state.lastMutation > 4000) {
+          const lists = (x.lists || []).map(srcOf).filter((l) => known.has(l.a));
+          const sets = await Promise.all(lists.map(async (l) => {
+            const names = await listNames(l.a).catch(() => ({}));
+            extra.listNames[`${l.a}|${l.id}`] = names[l.id] || '';
+            const tasks = await Google.tasks(l.a, l.id);
+            return tasks.map((t) => ({ ...withRef(t, l.a, l.id, names[l.id]), tag: lists.length > 1 ? (names[l.id] || '') : '' }));
+          }));
+          extra.tasks[x.id] = decorateTasks(sets.flat());
+        }
+      } catch (err) { console.warn('Extra widget sync failed', x.name, err); }
+    }));
+    renderExtras();
+  }
+
+  function renderExtras() {
+    for (const x of extrasOf()) {
+      const el = document.querySelector(`#dash .xw[data-w="${CSS.escape(x.id)}"]`);
+      if (!el) continue;
+      const body = el.querySelector('.xw-body');
+      let html;
+      if (!isDemo() && skeletonOn()) html = x.kind === 'agenda' ? skeletonAgenda() : skeletonTasks();
+      else if (x.kind === 'agenda') html = (isDemo() || (x.cals || []).length) ? agendaHtml(extraEvents(x)) : '<div class="empty">Choose calendars for this schedule in Settings</div>';
+      else {
+        const none = !isDemo() && !(x.lists || []).length;
+        const r = todoHtml(extraTasks(x), { empty: none ? 'Choose a list for this one in Settings' : '' });
+        el.querySelector('.count').textContent = none ? '' : (r.open || '');
+        html = r.html;
+      }
+      if (body.dataset.html !== html) { body.innerHTML = html; body.dataset.html = html; }
+    }
+  }
+
+  // Taps on the extra widgets: events open their details, to-dos behave as on the main list, Add opens the Add box.
+  $('dash').addEventListener('click', (e) => {
+    const el = e.target.closest('.xw');
+    if (!el) return;
+    const x = extraById(el.dataset.w);
+    if (!x) return;
+    if (x.kind === 'agenda') {
+      const k = e.target.closest('[data-key]');
+      const ev = k && agendaIndex.get(k.dataset.key);
+      if (ev) showEvent(ev);
+    } else if (e.target.closest('[data-xadd]')) {
+      if (!usingGoogle() && !isDemo()) { showToast('Sign in with Google to use the to-do list'); return; }
+      if (!isDemo() && !(x.lists || []).length) { showToast('Choose a list for this one in Settings'); return; }
+      addCtx = isDemo() ? null : x.id;
+      $('addInput').value = '';
+      addWho.reset();
+      const lists = (x.lists || []).map(srcOf);
+      $('addToRow').hidden = isDemo() || lists.length < 2;
+      if (!isDemo() && lists.length > 1) {
+        const several = new Set(lists.map((l) => l.a)).size > 1;
+        $('addToSel').innerHTML = lists.map((l) => `<option value="${esc(l.a + '|' + l.id)}">${esc(extra.listNames[`${l.a}|${l.id}`] || 'List')}${several ? ' · ' + esc(l.a) : ''}</option>`).join('');
+      }
+      addSheet.showModal();
+      setTimeout(() => $('addInput').focus(), 50);
+    } else {
+      taskTap(e, extraTasks(x));
+    }
+  });
+
+  function addExtraTasks(id, text, who = []) {
+    const x = extraById(id);
+    if (!x) return;
+    const picked = !$('addToRow').hidden && $('addToSel').value ? $('addToSel').value : (x.lists || [])[0];
+    const dest = picked && srcOf(picked);
+    if (!dest) return;
+    const pool = extra.tasks[x.id] = extra.tasks[x.id] || [];
+    text.split(/[,\n]/).map((t) => t.trim()).filter(Boolean).reverse().forEach((title) => {
+      const tmp = { id: 'tmp-' + Math.random().toString(36).slice(2), title, who, done: false, pending: true };
+      pool.unshift(tmp);
+      mutate(() => Google.addTask(dest.a, dest.id, title, buildNotes(who)))
+        .then((t) => { Object.assign(tmp, withRef(t, dest.a, dest.id, extra.listNames[picked] || ''), { pending: false, who, tag: (x.lists || []).length > 1 ? (extra.listNames[picked] || '') : '' }); renderExtras(); })
+        .catch(() => { extra.tasks[x.id] = extra.tasks[x.id].filter((y) => y !== tmp); renderExtras(); showToast(`Couldn’t add “${title}” — check your connection`); });
+    });
+    renderExtras();
   }
 
   // ─── Whiteboard (Skreen+) ──────────────────────────────────────────────────
@@ -2565,7 +2732,7 @@
       let marker = '';
       if (w.on && screenOf[w.id] !== last) { last = screenOf[w.id]; marker = `<div class="layout-screen">Skreen ${last + 1}</div>`; }
       return `${marker}<div class="layout-row${w.on ? '' : ' off'}">
-      <label class="check"><input type="checkbox" data-i="${i}" ${w.on ? 'checked' : ''}> ${esc(WIDGETS[w.id])}</label>
+      <label class="check"><input type="checkbox" data-i="${i}" ${w.on ? 'checked' : ''}> ${esc(WIDGETS[w.id] || ((draftExtras.find((x) => x.id === w.id) || {}).name) || w.id)}</label>
       <button type="button" class="btn ghost small" data-up="${i}" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>${Icons.up}</button>
       <button type="button" class="btn ghost small" data-down="${i}" aria-label="Move down" ${i === draftLayout.length - 1 ? 'disabled' : ''}>${Icons.down}</button></div>`;
     }).join('');
@@ -2586,6 +2753,56 @@
     drawLayoutEditor();
   });
 
+  // The extra schedules and to-do lists, in Settings (Skreen+).
+  let draftExtras = [];
+  function drawExtras() {
+    $('extrasField').hidden = !hasPlus();
+    if (!hasPlus()) return;
+    const accts = Object.keys(acctChoices);
+    const several = accountList().length > 1;
+    $('extrasList').innerHTML = draftExtras.map((x) => {
+      const checks = x.kind === 'agenda'
+        ? accts.map((a) => acctChoices[a].cals.map((c) => `<label class="check"><input type="checkbox" data-xsrc="${esc(a + '|' + c.id)}" ${x.cals.includes(a + '|' + c.id) ? 'checked' : ''}><i style="background:${esc(c.color)}"></i><span>${esc(c.name)}${several ? ' · ' + esc(a) : ''}</span></label>`).join('')).join('')
+        : accts.map((a) => acctChoices[a].lists.map((l) => `<label class="check"><input type="checkbox" data-xsrc="${esc(a + '|' + l.id)}" ${x.lists.includes(a + '|' + l.id) ? 'checked' : ''}><span>${esc(l.title)}${several ? ' · ' + esc(a) : ''}</span></label>`).join('')).join('');
+      return `<div class="extra" data-x="${esc(x.id)}">
+        <div class="extra-head"><span class="extra-kind">${x.kind === 'agenda' ? 'Schedule' : 'To-do list'}</span><input class="extra-name" type="text" maxlength="24" value="${esc(x.name)}" aria-label="Name"><button type="button" class="btn ghost small" data-xrm>Remove</button></div>
+        <span class="sub">${x.kind === 'agenda' ? 'Calendars to show' : 'Lists to show'}</span>
+        <div class="checks">${checks || '<span class="hint">Sign in with Google (above) to choose.</span>'}</div>
+      </div>`;
+    }).join('');
+  }
+  function addExtra(kind) {
+    const id = 'x' + Date.now().toString(36);
+    draftExtras.push({ id, kind, name: kind === 'agenda' ? 'Schedule' : 'To-do list', cals: [], lists: [] });
+    let at = draftLayout.length; while (at > 0 && !draftLayout[at - 1].on) at--;   // right after the last widget that is shown
+    draftLayout.splice(at, 0, { id, on: true });
+    drawLayoutEditor(); drawExtras();
+    const last = $('extrasList').querySelector('.extra:last-child .extra-name');
+    if (last) { last.focus(); last.select(); }
+  }
+  $('extraAddAgenda').addEventListener('click', () => addExtra('agenda'));
+  $('extraAddTodo').addEventListener('click', () => addExtra('todo'));
+  $('extrasList').addEventListener('input', (e) => {
+    if (!e.target.matches('.extra-name')) return;
+    const x = draftExtras.find((y) => y.id === e.target.closest('.extra').dataset.x);
+    if (x) { x.name = e.target.value; drawLayoutEditor(); }
+  });
+  $('extrasList').addEventListener('change', (e) => {
+    if (!e.target.matches('[data-xsrc]')) return;
+    const x = draftExtras.find((y) => y.id === e.target.closest('.extra').dataset.x);
+    if (!x) return;
+    const key = x.kind === 'agenda' ? 'cals' : 'lists', v = e.target.dataset.xsrc;
+    x[key] = e.target.checked ? [...new Set([...x[key], v])] : x[key].filter((y) => y !== v);
+  });
+  $('extrasList').addEventListener('click', (e) => {
+    if (!e.target.closest('[data-xrm]')) return;
+    const id = e.target.closest('.extra').dataset.x;
+    draftExtras = draftExtras.filter((y) => y.id !== id);
+    draftLayout = draftLayout.filter((w) => w.id !== id);
+    if (!draftLayout.some((w) => w.on)) draftLayout.forEach((w) => { w.on = true; });
+    drawLayoutEditor(); drawExtras();
+  });
+
   // ─── Settings sheet ────────────────────────────────────────────────────────
 
   const settingsSheet = $('settingsSheet'), form = $('settingsForm');
@@ -2603,16 +2820,16 @@
     // Say why a slide won't appear: its widget is off (that switch lives under Widgets), or it has nothing to show yet.
     const note = (id) => {
       if (id === 'music') return { text: 'Appears while music is playing' };
-      if (!visibleWidgets().includes(TOUR_ALL[id])) return { text: 'Not showing: this widget is off', go: true };
+      if (!visibleWidgets().includes(widgetOf(id))) return { text: 'Not showing: this widget is off', go: true };
       if (id === 'photos' && !photo.current) return { text: 'Not showing yet: no picture has loaded' };
       if (id === 'news' && !News.current.length) return { text: 'Not showing yet: no headlines have loaded' };
       if (id === 'meals' && !(mealState.ready && Object.keys(mealState.byDate).length)) return { text: 'Not showing yet: no dinners are planned' };
       if (id === 'shop' && !shopState.items.length) return { text: 'Not showing yet: your shopping list is empty' };
       if (id === 'board' && !board.notes.length) return { text: 'Not showing yet: there are no notes' };
-      if (['agenda', 'todo'].includes(id) && !state.loaded) return { text: 'Not showing yet: nothing has loaded' };
+      if ((['agenda', 'todo'].includes(id) || extraById(id)) && !extraReady()) return { text: 'Not showing yet: nothing has loaded' };
       return null;
     };
-    $('slideChecks').innerHTML = Object.entries(SLIDE_NAMES).map(([id, name]) => {
+    $('slideChecks').innerHTML = slideEntries().map(([id, name]) => {
       const n = note(id);
       return `<div class="slide-row"><label class="check"><input type="checkbox" data-slide="${id}" ${skip.includes(id) ? '' : 'checked'}>${esc(name)}</label>` +
         (n ? `<span class="slide-note">${esc(n.text)}${n.go ? ' <button type="button" class="linklike" data-goto="widgets">Turn it on in Widgets</button>' : ''}</span>` : '') + '</div>';
@@ -2700,8 +2917,10 @@
     draftIcs = (cfg.ics || []).map((c) => ({ ...c }));
     drawIcs();
     $('icsResult').textContent = '';
+    draftExtras = extrasOf().map((x) => ({ ...x, cals: [...(x.cals || [])], lists: [...(x.lists || [])] }));
     draftLayout = parseLayout(cfg.layout);
     drawLayoutEditor();
+    drawExtras();
     drawPlusCard();
     $('plusResult').textContent = '';
     draftLoc = cfg.lat != null ? { lat: cfg.lat, lon: cfg.lon, place: cfg.place } : null;
@@ -2752,6 +2971,7 @@
     drawAddTo();
     drawMealPick(all);
     drawShopPick(all);
+    drawExtras();
   }
   // The dinner planner's list: any Google Tasks list on a signed-in account.
   function drawMealPick(all) {
@@ -2850,6 +3070,7 @@
     if (draftLoc) Object.assign(cfg, draftLoc);
     cfg.ics = draftIcs;
     if (hasPlus()) cfg.slideSkip = Array.from($('slideChecks').querySelectorAll('input:not(:checked)')).map((i) => i.dataset.slide).join(',');
+    if (hasPlus()) cfg.extras = draftExtras.map((x) => ({ ...x, name: (x.name || '').trim() || (x.kind === 'agenda' ? 'Schedule' : 'To-do list') }));
     if (draftLayout && hasPlus()) cfg.layout = serializeLayout(draftLayout);
     document.querySelectorAll('#acctBox .acct').forEach((el) => {
       const acct = el.dataset.a;

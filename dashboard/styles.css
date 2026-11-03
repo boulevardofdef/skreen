@@ -880,3 +880,11 @@ body.native p.native-only { display: block; }
 .sv-note .sv-from { display: block; margin-top: 0.5em; font-size: 0.38em; font-style: normal; font-weight: 500; letter-spacing: 0; color: var(--muted); }
 #noteSheet .sheet-actions .btn:first-child { margin-right: 0; }
 #noteSheet #noteCancel { margin-left: auto; }
+
+/* ─── Extra schedules and to-do lists (Skreen+) ──────────────────────────── */
+.extra { margin: 0.9rem 0; padding: 0.9rem 1rem 0.6rem; border: 1px solid var(--rule); }
+.extra-head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.6rem; }
+.extra-kind { flex: none; font: 600 0.78rem/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.extra-name { flex: 1; min-width: 0; }
+.xw .col-head .xw-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xw-plus { display: contents; }
