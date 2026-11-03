@@ -8,7 +8,7 @@
     lat: null, lon: null, place: '',
     units: 'fahrenheit', clock: '12',
     bg: 'auto', font: 'bricolage', accent: 'orange',
-    showcaseMinutes: '5', refreshMinutes: '10', bigMode: '0', bigTap: '1', bigResume: '1', extras: [], household: [], slideSeconds: '60', slideSkip: '', pixelShift: '1',
+    showcaseMinutes: '5', refreshMinutes: '10', bigMode: '0', bigTap: '1', bigResume: '1', mealTypes: 'd', extras: [], household: [], slideSeconds: '60', slideSkip: '', pixelShift: '1',
     layout: 'clock,weather,agenda,todo', photoSource: 'art', photoSeconds: '30', mealList: '', shopList: '', pageSeconds: '60',
     ics: [],
     nightEnabled: '1', nightStart: '22:30', nightEnd: '06:00',
@@ -1496,11 +1496,17 @@
 
   function tourHtml(name) {
     if (name === 'meals') {
-      const rows = mealDays().slice(0, 5).map(({ date, d, i }) => {
-        const items = mealState.byDate[date] || [];
-        return `<div class="row${i === 0 ? ' now' : ''}"><div class="rt">${esc(i === 0 ? 'Tonight' : fmtDate(d, { weekday: 'short' }))}</div><div class="rn">${items.length ? esc(items.map((m) => m.title).join(' + ')) : '<span class="sv-none">\u2014</span>'}</div></div>`;
+      const types = mealTypes(), multi = types.length > 1;
+      const rows = mealDays().slice(0, multi ? 4 : 5).map(({ date, d, i }) => {
+        const label = esc(i === 0 ? (multi ? 'Today' : 'Tonight') : fmtDate(d, { weekday: 'short' }));
+        if (multi) {
+          const lines = types.map((t) => ({ t, items: mealItems(date, t) })).filter((x) => x.items.length).map(({ t, items }) => `<div class="mline"><small>${MEAL_NAMES[t]}</small> ${esc(items.map((m) => m.title).join(' + '))}</div>`).join('');
+          return `<div class="row${i === 0 ? ' now' : ''}"><div class="rt">${label}</div><div class="rn">${lines || '<span class="sv-none">\u2014</span>'}</div></div>`;
+        }
+        const items = mealItems(date);
+        return `<div class="row${i === 0 ? ' now' : ''}"><div class="rt">${label}</div><div class="rn">${items.length ? esc(items.map((m) => m.title).join(' + ')) : '<span class="sv-none">\u2014</span>'}</div></div>`;
       }).join('');
-      return `<div class="kicker">Dinner this week</div><div class="sv-list">${rows}</div>`;
+      return `<div class="kicker">${multi ? 'Meals' : 'Dinner'} this week</div><div class="sv-list">${rows}</div>`;
     }
     if (name === 'shop') {
       const rows = shopState.items.slice(0, 8).map((t) => `<div class="row"><div class="bullet"></div><div class="rn">${esc(t.title)}</div></div>`).join('');
@@ -2667,6 +2673,17 @@
   const mealTarget = () => { const [a, l] = String(cfg.mealList || '').split('|'); return a && l && accountList().includes(a) ? { a, l } : null; };
   const mealState = { byDate: {}, ideas: [], ready: false, error: '' };
 
+  // Dinner is always planned; breakfast and lunch are optional (Settings → Meals to plan). All three live in the same list:
+  // breakfast and lunch carry "#breakfast" / "#lunch" in their notes, and anything else is dinner.
+  const MEAL_NAMES = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner' };
+  const mealTypes = () => { const v = String(cfg.mealTypes || 'd'); return [v.includes('b') ? 'breakfast' : '', v.includes('l') ? 'lunch' : '', 'dinner'].filter(Boolean); };
+  const mealItems = (date, type = 'dinner') => (mealState.byDate[date] || []).filter((m) => (m.type || 'dinner') === type);
+  const defaultMealType = (dayIndex) => {   // what's most likely wanted: today's next meal, otherwise dinner
+    if (dayIndex !== 0) return 'dinner';
+    const h = new Date().getHours(), want = h < 10 ? 'breakfast' : h < 15 ? 'lunch' : 'dinner';
+    return mealTypes().includes(want) ? want : 'dinner';
+  };
+
   function mealDays() {
     const today = startOfDay(new Date());
     return Array.from({ length: 7 }, (_, i) => { const d = addDays(today, i); return { date: ymdOf(d), d, i }; });
@@ -2681,8 +2698,21 @@
     }
     if (!mealState.ready) { box.innerHTML = mealDays().map(() => `<div class="meal skeleton"><ul>${[1].map(() => `<li>${sk(40, 1.3)}</li>`).join('')}</ul></div>`).join(''); return; }
     $('mealsHint').textContent = mealState.error ? 'Offline' : '';
+    const types = mealTypes();
+    $('mealsTitle').textContent = types.length > 1 ? 'Meals' : 'Dinners';
+    if (types.length > 1) {
+      box.innerHTML = mealDays().map(({ date, d, i }) => {
+        const name = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : fmtDate(d, { weekday: 'long' });
+        const lines = types.map((t) => ({ t, items: mealItems(date, t) })).filter((x) => x.items.length);
+        const html = lines.length
+          ? lines.map(({ t, items }) => `<span class="ml" data-type="${t}"><i>${MEAL_NAMES[t]}</i><span>${items.map((m) => `<span class="${m.done ? 'done' : ''}">${esc(m.title)}</span>`).join('<span class="sep"> + </span>')}</span></span>`).join('')
+          : 'Plan meals';
+        return `<button type="button" class="meal multi${i === 0 ? ' today' : ''}${lines.length ? '' : ' empty'}" data-date="${date}"><span class="meal-day">${esc(name)}</span><span class="meal-what">${html}</span></button>`;
+      }).join('');
+      return;
+    }
     box.innerHTML = mealDays().map(({ date, d, i }) => {
-      const items = mealState.byDate[date] || [];
+      const items = mealItems(date);
       const name = i === 0 ? 'Tonight' : i === 1 ? 'Tomorrow' : fmtDate(d, { weekday: 'long' });
       const text = items.map((m) => `<span class="${m.done ? 'done' : ''}">${esc(m.title)}</span>`).join('<span class="sep"> + </span>');
       return `<button type="button" class="meal${i === 0 ? ' today' : ''}${items.length ? '' : ' empty'}" data-date="${date}"><span class="meal-day">${esc(name)}</span><span class="meal-what">${items.length ? text : 'Plan dinner'}</span></button>`;
@@ -2694,7 +2724,12 @@
     if (isDemo()) {
       const sample = ['Tacos', 'Sheet-pan chicken', 'Pasta night', 'Leftovers', 'Pizza & movie', 'Grilled salmon', 'Soup and bread'];
       mealState.byDate = {};
-      mealDays().forEach(({ date }, i) => { mealState.byDate[date] = [{ id: 'd' + i, title: sample[i], done: false }]; });
+      const types = mealTypes(), early = ['Oatmeal', 'Pancakes', 'Yogurt and fruit', 'Eggs and toast', 'Smoothies', 'Waffles', 'Bagels'], mid = ['Sandwiches', 'Leftovers', 'Soup and salad', 'Pasta salad', 'Quesadillas', 'Wraps', 'Out for lunch'];
+      mealDays().forEach(({ date }, i) => {
+        mealState.byDate[date] = [{ id: 'd' + i, title: sample[i], done: false, type: 'dinner' }];
+        if (types.includes('breakfast')) mealState.byDate[date].push({ id: 'b' + i, title: early[i], done: false, type: 'breakfast' });
+        if (types.includes('lunch') && i % 3 !== 2) mealState.byDate[date].push({ id: 'l' + i, title: mid[i], done: false, type: 'lunch' });
+      });
       mealState.ideas = ['Tacos', 'Pasta night', 'Sheet-pan chicken', 'Chili', 'Grilled salmon', 'Stir fry'].map((title, i) => ({ id: 'i' + i, title }));
       mealState.ready = true; mealState.error = '';
       drawMeals();
@@ -2813,57 +2848,67 @@
   if (NATIVE && NATIVE.startVoice) $('shopMic').addEventListener('click', () => { voiceSink = (text) => { $('shopInput').value = capFirst(text); }; NATIVE.startVoice(); });
   else $('shopMic').hidden = true;
 
-  let mealEditing = null;   // { date, first }
-  function openMeal(date) {
+  let mealEditing = null;   // { date, type, first }
+  function openMeal(date, type) {
     const d = mealDays().find((x) => x.date === date);
     if (!d) return;
-    const items = mealState.byDate[date] || [];
-    mealEditing = { date, first: items[0] || null };
-    $('mealDay').textContent = d.i === 0 ? 'Tonight' : d.i === 1 ? 'Tomorrow' : fmtDate(d.d, { weekday: 'long', month: 'short', day: 'numeric' });
-    $('mealHint').textContent = items.length > 1 ? `Also planned: ${items.slice(1).map((m) => m.title).join(', ')}` : 'What\u2019s for dinner?';
+    const types = mealTypes();
+    const t = types.includes(type) ? type : defaultMealType(d.i);
+    const items = mealItems(date, t);
+    mealEditing = { date, type: t, first: items[0] || null };
+    $('mealDay').textContent = d.i === 0 ? (types.length > 1 ? 'Today' : 'Tonight') : d.i === 1 ? 'Tomorrow' : fmtDate(d.d, { weekday: 'long', month: 'short', day: 'numeric' });
+    $('mealTypesBar').hidden = types.length < 2;
+    $('mealTypesBar').innerHTML = types.map((x) => `<button type="button" class="mt${x === t ? ' on' : ''}" data-mtype="${x}">${MEAL_NAMES[x]}</button>`).join('');
+    $('mealHint').textContent = items.length > 1 ? `Also planned: ${items.slice(1).map((m) => m.title).join(', ')}` : `What’s for ${t}?`;
+    $('mealInput').placeholder = { breakfast: 'e.g. Pancakes', lunch: 'e.g. Sandwiches', dinner: 'e.g. Tacos' }[t];
     $('mealInput').value = items[0] ? items[0].title : '';
     $('mealClear').hidden = !items[0];
-    // The list's undated tasks, as one-tap choices.
-    const planned = new Set(Object.values(mealState.byDate).flat().map((m) => m.title.toLowerCase()));
-    const ideas = (mealState.ideas || []).slice(0, 14);
+    // The list's undated tasks, as one-tap choices (ones marked for another meal are left out).
+    const planned = new Set(Object.values(mealState.byDate).flat().filter((m) => (m.type || 'dinner') === t).map((m) => m.title.toLowerCase()));
+    const ideas = (mealState.ideas || []).filter((i) => !i.type || i.type === t).slice(0, 14);
     $('mealIdeas').hidden = !ideas.length;
     $('mealIdeas').innerHTML = ideas.map((i) => `<button type="button" class="idea${planned.has(i.title.toLowerCase()) ? ' used' : ''}" data-idea="${esc(i.title)}">${esc(i.title)}</button>`).join('');
-    $('mealSheet').showModal();
+    if (!$('mealSheet').open) $('mealSheet').showModal();
     setTimeout(() => $('mealInput').focus(), 50);
   }
+  $('mealTypesBar').addEventListener('click', (e) => { const b = e.target.closest('[data-mtype]'); if (b && mealEditing) openMeal(mealEditing.date, b.dataset.mtype); });
   async function saveMeal(clear) {
     if (!mealEditing) return;
-    const { date, first } = mealEditing, text = $('mealInput').value.trim(), t = mealTarget();
+    const { date, type, first } = mealEditing, text = $('mealInput').value.trim(), t = mealTarget();
     $('mealSheet').close();
     if (!clear && !text) return;
+    const all = () => mealState.byDate[date] || [];
+    const setDay = (list) => { if (list.length) mealState.byDate[date] = list; else delete mealState.byDate[date]; };
     if (isDemo()) {
-      if (clear) delete mealState.byDate[date];
-      else mealState.byDate[date] = [{ id: 'd', title: text, done: false }];
+      if (clear) setDay(all().filter((m) => m !== first));
+      else if (first) setDay(all().map((m) => (m === first ? { ...m, title: text } : m)));
+      else setDay([...all(), { id: 'd' + Math.random().toString(36).slice(2), title: text, done: false, type }]);
       drawMeals();
       return;
     }
     if (!t) return;
     const before = JSON.stringify(mealState.byDate);
     // Show the change straight away; put it back if Google says no.
-    if (clear) { const rest = (mealState.byDate[date] || []).slice(1); if (rest.length) mealState.byDate[date] = rest; else delete mealState.byDate[date]; }
-    else if (first) mealState.byDate[date] = [{ ...first, title: text }, ...(mealState.byDate[date] || []).slice(1)];
-    else mealState.byDate[date] = [{ id: 'tmp', title: text, done: false }];
+    if (clear) setDay(all().filter((m) => m !== first));
+    else if (first) setDay(all().map((m) => (m === first ? { ...m, title: text } : m)));
+    else setDay([...all(), { id: 'tmp', title: text, done: false, type }]);
     drawMeals();
     try {
       if (clear) await Google.deleteTask(t.a, t.l, first.id);
       else if (first) await Google.setTitle(t.a, t.l, first.id, text);
-      else await Google.addMeal(t.a, t.l, text, date);
+      else await Google.addMeal(t.a, t.l, text, date, type);
       refreshMeals();
     } catch (_) {
       mealState.byDate = JSON.parse(before);
       drawMeals();
-      showToast('Couldn\u2019t save that dinner \u2014 check your connection');
+      showToast(`Couldn’t save that ${type} — check your connection`);
     }
   }
   $('mealList').addEventListener('click', (e) => {
     if (e.target.closest('[data-meal-setup]')) { if (canSignIn()) openSettings(); return; }
     const b = e.target.closest('[data-date]');
-    if (b && (isDemo() || mealTarget())) openMeal(b.dataset.date);
+    const tp = e.target.closest('[data-type]');
+    if (b && (isDemo() || mealTarget())) openMeal(b.dataset.date, tp ? tp.dataset.type : undefined);
   });
   $('mealIdeas').addEventListener('click', (e) => { const b = e.target.closest('[data-idea]'); if (b) { $('mealInput').value = b.dataset.idea; saveMeal(false); } });
   $('mealSave').addEventListener('click', () => saveMeal(false));

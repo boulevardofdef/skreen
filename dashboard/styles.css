@@ -928,3 +928,15 @@ body.native p.native-only { display: block; }
 .chore-cfg label { flex: 1; min-width: 9rem; }
 .chore-cfg input, .chore-cfg select { margin-top: 0.3rem; }
 .day-picks { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin-bottom: 0.6rem; }
+
+/* Breakfast and lunch on the meal planner (only when switched on in Settings) */
+.meal.multi { align-items: start; }
+.meal.multi .meal-what { display: flex; flex-direction: column; gap: 0.25rem; font-size: 1.15rem; }
+.meal.multi.empty .meal-what { font-size: 1.05rem; }
+.ml { display: flex; align-items: baseline; gap: 0.7rem; }
+.ml i { flex: none; width: 5.4rem; font: 600 0.7rem/1.2 var(--mono); font-style: normal; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.meal.today .ml i { color: rgba(14, 13, 11, 0.62); }
+.meal-types { display: flex; gap: 0.5rem; margin: 0 0 0.8rem; }
+.meal-types .mt { flex: 1; padding: 0.7rem 0.5rem; border: 1px solid var(--rule); background: transparent; color: var(--ink); font: 700 0.85rem/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
+.meal-types .mt.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.mline small { display: inline-block; min-width: 6.5rem; font-size: 0.55em; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }

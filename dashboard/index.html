@@ -70,7 +70,7 @@
     </section>
 
     <section class="w col meals" data-w="meals">
-      <div class="col-head"><span>Dinners</span><span class="place" id="mealsHint"></span></div>
+      <div class="col-head"><span id="mealsTitle">Dinners</span><span class="place" id="mealsHint"></span></div>
       <div class="scroll meal-list" id="mealList"></div>
     </section>
 
@@ -219,6 +219,7 @@
   <dialog class="sheet meal-sheet" id="mealSheet">
     <div class="brand-row sm" data-brand></div>
     <h3 id="mealDay"></h3>
+    <div class="meal-types" id="mealTypesBar" hidden></div>
     <p class="hint" id="mealHint">What's for dinner?</p>
     <div class="meal-ideas" id="mealIdeas" hidden></div>
     <div class="add-row">
@@ -477,7 +478,8 @@
         <div class="group native-only">Dinners <span class="plus-chip" data-plus-logo></span></div>
         <div class="native-block" id="mealField">
           <label class="field"><span>Dinner planner list <em>(a Google Tasks list)</em></span><select id="mealPick"></select></label>
-          <p class="hint how">How it works: make a Google Tasks list, such as &ldquo;Dinners&rdquo;. Tasks <b>without a date</b> are your meal ideas (add them any time, from your phone too). Tap a day on the Dinners widget and pick an idea, or type a new meal, and Skreen puts a dated copy on that day. You can also add a task to the list with a date, and it shows on that day.</p>
+          <label class="field"><span>Meals to plan</span><select name="mealTypes"><option value="d">Dinner only</option><option value="ld">Lunch and dinner</option><option value="bd">Breakfast and dinner</option><option value="bld">Breakfast, lunch and dinner</option></select></label>
+          <p class="hint how">How it works: make a Google Tasks list, such as &ldquo;Dinners&rdquo;. Tasks <b>without a date</b> are your meal ideas (add them any time, from your phone too). Tap a day on the Dinners widget and pick an idea, or type a new meal, and Skreen puts a dated copy on that day. You can also add a task to the list with a date, and it shows on that day. Breakfast and lunch use the same list: put <b>#breakfast</b> or <b>#lunch</b> on the first line of a task's notes (Skreen does this for you when you plan them here).</p>
         </div>
         <div class="group native-only">Shopping list <span class="plus-chip" data-plus-logo></span></div>
         <div class="native-block" id="shopField">

@@ -140,18 +140,22 @@ window.Google = (() => {
   // date as midnight UTC of that day, so the date part is the day itself.
   async function mealTasks(acct, listId, from, to) {
     const base = `${TASKS}/lists/${encodeURIComponent(listId)}/tasks`;
-    const q = new URLSearchParams({ showCompleted: 'true', showHidden: 'true', maxResults: '100', dueMin: `${from}T00:00:00.000Z`, dueMax: `${to}T23:59:59.000Z`, fields: 'items(id,title,due,status,parent)' });
+    const q = new URLSearchParams({ showCompleted: 'true', showHidden: 'true', maxResults: '100', dueMin: `${from}T00:00:00.000Z`, dueMax: `${to}T23:59:59.000Z`, fields: 'items(id,title,notes,due,status,parent)' });
     const res = await call(acct, `${base}?${q}`);
-    return (res.items || []).filter((t) => t.title && t.due && !t.parent).map((t) => ({ id: t.id, title: t.title, date: t.due.slice(0, 10), done: t.status === 'completed' }));
+    return (res.items || []).filter((t) => t.title && t.due && !t.parent).map((t) => ({ id: t.id, title: t.title, date: t.due.slice(0, 10), done: t.status === 'completed', type: mealType(t.notes) }));
   }
+  // Breakfast and lunch are marked with "#breakfast" / "#lunch" on the first line of the task's notes; anything else is dinner.
+  const mealType = (notes) => { const m = /^\s*#(breakfast|lunch|dinner)\b/i.exec(notes || ''); return m ? m[1].toLowerCase() : 'dinner'; };
   // The list's undated tasks: the pool of meal ideas to pick from.
   async function mealIdeas(acct, listId) {
-    const res = await call(acct, `${TASKS}/lists/${encodeURIComponent(listId)}/tasks?showCompleted=false&showHidden=false&maxResults=100&fields=items(id,title,due,parent,position)`);
-    return (res.items || []).filter((t) => t.title && !t.due && !t.parent).sort((a, b) => ((a.position || '') < (b.position || '') ? -1 : 1)).map((t) => ({ id: t.id, title: t.title }));
+    const res = await call(acct, `${TASKS}/lists/${encodeURIComponent(listId)}/tasks?showCompleted=false&showHidden=false&maxResults=100&fields=items(id,title,notes,due,parent,position)`);
+    return (res.items || []).filter((t) => t.title && !t.due && !t.parent).sort((a, b) => ((a.position || '') < (b.position || '') ? -1 : 1)).map((t) => ({ id: t.id, title: t.title, type: /^\s*#(breakfast|lunch|dinner)\b/i.test(t.notes || '') ? mealType(t.notes) : '' }));
   }
-  async function addMeal(acct, listId, title, date) {
-    const t = await call(acct, `${TASKS}/lists/${encodeURIComponent(listId)}/tasks`, { method: 'POST', body: JSON.stringify({ title: title.slice(0, 500), due: `${date}T00:00:00.000Z` }) });
-    return { id: t.id, title: t.title, date, done: false };
+  async function addMeal(acct, listId, title, date, type = 'dinner') {
+    const body = { title: title.slice(0, 500), due: `${date}T00:00:00.000Z` };
+    if (type !== 'dinner') body.notes = '#' + type;   // dinner is the unmarked default
+    const t = await call(acct, `${TASKS}/lists/${encodeURIComponent(listId)}/tasks`, { method: 'POST', body: JSON.stringify(body) });
+    return { id: t.id, title: t.title, date, done: false, type };
   }
   const deleteTask = (acct, listId, id) => call(acct, taskUrl(listId, id), { method: 'DELETE' }).then(() => true);
 
