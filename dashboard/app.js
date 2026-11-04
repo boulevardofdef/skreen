@@ -301,6 +301,7 @@
       if (cfg.accent === 'auto') applyAccent('auto');   // and a new accent colour
       updateNight(now);
       updateShowNow();
+      refreshTimeSlide(now);   // the big clock keeps up, however long the slide stays
       nudgeLayout(now);
       applyBrightness(now);
       maybeSelfReload();
@@ -1365,6 +1366,14 @@
     updateShowNow();
   }
 
+  // The Time slide shows the minute it was drawn; at a long slide length it would be minutes out of date, so it follows the clock.
+  function refreshTimeSlide(now = new Date()) {
+    const v = document.querySelector('#showBody .sv-time:not(.out)');
+    if (!v || !tour.on) return;
+    const { hm, ap } = timeParts(now), big = v.querySelector('.big'), date = v.querySelector('.bigdate');
+    if (big) { big.innerHTML = `${clockHtml(hm)}${ap ? `<small>${ap}</small>` : ''}`; fitToWidth(big, v.clientWidth * 0.82); }
+    if (date) date.textContent = fmtDate(now, { weekday: 'long', month: 'long', day: 'numeric' });
+  }
   // Always-on slideshow: what's playing sits in the corner of every slide (the timers already do). A radio station
   // or song shows its name; the music slide itself doesn't need the extra strip.
   function updateShowNow() {
