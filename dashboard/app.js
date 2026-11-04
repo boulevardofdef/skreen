@@ -3398,6 +3398,9 @@
   }
   $('fontSelect').addEventListener('change', (e) => applyFont(e.target.value));   // live preview
   settingsSheet.addEventListener('close', () => applyFont(cfg.font));              // Cancel puts it back
+  // Big Skreen Mode is waiting out a tap (the "back after N minutes" time); once Settings has been used and closed, it
+  // returns at once instead, so nobody is left looking at the regular screen wondering why it hasn't come back.
+  settingsSheet.addEventListener('close', () => { if (alwaysTour() && tour.tapped) { tour.tapped = false; tour.last = 0; maybeStartTour(); } });
   $('accentSelect').addEventListener('change', (e) => applyAccent(e.target.value));   // live preview
   settingsSheet.addEventListener('close', () => applyAccent(cfg.accent));
 
