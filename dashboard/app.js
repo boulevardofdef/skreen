@@ -302,6 +302,7 @@
       updateNight(now);
       updateShowNow();
       refreshTimeSlide(now);   // the big clock keeps up, however long the slide stays
+      refreshSlideInPlace();   // and so do the schedule and weather slides, when a slide stays long
       nudgeLayout(now);
       applyBrightness(now);
       maybeSelfReload();
@@ -1351,7 +1352,9 @@
     // The every-few-minutes tour keeps everything left-aligned; only the always-on slideshow shifts position
     // (left, centre, right) so a big slide doesn't sit on the same pixels all day.
     v.className = `sv sv-${name} p${alwaysTour() ? (tour.cycle + tour.i) % 3 : 0}`;
-    v.innerHTML = tourHtml(name);
+    const html = tourHtml(name);
+    v.innerHTML = html;
+    v.dataset.sig = html;   // what was drawn, so a later refresh can tell whether anything changed
     body.appendChild(v);
     fitToWidth(v.querySelector('.big'), v.clientWidth * 0.82);   // never wider than the space inside the side margins
     fitRows(v);
@@ -1366,6 +1369,30 @@
     updateShowNow();
   }
 
+  // On long slides (a minute or more) the schedule and weather slides are brought up to date once a minute, in place:
+  // the existing pages and their scrolling are kept, and only what's written on them changes.
+  function refreshSlideInPlace() {
+    if (!tour.on || !alwaysTour() || slideMs() < 60000) return;
+    const name = TOUR[tour.i], x = name && extraById(name);
+    if (!name || !(name === 'agenda' || name === 'weather' || name === 'forecast' || (x && x.kind === 'agenda'))) return;
+    const v = document.querySelector('#showBody .sv:not(.out)');
+    if (!v || !v.classList.contains('sv-' + name)) return;
+    const html = tourHtml(name);
+    if (v.dataset.sig === html) return;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const oldStage = v.querySelector('.sv-stage'), newStage = tmp.querySelector('.sv-stage');
+    if (oldStage || newStage) {
+      if (!oldStage || !newStage) return;   // went from several pages to one, or back: left for the next time round
+      const o = oldStage.querySelectorAll(':scope > .sv-sub'), n = newStage.querySelectorAll(':scope > .sv-sub');
+      if (o.length !== n.length) return;    // a different number of pages (say an event ended): also left for the next round
+      o.forEach((el, i) => { el.innerHTML = n[i].innerHTML; });
+    } else {
+      v.innerHTML = tmp.innerHTML;
+      fitRows(v);
+    }
+    v.dataset.sig = html;
+  }
   // The Time slide shows the minute it was drawn; at a long slide length it would be minutes out of date, so it follows the clock.
   function refreshTimeSlide(now = new Date()) {
     const v = document.querySelector('#showBody .sv-time:not(.out)');
