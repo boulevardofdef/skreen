@@ -2318,6 +2318,7 @@
   let newsFailed = false, newsRetry = null;
   function drawNews() {
     const list = News.current.slice(0, 5);
+    $('newsCredit').hidden = !list.some((s) => /wikipedia\.org/i.test(s.url || ''));   // the Wikipedia credit appears only if the stories themselves are Wikipedia's
     $('newsList').innerHTML = list.length
       ? list.map((s) => `<li class="news-item">${esc(s.text)}</li>`).join('')
       : `<li class="news-item news-empty">${newsFailed ? 'Couldn\u2019t load the news right now. Trying again soon.' : 'Loading the news\u2026'}</li>`;
