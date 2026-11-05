@@ -1358,6 +1358,7 @@
     body.appendChild(v);
     fitToWidth(v.querySelector('.big'), v.clientWidth * 0.82);   // never wider than the space inside the side margins
     fitRows(v);
+    const wall = v.querySelector('.wall'); if (wall) fitWall(wall);
     if (alwaysTour()) startSubs(v); else clearInterval(tour.subTimer);
     if (name === 'photos' && alwaysTour()) { photo.hold = true; tour.photoLocked = true; clearTimeout(photo.timer); planPhotoSwaps(); }
     tour.timer = setTimeout(() => {
@@ -1586,13 +1587,7 @@
       return listSlide('Shopping', shopState.items, (t) => `<div class="row"><div class="bullet"></div><div class="rn"><span class="ttl">${esc(t.title)}</span></div></div>`, { big: 5, plain: 8 });
     }
     if (name === 'chores') return choresSlide();
-    if (name === 'board' && alwaysTour()) {   // Big Skreen Mode: one note at a time, swiping up through the newest few
-      return stageHtml('Whiteboard', board.notes.slice(0, slideMs() <= 15000 ? 2 : 4).map((n) => `<div class="sv-headline sv-note"><span>${esc(n.text)}${n.who.length ? `<em class="sv-from">\u2014 ${esc(n.who.join(', '))}</em>` : ''}</span></div>`), 'headlines');
-    }
-    if (name === 'board') {
-      const rows = board.notes.slice(0, 5).map((n) => `<div class="row"><div class="rn">${esc(n.text)}${n.who.length ? `<span class="sv-who">${n.who.map(esc).join(' \u00b7 ')}</span>` : ''}</div></div>`).join('');
-      return `<div class="kicker">Whiteboard</div><div class="sv-list sv-news">${rows}</div>`;
-    }
+    if (name === 'board') return `<div class="kicker">Whiteboard</div><div class="wall" data-wall>${wallHtml('div')}</div>`;   // the whole board at once, sized to fill the screen
     if (name === 'news' && alwaysTour()) {   // Big Skreen Mode: one big headline at a time, swiping up through up to three (two on a short slide)
       return stageHtml('In the news', News.current.slice(0, slideMs() <= 15000 ? 2 : 3).map((h) => `<div class="sv-headline"><span>${esc(h.text)}</span></div>`), 'headlines');
     }
@@ -2682,13 +2677,63 @@
     if (m < 24 * 60) return `${Math.floor(m / 60)}h`;
     return fmtDate(new Date(ms), { weekday: 'short', month: 'short', day: 'numeric' });
   }
-  const noteHtml = (n) => `<button type="button" class="note" data-note="${esc(n.id)}" style="--p:${n.who.length ? personColor(n.who[0]) : 'var(--rule)'}"><span class="note-text">${esc(n.text)}</span><span class="note-foot">${chipsHtml(n.who)}<span class="note-when">${esc(noteWhen(n.at))}</span></span></button>`;
+  // The board is a wall of sticky notes in handwriting. Each note's paper takes the writer's colour, the text is sized so
+  // every note fits (one note is huge, a full wall is smaller), and the newest BOARD_MAX are shown, the rest listed under "earlier".
+  const BOARD_MAX = 12;
+  const paperOf = (name) => {
+    if (!name) return '#f1ead7';
+    const n = parseInt(personColor(name).slice(1), 16), mix = (c) => Math.round(c + (255 - c) * 0.5);   // the person's colour, lightened
+    return `rgb(${mix((n >> 16) & 255)}, ${mix((n >> 8) & 255)}, ${mix(n & 255)})`;
+  };
+  const noteTilt = (id) => { let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return (((h % 5) - 2) * 0.55).toFixed(2) + 'deg'; };
+  function wallHtml(tag = 'button') {
+    const shown = board.notes.slice(0, BOARD_MAX), older = board.notes.length - shown.length;
+    const open = tag === 'button' ? ' type="button"' : '';
+    return shown.map((n) => `<${tag}${open} class="sn" data-note="${esc(n.id)}" style="--paper:${paperOf(n.who[0])}; --rot:${noteTilt(n.id)}"><span class="t">${esc(n.text)}</span><span class="by">${n.who.length ? `<span class="name">${esc(n.who.join(' & '))}</span>` : ''}<span class="ago">${esc(noteWhen(n.at))}</span></span></${tag}>`).join('')
+      + (older > 0 && tag === 'button' ? `<button type="button" class="wall-more" data-older>+${older} earlier</button>` : '')
+      + (older > 0 && tag !== 'button' ? `<div class="wall-more">+${older} earlier</div>` : '');
+  }
+  // Find the layout (columns) and text size that make the writing as large as possible with every note fitting.
+  function fitWall(wall) {
+    const notes = wall && wall.querySelectorAll('.sn'), n = notes ? notes.length : 0, W = wall ? wall.clientWidth : 0, H = wall ? wall.clientHeight : 0;
+    if (!n || !W || !H) return;
+    wall.classList.toggle('has-more', !!wall.querySelector('.wall-more'));   // leaves a strip for the "+N earlier" tag
+    const fits = () => { for (const el of notes) if (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1) return false; return true; };
+    let best = { fs: 0, cols: 1 };
+    for (let cols = 1; cols <= Math.min(n, 6); cols++) {
+      const rows = Math.ceil(n / cols), cell = (W / H) * rows / cols;
+      if (n > 1 && (cell < 0.6 || cell > 3)) continue;   // keep each note roughly card-shaped, not a strip or a tall sliver
+      wall.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+      wall.style.gridTemplateRows = `repeat(${rows}, minmax(0, 1fr))`;
+      let lo = 10, hi = Math.min(260, Math.floor(H * 0.45));
+      while (hi - lo > 1) { const mid = (lo + hi) >> 1; wall.style.setProperty('--fs', mid + 'px'); if (fits()) lo = mid; else hi = mid; }
+      if (lo > best.fs) best = { fs: lo, cols };
+    }
+    wall.style.gridTemplateColumns = `repeat(${best.cols}, minmax(0, 1fr))`;
+    wall.style.gridTemplateRows = `repeat(${Math.ceil(n / best.cols)}, minmax(0, 1fr))`;
+    wall.style.setProperty('--fs', Math.max(10, best.fs) + 'px');
+  }
+  const refitBoard = () => document.querySelectorAll('.wall').forEach(fitWall);
+  window.addEventListener('resize', () => { clearTimeout(refitBoard.t); refitBoard.t = setTimeout(refitBoard, 150); });
+  if (document.fonts && document.fonts.load) document.fonts.load('40px "Patrick Hand"').then(refitBoard, () => {});
   function drawBoard() {
     const box = $('boardList');
     if (!boardShown() && !tour.on) return;
     $('boardCount').textContent = board.notes.length ? String(board.notes.length) : '';
-    box.innerHTML = board.notes.length ? board.notes.map(noteHtml).join('') : '<div class="board-empty">Nothing here yet. Tap <b>Add note</b> to leave one for the household.</div>';
+    box.innerHTML = board.notes.length ? wallHtml() : '<div class="board-empty">Nothing here yet. Tap <b>Add note</b> to leave one for the household.</div>';
+    fitWall(box);
   }
+  // Notes past the newest BOARD_MAX are still kept; this lists them so they can be opened, edited or deleted.
+  function openOlderNotes() {
+    $('olderList').innerHTML = board.notes.slice(BOARD_MAX).map((n) => `<button type="button" class="older-row" data-note="${esc(n.id)}"><span class="o-t">${esc(n.text)}</span><span class="o-m">${n.who.length ? chipsHtml(n.who) : ''}<span class="o-w">${esc(noteWhen(n.at))}</span></span></button>`).join('') || '<p class="hint">No earlier notes.</p>';
+    $('olderSheet').showModal();
+  }
+  $('olderClose').addEventListener('click', () => $('olderSheet').close());
+  $('olderSheet').addEventListener('click', (e) => {
+    if (e.target === $('olderSheet')) { $('olderSheet').close(); return; }
+    const b = e.target.closest('[data-note]');
+    if (b) { $('olderSheet').close(); openNote(b.dataset.note); }
+  });
 
   const noteSheet = $('noteSheet');
   const noteWho = whoPicker({ pills: $('notePills'), box: $('noteNew'), input: $('noteWhoInput'), addBtn: $('noteWhoAdd'), anyone: 'No name' });
@@ -2707,7 +2752,10 @@
   $('boardAddIcon').innerHTML = Icons.plus || '+';
   $('noteMic').innerHTML = Icons.mic;
   $('boardAdd').addEventListener('click', () => openNote(null));
-  $('boardList').addEventListener('click', (e) => { const b = e.target.closest('[data-note]'); if (b) openNote(b.dataset.note); });
+  $('boardList').addEventListener('click', (e) => {
+    if (e.target.closest('[data-older]')) { openOlderNotes(); return; }
+    const b = e.target.closest('[data-note]'); if (b) openNote(b.dataset.note);
+  });
   $('noteCancel').addEventListener('click', () => noteSheet.close());
   noteSheet.addEventListener('click', (e) => { if (e.target === noteSheet) noteSheet.close(); });
   $('noteForm').addEventListener('submit', (e) => {

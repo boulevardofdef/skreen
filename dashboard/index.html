@@ -82,7 +82,7 @@
 
     <section class="w col board" data-w="board">
       <div class="col-head"><span>Whiteboard</span><span class="count" id="boardCount"></span></div>
-      <div class="scroll board-list" id="boardList"></div>
+      <div class="wall" id="boardList"></div>
       <button class="add-btn" id="boardAdd" type="button"><span id="boardAddIcon"></span>Add note</button>
     </section>
 
@@ -286,6 +286,14 @@
         <button type="submit" class="btn primary" id="addSubmit">Add</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- Earlier whiteboard notes -->
+  <dialog class="sheet" id="olderSheet">
+    <div class="brand-row sm" data-brand></div>
+    <h3>Earlier notes</h3>
+    <div class="older-list" id="olderList"></div>
+    <div class="sheet-actions"><button type="button" class="btn primary" id="olderClose">Close</button></div>
   </dialog>
 
   <!-- Whiteboard note sheet -->
