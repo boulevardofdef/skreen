@@ -13,4 +13,5 @@
 - Website: https://skreen.fyi/
 - Try it with sample data: https://app.skreen.fyi/?test=yes
 - Privacy policy: https://app.skreen.fyi/privacy.html
+- Terms of service: https://app.skreen.fyi/terms.html
 - Support: support@skreen.fyi
