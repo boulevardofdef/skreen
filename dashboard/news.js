@@ -1,5 +1,5 @@
-// News (Skreen+): the "In the news" box from Wikipedia's front page, a few current stories.
-// Wikipedia text is CC BY-SA, so the widget carries a credit. It comes through the Skreen relay,
+// News (Skreen+): a few current headlines, written by an AI model on the Skreen relay from major outlets'
+// top stories (worker/news.js). They come through the relay,
 // which sets the identifying User-Agent Wikimedia asks for and caches it.
 const News = (() => {
   let list = [], at = 0;
