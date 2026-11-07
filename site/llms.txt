@@ -11,6 +11,8 @@
 ## Links
 - Get Skreen on Google Play: https://play.google.com/store/apps/details?id=app.skreen.wall
 - Website: https://skreen.fyi/
+- Guide, turn an old Android tablet into a family calendar: https://skreen.fyi/old-tablet-family-calendar/
+- Guide, show school and team calendars with a calendar link: https://skreen.fyi/school-calendar/
 - Try it with sample data: https://app.skreen.fyi/?test=yes
 - Privacy policy: https://app.skreen.fyi/privacy.html
 - Terms of service: https://app.skreen.fyi/terms.html

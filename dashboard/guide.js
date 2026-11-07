@@ -10,7 +10,7 @@ window.Guide = (() => {
 <ol>
   <li><b>Sign in with Google.</b> Tap the button, choose your account and allow access. That's all there is to it. <button class="btn ghost small" data-go="signin">What you're allowing →</button></li>
   <li><b>Pick your city</b> in Settings for the weather, and choose which calendars and which to-do list to show.</li>
-  <li><b>Optional:</b> add Outlook, Apple or other calendars with a link. <button class="btn ghost small" data-go="calendars">How →</button></li>
+  <li><b>Optional:</b> add Outlook, Apple or other calendars with a link. <button class="btn ghost small" data-go="calendars">How →</button> School or team calendar? <button class="btn ghost small" data-go="school">Find the link →</button></li>
   <li><b>Optional:</b> make the tablet a proper wall display. <button class="btn ghost small" data-go="device">Tips →</button></li>
 </ol>
 <p>Until you sign in or add a calendar link, you're looking at <b>sample data</b>.</p>
@@ -72,6 +72,30 @@ window.Guide = (() => {
   <li>Skreen's relay fetches the link for you because browsers can't read most calendar hosts directly. It keeps the calendar for about five minutes so a busy moment doesn't hammer your provider, and stores nothing else.</li>
   <li>Changes can take a few minutes to appear, and some services refresh their published links only every few hours.</li>
   <li>Links are stored on this tablet only. Skreen can't add or change events on these calendars.</li>
+</ul>`
+    },
+    {
+      id: 'school', title: 'School & team calendars',
+      html: `
+<h1>School &amp; team calendars</h1>
+<p class="lede">Practice times, early dismissals and game days can sit right beside your own calendar, free, with no extra sign-in.</p>
+<ol>
+  <li>Find the school, team or club calendar and look for <b>Subscribe</b>, <b>iCal</b>, <b>Export</b> or <b>Calendar feed</b>.</li>
+  <li><b>Copy the link.</b> It ends in <code>.ics</code> or starts with <code>webcal://</code>. Either works. On a website, press and hold (or right-click) the Subscribe button and copy the link address.</li>
+  <li>Open <b>Settings → Other calendars</b>, paste it, name it (like “Lincoln Elementary”) and tap <b>Add calendar</b>.</li>
+</ol>
+<h2>Where to look</h2>
+<ul>
+  <li><b>School and district websites</b> often have a Subscribe or Add to calendar button on their calendar page.</li>
+  <li><b>Team and club apps</b> such as TeamSnap and SportsEngine generally offer a calendar feed or iCal link in their calendar settings. Menu names change, so search the app's help for “calendar feed” or “iCal”.</li>
+  <li><b>A shared Google calendar</b> needs no link. Add it to your Google account and tick it in Settings.</li>
+  <li><b>Only a PDF or a plain web page?</b> Skreen can't read those. Ask the school office or coach whether there is an iCal or subscribable calendar. If so, they can send you the link.</li>
+</ul>
+<h2>Good to know</h2>
+<ul>
+  <li>You can add up to eight calendars by link. They show in the main schedule, each in its own color.</li>
+  <li>With Skreen+, the per-person columns use Google calendars. A calendar added by link shows in the main schedule instead.</li>
+  <li>Treat the link like a password. See <button class="btn ghost small" data-go="calendars">Other calendars →</button> for privacy details.</li>
 </ul>`
     },
     {

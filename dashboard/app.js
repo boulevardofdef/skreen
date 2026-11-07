@@ -3422,6 +3422,7 @@
     }
   });
   $('icsHelp').addEventListener('click', (e) => { e.preventDefault(); settingsSheet.close(); openGuide('calendars'); });
+  $('icsSchool').addEventListener('click', (e) => { e.preventDefault(); settingsSheet.close(); openGuide('school'); });
 
   let draftLoc = null;
 
