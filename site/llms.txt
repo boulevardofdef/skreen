@@ -13,6 +13,13 @@
 - Website: https://skreen.fyi/
 - Guide, turn an old Android tablet into a family calendar: https://skreen.fyi/old-tablet-family-calendar/
 - Guide, show school and team calendars with a calendar link: https://skreen.fyi/school-calendar/
+- Guide, mounting a tablet in the kitchen: https://skreen.fyi/tablet-wall-mount-kitchen/
+- Guide, chore chart with stars and rewards: https://skreen.fyi/chore-chart-app-kids/
+- Guide, family meal planner display: https://skreen.fyi/family-meal-planner-display/
+- Comparison, dedicated family calendar vs. an app on a tablet: https://skreen.fyi/hardware-vs-app-family-calendar/
+- Guide, a kitchen display without a voice assistant: https://skreen.fyi/kitchen-display-without-voice-assistant/
+- Guide, several Google Calendars side by side: https://skreen.fyi/multiple-google-calendars-display/
+- Press kit: https://skreen.fyi/press/
 - Try it with sample data: https://app.skreen.fyi/?test=yes
 - Privacy policy: https://app.skreen.fyi/privacy.html
 - Terms of service: https://app.skreen.fyi/terms.html
