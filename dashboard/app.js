@@ -2382,10 +2382,15 @@
   const extraReady = () => isDemo() || state.loaded;
 
   // Fetch the events of some calendars, or the tasks of some lists ('account|id' each), from the signed-in accounts.
+  // A calendar added by link is written 'ics|<id>' (the account part is 'ics').
   async function fetchEvents(cals, known) {
-    const byAcct = new Map();
-    for (const c of (cals || []).map(srcOf)) if (known.has(c.a)) byAcct.set(c.a, [...(byAcct.get(c.a) || []), c.id]);
-    const sets = await Promise.all([...byAcct].map(([a, ids]) => Google.events(a, ids, AGENDA_DAYS)));
+    const byAcct = new Map(), links = new Set();
+    for (const c of (cals || []).map(srcOf)) {
+      if (c.a === 'ics') links.add(c.id);
+      else if (known.has(c.a)) byAcct.set(c.a, [...(byAcct.get(c.a) || []), c.id]);
+    }
+    const linked = (cfg.ics || []).filter((l) => links.has(l.id));
+    const sets = await Promise.all([...byAcct].map(([a, ids]) => Google.events(a, ids, AGENDA_DAYS)).concat(linked.length ? [Ics.events(linked, AGENDA_DAYS)] : []));
     const seen = new Set(), events = [];
     for (const ev of sets.flat()) { const k = (ev.uid || ev.id) + '|' + ev.start; if (!seen.has(k)) { seen.add(k); events.push(ev); } }
     return events;
@@ -2406,7 +2411,7 @@
     const xs = extrasOf();
     if (!xs.length) { extra.events = {}; extra.tasks = {}; return; }
     if (isDemo()) { renderExtras(); return; }
-    if (!usingGoogle()) return;
+    if (!usingGoogle() && !(cfg.ics && cfg.ics.length)) return;
     const known = new Set(accountList());
     const idle = () => !state.mutating && Date.now() - state.lastMutation > 4000;
     const needEv = new Set(), needTk = new Set();
@@ -3157,10 +3162,22 @@
 
   // People, and the extra schedules and to-do lists, in Settings (Skreen+).
   let draftExtras = [], draftPeople = [];
-  const sourceChecks = (accts, several, kind, chosen, attr) => accts.map((a) => (kind === 'cal' ? acctChoices[a].cals : acctChoices[a].lists).map((c) => {
-    const v = a + '|' + c.id;
-    return `<label class="check"><input type="checkbox" ${attr}="${esc(v)}" ${chosen.includes(v) ? 'checked' : ''}>${kind === 'cal' ? `<i style="background:${esc(c.color)}"></i>` : ''}<span>${esc(kind === 'cal' ? c.name : c.title)}${several ? ' · ' + esc(a) : ''}</span></label>`;
-  }).join('')).join('') || '<span class="hint">Sign in with Google (above) to choose.</span>';
+  const sourceChecks = (accts, several, kind, chosen, attr) => {
+    const rows = accts.map((a) => (kind === 'cal' ? acctChoices[a].cals : acctChoices[a].lists).map((c) => {
+      const v = a + '|' + c.id;
+      return `<label class="check"><input type="checkbox" ${attr}="${esc(v)}" ${chosen.includes(v) ? 'checked' : ''}>${kind === 'cal' ? `<i style="background:${esc(c.color)}"></i>` : ''}<span>${esc(kind === 'cal' ? c.name : c.title)}${several ? ' \u00b7 ' + esc(a) : ''}</span></label>`;
+    }).join('')).concat(kind === 'cal' ? draftIcs.map((l) => {   // calendars added by link
+      const v = 'ics|' + l.id;
+      return `<label class="check"><input type="checkbox" ${attr}="${esc(v)}" ${chosen.includes(v) ? 'checked' : ''}><i style="background:${esc(l.color)}"></i><span>${esc(l.name)} \u00b7 link</span></label>`;
+    }) : []);
+    return rows.join('') || '<span class="hint">Sign in with Google (above) to choose.</span>';
+  };
+  // Forget link calendars that were removed, wherever a person or widget had them ticked.
+  const pruneIcsRefs = () => {
+    const ok = new Set(draftIcs.map((l) => 'ics|' + l.id)), keep = (v) => !String(v).startsWith('ics|') || ok.has(v);
+    draftPeople.forEach((p) => { p.cals = (p.cals || []).filter(keep); });
+    draftExtras.forEach((x) => { if (x.cals) x.cals = x.cals.filter(keep); });
+  };
 
   function drawPeople() {
     $('peopleField').hidden = !hasPlus();
@@ -3397,6 +3414,7 @@
   function drawIcs() {
     $('icsList').hidden = !draftIcs.length;
     $('icsList').innerHTML = draftIcs.map((c, i) => `<label class="check"><i style="background:${esc(c.color)}"></i><span>${esc(c.name)}</span><button type="button" class="btn ghost small" data-rm-ics="${i}">Remove</button></label>`).join('');
+    if (hasPlus()) { pruneIcsRefs(); setTimeout(drawExtras, 0); }   // link calendars can be picked for people and extra schedules
   }
   $('icsList').addEventListener('click', (e) => {
     const b = e.target.closest('[data-rm-ics]');
@@ -3633,6 +3651,7 @@
     for (const el of form.elements) if (el.name && el.name in cfg) cfg[el.name] = el.value.trim();
     if (draftLoc) Object.assign(cfg, draftLoc);
     cfg.ics = draftIcs;
+    if (hasPlus()) pruneIcsRefs();
     if (hasPlus()) cfg.slideSkip = Array.from($('slideChecks').querySelectorAll('input:not(:checked)')).map((i) => i.dataset.slide).join(',');
     if (hasPlus()) {
       cfg.household = draftPeople.map((p) => ({ ...p, name: (p.name || '').trim() })).filter((p) => p.name);

@@ -94,7 +94,7 @@ window.Guide = (() => {
 <h2>Good to know</h2>
 <ul>
   <li>You can add up to eight calendars by link. They show in the main schedule, each in its own color.</li>
-  <li>With Skreen+, the per-person columns use Google calendars. A calendar added by link shows in the main schedule instead.</li>
+  <li>With Skreen+, a calendar added by link can also go in a person's column (a child's school or team calendar, say). After adding it, open <b>Settings → Family</b> and tick it under that person's <b>Calendars</b>. It still shows in the main schedule too.</li>
   <li>Treat the link like a password. See <button class="btn ghost small" data-go="calendars">Other calendars →</button> for privacy details.</li>
 </ul>`
     },
