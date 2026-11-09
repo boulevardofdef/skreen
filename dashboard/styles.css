@@ -989,3 +989,6 @@ button.sn { cursor: pointer; }
 .settings-nav button { padding: 0.7rem 0.9rem; font-size: 0.88rem; }
 .wall.has-more { padding-bottom: 2.8rem; }
 .sv-board .wall.has-more { padding-bottom: 5vh; }
+
+/* The iPad app sells Skreen+ only through the App Store: no unlock codes. */
+body.ios #plusCodeBox, body.ios #plusSheetCode, body.ios #plusForget { display: none !important; }

@@ -1,0 +1,88 @@
+name: Build iPad app
+
+# Builds the iPad app on a GitHub-hosted Mac, so no Mac of your own is needed.
+#
+#  • Every change under ios/ (or a manual run) first makes sure the app COMPILES for the iPad simulator.
+#    This needs nothing from Apple.
+#  • A manual run with "Upload to TestFlight" ticked also signs the app and sends it to App Store Connect.
+#    That needs an Apple Developer account and these in the repository (Settings → Secrets and variables → Actions):
+#      Secrets:    ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8   (an App Store Connect API key: the .p8 file's text)
+#      Variables:  APPLE_TEAM_ID                           (the 10-character Team ID)
+#                  GOOGLE_IOS_CLIENT_ID                    (the iOS OAuth client ID from Google Cloud Console)
+#
+# Mac build minutes can cost money on private repositories; see GitHub's current pricing.
+
+on:
+  push:
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+    inputs:
+      testflight:
+        description: 'Upload to TestFlight (needs the Apple secrets)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate the Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Compile for the iPad simulator
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Skreen.xcodeproj -scheme Skreen \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            GOOGLE_IOS_CLIENT_ID="${{ vars.GOOGLE_IOS_CLIENT_ID }}" \
+            | tee "$RUNNER_TEMP/build.log" | tail -n 60
+
+      - name: Archive for the App Store and upload to TestFlight
+        if: ${{ inputs.testflight }}
+        working-directory: ios
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          for v in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 TEAM_ID; do
+            if [ -z "${!v}" ]; then echo "Missing $v" >&2; exit 1; fi
+          done
+          KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_KEY_P8" > "$KEY"
+          cat > "$RUNNER_TEMP/export.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+          </dict></plist>
+          PLIST
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          xcodebuild archive \
+            -project Skreen.xcodeproj -scheme Skreen \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Skreen.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            GOOGLE_IOS_CLIENT_ID="${{ vars.GOOGLE_IOS_CLIENT_ID }}" \
+            "${AUTH[@]}"
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Skreen.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
+            "${AUTH[@]}"

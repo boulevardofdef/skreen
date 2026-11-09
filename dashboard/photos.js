@@ -3,7 +3,7 @@
 //     kept, shrunk, in the app's private storage on the tablet, or
 //   • "Art gallery": public-domain paintings from Wikimedia Commons, through the relay.
 const Photos = (() => {
-  const LOCAL = 'https://appassets.androidplatform.net/skreen-photos/';
+  const LOCAL = (window.SkreenNative && window.SkreenNative.photoBase) || 'https://appassets.androidplatform.net/skreen-photos/';   // iPad: skreen-photos://local/
 
   const nativeOK = () => !!(window.SkreenNative && window.SkreenNative.pickPhotos);
 

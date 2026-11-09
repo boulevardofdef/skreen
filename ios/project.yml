@@ -1,0 +1,32 @@
+# Skreen for iPad. The Xcode project is generated from this file by XcodeGen (see .github/workflows/ios.yml),
+# so nothing here needs a Mac to edit. The app is a native shell around the web dashboard in /dashboard.
+name: Skreen
+options:
+  bundleIdPrefix: app.skreen
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    GOOGLE_IOS_CLIENT_ID: ""
+targets:
+  Skreen:
+    type: application
+    platform: iOS
+    sources:
+      - path: Skreen
+      - path: ../dashboard
+        type: folder
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.skreen.wall
+        TARGETED_DEVICE_FAMILY: "2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Skreen/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ""
+        ENABLE_USER_SCRIPT_SANDBOXING: NO

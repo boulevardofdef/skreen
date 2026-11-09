@@ -47,6 +47,7 @@
   // Present only inside the Skreen Android app.
   const NATIVE = window.SkreenNative || null;
   if (NATIVE) document.body.classList.add('native');
+  try { if (NATIVE && NATIVE.platform === 'ios') document.body.classList.add('ios'); } catch (_) {}   // the iPad app: no unlock codes (App Store rules)
   try { if (NATIVE && NATIVE.isStoreBuild && NATIVE.isStoreBuild()) document.body.classList.add('store'); } catch (_) {}   // Play build: Google Play does the updating
 
   const $ = (id) => document.getElementById(id);
@@ -3082,12 +3083,14 @@
     $('plusBuy').hidden = on || !st.canBuy;
     $('plusBuy').textContent = st.price ? `Unlock Skreen+ \u00b7 ${st.price}` : 'Unlock Skreen+';
     $('plusForget').hidden = !(on && st.code);
-    const actions = !($('plusBuy').hidden && $('plusForget').hidden);
+    $('plusRestore').hidden = on || !(NATIVE && NATIVE.restorePlus);   // the App Store build (iPad) must offer "restore"
+    const actions = !($('plusBuy').hidden && $('plusForget').hidden && $('plusRestore').hidden);
     $('plusActions').hidden = !actions;
     $('plusCard').classList.toggle('no-actions', !actions);
     $('plusCodeBox').hidden = on;
   }
   $('plusBuy').addEventListener('click', () => Plus.buy());
+  $('plusRestore').addEventListener('click', () => { try { NATIVE.restorePlus(); showToast('Checking the App Store for your purchase\u2026'); } catch (_) {} });
 
   // A free user tried a Skreen+ option: say so, and offer to unlock it. (A toast would sit behind Settings.)
   function offerPlus(why) {
