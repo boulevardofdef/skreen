@@ -49,6 +49,27 @@ jobs:
             GOOGLE_IOS_CLIENT_ID="${{ vars.GOOGLE_IOS_CLIENT_ID }}" \
             | tee "$RUNNER_TEMP/build.log" | tail -n 60
 
+      - name: Launch in an iPad simulator and take a screenshot
+        working-directory: ios
+        run: |
+          set -x
+          APP=$(find "$HOME/Library/Developer/Xcode/DerivedData" -path '*Debug-iphonesimulator/Skreen.app' -maxdepth 6 | head -n 1)
+          UDID=$(xcrun simctl list devices available | grep -m1 'iPad' | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')
+          echo "Simulator: $UDID  App: $APP"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl launch "$UDID" app.skreen.wall
+          sleep 25
+          xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/launch.png"
+          xcrun simctl spawn "$UDID" launchctl list | grep -i skreen || { echo "The app is not running (it crashed?)"; exit 1; }
+          cp "$RUNNER_TEMP/launch.png" "$GITHUB_WORKSPACE/launch.png"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ipad-launch-screenshot
+          path: launch.png
+
       - name: Archive for the App Store and upload to TestFlight
         if: ${{ inputs.testflight }}
         working-directory: ios
