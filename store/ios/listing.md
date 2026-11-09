@@ -11,8 +11,8 @@ Family calendar for your iPad
 ## Promotional text (166/170)
 Turn your iPad into a family wall calendar. Schedules, to-dos, weather, timers and radio on one always-on screen. Free, with one optional upgrade and no subscription.
 
-## Keywords (118/100, comma-separated, no spaces after commas)
-family,planner,chore chart,meal plan,kitchen,dashboard,clock,weather,to-do,tablet,schedule,organizer,whiteboard,chores
+## Keywords (97/100, comma-separated, no spaces after commas)
+planner,chore chart,meal plan,kitchen,dashboard,clock,weather,to-do,schedule,organizer,whiteboard
 
 ## Description (2270/4000)
 Skreen turns your iPad into an always-on wall display for your day: the time, the weather, what's on the calendar and what's on the list, readable from across the room.
@@ -64,7 +64,7 @@ Primary: Productivity. Secondary: Lifestyle.
 2026 Logflume
 
 ## Age rating
-No objectionable content, no web browsing, no user-generated content shared between users, no gambling, no unrestricted web access. The app links out to news-free, calendar and weather content only. Expected rating: 4+. Answer Apple's questionnaire "None" throughout, and re-check it against the form's current questions.
+No objectionable content, no web browsing, no user-generated content shared between users, no gambling, no unrestricted web access. Expected rating: 4+. Answer Apple's questionnaire "None" throughout, and re-check it against the form's current questions.
 
 ## App Review notes (paste into App Review Information)
 Skreen is a wall display for calendars, to-dos, weather and timers. Core features work without signing in: use Settings, then Other calendars, to add a calendar link, and the weather, timers and radio need no sign-in. Sign in with Google (optional) shows Google Calendar and Google Tasks. A demo Google account for review is: (email and password go here, in App Store Connect only).
