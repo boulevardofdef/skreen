@@ -11,6 +11,7 @@ window.Guide = (() => {
   <li><b>Sign in with Google.</b> Tap the button, choose your account and allow access. That's all there is to it. <button class="btn ghost small" data-go="signin">What you're allowing →</button></li>
   <li><b>Pick your city</b> in Settings for the weather, and choose which calendars and which to-do list to show.</li>
   <li><b>Optional:</b> add Outlook, Apple or other calendars with a link. <button class="btn ghost small" data-go="calendars">How →</button> School or team calendar? <button class="btn ghost small" data-go="school">Find the link →</button></li>
+  <li><b>On an iPad?</b> <button class="btn ghost small" data-go="ipad">Set it up →</button></li>
   <li><b>Optional:</b> make the tablet a proper wall display. <button class="btn ghost small" data-go="device">Tips →</button></li>
 </ol>
 <p>Until you sign in or add a calendar link, you're looking at <b>sample data</b>.</p>
@@ -39,6 +40,28 @@ window.Guide = (() => {
   <li><b>Revoke completely:</b> in your Google Account, open <b>Security → Your connections to third-party apps and services</b> and remove Skreen.</li>
 </ul>
 `
+    },
+    {
+      id: 'ipad', title: 'On an iPad',
+      html: `
+<h1>Skreen on an iPad</h1>
+<p class="lede">A full iPad app is on the way. Until then, Skreen already runs on an iPad in Safari, free, with your calendars, weather, timers and radio.</p>
+<h2>Set it up</h2>
+<ol>
+  <li>In Safari, open <b>app.skreen.fyi</b>.</li>
+  <li>Tap the <b>Share</b> button, then <b>Add to Home Screen</b>. Open Skreen from that icon and it fills the screen with no browser bars.</li>
+  <li>In the iPad's <b>Settings → Display &amp; Brightness → Auto-Lock</b>, choose <b>Never</b>, so the screen stays on while it's charging.</li>
+  <li>Add your calendars: <b>Settings → Other calendars</b> in Skreen. <button class="btn ghost small" data-go="calendars">How to get a link →</button></li>
+</ol>
+<h2>Google Calendar on an iPad</h2>
+<p>Signing in with Google isn't available on the iPad yet. Instead, use your calendar's private link: in Google Calendar on a computer, open <b>Settings</b>, choose the calendar, and under <b>Integrate calendar</b> copy the <b>Secret address in iCal format</b>. Paste it under <b>Settings → Other calendars</b> in Skreen. Treat it like a password.</p>
+<h2>What isn't there yet on iPad</h2>
+<ul>
+  <li><b>Google Tasks</b> (the to-do list that syncs with your phone), and anything that depends on it, such as the dinner planner and shopping list.</li>
+  <li><b>Skreen+ purchase.</b> It will come with the iPad app.</li>
+  <li><b>Music controls.</b> iPads don't let one app show what another is playing. Radio works.</li>
+</ul>
+<p>Optional: to stop anyone leaving Skreen by accident, turn on <b>Guided Access</b> in the iPad's Accessibility settings, then triple-click the top button while Skreen is open.</p>`
     },
     {
       id: 'device', title: 'On the tablet',

@@ -3821,6 +3821,14 @@
     scheduleData();
     setInterval(refreshWeather, REFRESH_WEATHER_MS);
     if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname !== 'appassets.androidplatform.net') navigator.serviceWorker.register('sw.js').catch(() => {});
+    // iPad in Safari (not yet on the Home Screen): offer the full-screen setup once.
+    try {
+      const ipad = /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (ipad && !NATIVE && !navigator.standalone && !isDemo() && !localStorage.getItem('skreen-ipad-tip')) {
+        localStorage.setItem('skreen-ipad-tip', '1');
+        setTimeout(() => showToast('On an iPad? Add Skreen to your Home Screen for full screen.', 'How', () => openGuide('ipad')), 4000);
+      }
+    } catch (_) {}
   }
 
   boot();
