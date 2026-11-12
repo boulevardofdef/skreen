@@ -417,7 +417,7 @@
     else { start = fmtTime(ev.s, { small: true }); end = ev.e <= dayEnd ? fmtTime(ev.e) : 'Overnight'; }
 
     const chip = running ? '<span class="chip">Now</span>' : soon ? `<span class="chip">${relMinutes(minsAway)}</span>` : '';
-    const meta = ev.location ? `${Icons.pin}${esc(ev.location.split('\n')[0])}` : ev.calendar ? esc(ev.calendar) : '';
+    const meta = placeOf(ev) ? `${Icons.pin}${esc(placeOf(ev))}` : callOf(ev) ? 'Video call' : ev.calendar ? esc(ev.calendar) : '';
     const progress = running ? `<div class="progress" style="width:${Math.min(100, ((now - ev.s) / (ev.e - ev.s)) * 100).toFixed(1)}%"></div>` : '';
 
     agendaIndex.set(evKey(ev), ev);
@@ -1358,6 +1358,7 @@
     v.dataset.sig = html;   // what was drawn, so a later refresh can tell whether anything changed
     body.appendChild(v);
     fitToWidth(v.querySelector('.big'), v.clientWidth * 0.82);   // never wider than the space inside the side margins
+    fitBigRows(v);
     fitRows(v);
     const wall = v.querySelector('.wall'); if (wall) fitWall(wall);
     if (alwaysTour()) startSubs(v); else clearInterval(tour.subTimer);
@@ -1389,8 +1390,10 @@
       const o = oldStage.querySelectorAll(':scope > .sv-sub'), n = newStage.querySelectorAll(':scope > .sv-sub');
       if (o.length !== n.length) return;    // a different number of pages (say an event ended): also left for the next round
       o.forEach((el, i) => { el.innerHTML = n[i].innerHTML; });
+      fitBigRows(v);
     } else {
       v.innerHTML = tmp.innerHTML;
+      fitBigRows(v);
       fitRows(v);
     }
     v.dataset.sig = html;
@@ -1469,6 +1472,29 @@
   function releasePhotos() {
     (tour.photoTimers || []).forEach(clearTimeout); tour.photoTimers = [];
     if (photo.hold) { photo.hold = false; if (photosShown()) nextPhoto(); }   // line up a fresh picture for next time
+  }
+
+  // A place for a one-line caption. A meeting link (Zoom, Teams, Meet) is not a place: say "Video call" instead of printing the address.
+  const isLink = (t) => /^(https?:\/\/|www\.)/i.test(String(t || '').trim());
+  const firstLine = (t) => String(t || '').split('\n')[0].trim();
+  const placeOf = (ev) => { const l = firstLine(ev.location); return l && !isLink(l) ? l : ''; };
+  const callOf = (ev) => !!(ev.meet || isLink(firstLine(ev.location)));
+
+  // Big pages with a fixed number of rows (the schedule, a to-do list that scrolls): make the writing as large as it can be
+  // while everything fits between the margins and no title is cut short. Measured rather than guessed, because titles vary.
+  function fitBigRows(v) {
+    if (!v || v.querySelector('.sv-cols')) return;   // columns size themselves
+    const stage = v.querySelector('.sv-stage'), list = v.querySelector('.sv-list');
+    if (!list || (!stage && !v.classList.contains('sv-agenda'))) return;
+    const pages = stage ? Array.from(stage.children) : [list];
+    const cs = getComputedStyle(v), kick = v.querySelector('.kicker');
+    const gap = parseFloat(cs.rowGap) || 0;
+    const avail = v.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0) - (kick ? kick.offsetHeight + gap : 0);
+    const need = () => Math.max(...pages.map((p) => Array.from(p.children).reduce((h, r) => h + r.offsetHeight, 0)));
+    const cut = () => pages.some((p) => Array.from(p.querySelectorAll('.ttl')).some((t) => t.scrollHeight > t.clientHeight + 0.5 * parseFloat(getComputedStyle(t).fontSize)));   // a whole line hidden (glyphs poking past a tight line box don't count)
+    let f = 1;
+    v.style.setProperty('--sf', '1');
+    for (let k = 0; k < 12 && (need() > avail || cut()) && f > 0.46; k++) { f = Math.round((f - 0.05) * 100) / 100; v.style.setProperty('--sf', String(f)); }
   }
 
   // Lists on the big pages show only the rows that fit inside the margins, never one cut off at the edge.
@@ -1641,7 +1667,7 @@
     const rowHtml = (e) => {
       const running = !e.allDay && e.s <= now;
       const when = e.allDay ? 'All day' : fmtTime(e.s, { small: true });
-      const sub = [e.s >= tomorrow && !e.allDay ? 'Tomorrow' : '', e.location ? e.location.split('\n')[0] : e.calendar || ''].filter(Boolean).join(' · ');
+      const sub = [e.s >= tomorrow && !e.allDay ? 'Tomorrow' : '', placeOf(e) || (callOf(e) ? 'Video call' : e.calendar || '')].filter(Boolean).join(' · ');
       return `<div class="row${running ? ' now' : ''}"><div class="rt">${when}</div><div class="rn"><span class="ttl">${esc(e.title)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>`;
     };
     if (alwaysTour() && soon.length) {
