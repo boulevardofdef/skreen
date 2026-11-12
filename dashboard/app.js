@@ -888,8 +888,8 @@
     const i0 = h.time.findIndex((t) => new Date(t).getTime() > nowMs - 3600000);
     if (i0 < 0) return null;
     const hours = [];
-    for (let i = i0; i < Math.min(i0 + 12, h.time.length); i++) hours.push({ t: new Date(h.time[i]), pop: h.precipitation_probability[i] ?? 0, code: h.weather_code[i] });
-    const wet = (x) => isWet(x.code) || x.pop >= 55;
+    for (let i = i0; i < Math.min(i0 + 12, h.time.length); i++) hours.push({ t: new Date(h.time[i]), pop: h.precipitation_probability[i], code: h.weather_code[i] });   // pop is null when the forecast gives no chance
+    const wet = (x) => (x.pop != null && x.pop >= 55) || (isWet(x.code) && (x.pop == null || x.pop >= 30));   // a rain symbol with a 0% chance is not a warning
     const kind = (code) => (code >= 95 ? 'Storms' : (code >= 71 && code <= 77) || code === 85 || code === 86 ? 'Snow' : 'Rain');
 
     if (isWet({ code: w.current.weather_code, pop: 0 })) {
@@ -897,7 +897,7 @@
       return { wet: true, text: stop > 0 ? `${k} easing around ${shortHour(hours[stop].t)}` : `${k} continuing for a while` };
     }
     const first = hours.find(wet);
-    if (first) return { wet: true, text: `${kind(first.code)} likely around ${shortHour(first.t)} (${first.pop}%)` };
+    if (first) return { wet: true, text: `${kind(first.code)} ${first.pop == null ? 'expected' : 'likely'} around ${shortHour(first.t)}${first.pop == null ? '' : ` (${first.pop}%)`}` };
     return { wet: false, text: `No rain expected ${new Date(nowMs).getHours() >= 15 ? 'tonight' : 'today'}` };
   }
   function weatherSummary(w) {

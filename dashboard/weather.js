@@ -67,7 +67,10 @@ const Weather = (() => {
     for (const p of ts) {
       const next = p.data.next_1_hours;
       if (!next) continue;
-      const sym = next.summary.symbol_code, pop = next.details && next.details.probability_of_precipitation;
+      const sym = next.summary.symbol_code;
+      // Outside the Nordic countries the one-hour forecast carries no chance of rain; the six-hour one (starting at this hour) does.
+      const six = p.data.next_6_hours && p.data.next_6_hours.details;
+      const pop = next.details && next.details.probability_of_precipitation != null ? next.details.probability_of_precipitation : (six ? six.probability_of_precipitation : null);
       const c = p.data.instant.details.air_temperature;
       hourly.time.push(isoHour(new Date(p.time)));
       hourly.temperature_2m.push(temp(c));
