@@ -73,7 +73,7 @@ window.Guide = (() => {
   <li><b>Make it the Home screen.</b> <i>Optional.</i> Press the Home button and choose <b>Skreen → Always</b>. Skreen then opens when the tablet starts, and Home always returns to it.</li>
   <li><b>Brightness.</b> A wall display doesn't need to be bright. Settings → Brightness sets a daytime and a night level for this app only.</li>
   <li><b>Updates.</b> Google Play keeps the app up to date. The skreens inside the app update themselves, usually overnight.</li>
-  <li><b>Mounting.</b> Any tablet works, in either direction. Wall mounts and stands that keep the charger connected are easy to find.</li>
+  <li><b>Mounting.</b> Skreen runs sideways (landscape), either way up. Wall mounts and stands that keep the charger connected are easy to find.</li>
 </ul>`
     },
     {
