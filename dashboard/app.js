@@ -15,6 +15,20 @@
     dayBrightness: 'system', nightBrightness: '3',
     signedIn: false, calSel: {}, listSel: {}, addTo: '', welcomed: false,
   };
+  // The on-screen keyboard makes the page shorter (so dialogs sit above it), and text is sized from the screen's height.
+  // Remember the full height and keep sizing from it while someone is typing, so a dialog doesn't shrink when the keyboard opens.
+  (function steadyHeight() {
+    let w = 0, h = 0;
+    const typing = () => { const a = document.activeElement; return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable); };
+    const set = () => {
+      const W = window.innerWidth, H = window.innerHeight;
+      if (W !== w || H > h || !typing()) { w = W; h = H; document.documentElement.style.setProperty('--vhf', (H / 100) + 'px'); }
+    };
+    set();
+    window.addEventListener('resize', set);
+    document.addEventListener('focusout', () => setTimeout(set, 300));   // keyboard closed: catch up with the real height
+  })();
+
   const STORE_KEY = 'skreen-settings';
   const LEGACY_KEY = 'kitchen-dashboard-settings';
 

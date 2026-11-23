@@ -66,7 +66,8 @@
   --scale: 1;
 
   /* Everything scales with the screen, so it reads from across the kitchen. */
-  font-size: clamp(11px, min(1.3vw, 2.15vh), 30px);
+  /* --vhf: 1% of the screen's full height, kept while the keyboard is up (app.js), so text doesn't shrink when it opens. */
+  font-size: clamp(11px, min(1.3vw, calc(2.15 * var(--vhf, 1vh))), 30px);
   color-scheme: dark;
 }
 
@@ -540,7 +541,7 @@ body.native .field.native-only { display: flex; }
 /* ─── Portrait ───────────────────────────────────────────────────────────── */
 
 @media (orientation: portrait) {
-  :root { font-size: clamp(11px, min(2.1vw, 1.35vh), 30px); }
+  :root { font-size: clamp(11px, min(2.1vw, calc(1.35 * var(--vhf, 1vh))), 30px); }
   .dash { padding: 1.8rem 1.8rem 2.4rem; }
   .page { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto minmax(0, 1fr); }
   .lane.pair { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 2.4rem; padding: 0 0 1.6rem; border-left: 0; }
