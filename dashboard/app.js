@@ -1306,7 +1306,7 @@
   let TOUR = Object.keys(TOUR_ALL);
   const ROTATING_TOUR = ['time', 'weather', 'agenda', 'todo'];   // the occasional tour is always these four, so it's always the same length
   // Is this slide switched on, and does it have something to show right now?
-  const viewOkBase = (v) => !slideSkipped(v) && (v === 'music' ? (alwaysTour() && musicPlaying()) : visibleWidgets().includes(widgetOf(v))) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (v !== 'board' || (boardShown() && board.notes.length)) && (v !== 'chores' || (choresShown() && choresToday().length)) && (!['agenda', 'todo'].includes(v) || state.loaded) && (!extraById(v) || extraReady())
+  const viewOkBase = (v) => !slideSkipped(v) && (v === 'music' ? (alwaysTour() && musicPlaying()) : visibleWidgets().includes(widgetOf(v))) && (v !== 'photos' || (photosShown() && photo.current)) && (v !== 'news' || (newsShown() && News.current.length)) && (v !== 'meals' || (mealsShown() && mealState.ready && Object.keys(mealState.byDate).length)) && (v !== 'shop' || (shopShown() && shopState.items.length)) && (v !== 'board' || (boardShown() && board.notes.length)) && (v !== 'chores' || (choresShown() && choresToday().length)) && (!['agenda', 'todo'].includes(v) || state.loaded) && (!extraById(v) || extraReady()) && hasEventsToShow(v)
   // The forecast slide has no switch of its own: choose Weather and you get both (Big Skreen Mode only), each for the full slide time.
   const viewOk = (v) => (v === 'forecast' ? alwaysTour() && viewOkBase('weather') && !!(state.weather && state.weather.daily) : viewOkBase(v));
   // The occasional tour is always the same length (four slides' worth). If some of the usual four are off, the rest
@@ -1670,6 +1670,21 @@
     if (xw) return colsOf(xw).length ? peopleSlide(xw) : (xw.kind === 'agenda' ? agendaSlide(extraEvents(xw), xw.name) : todoSlide(extraTasks(xw), xw.name));
     if (name === 'agenda') return agendaSlide(state.events, 'Next up');
     return todoSlide(state.tasks, 'To-do');
+  }
+
+  // A schedule slide with nothing coming up isn't shown at all (rather than a slide saying so).
+  // Same rule as the slides themselves: "Next up" covers what's left of today and tomorrow; family columns, anything still to come.
+  function soonEvents(list) {
+    const now = new Date(), after = addDays(startOfDay(now), 2);
+    return (list || []).map(normalizeEvent).filter((e) => e.e > now && e.s < after);
+  }
+  function hasEventsToShow(v) {
+    if (v === 'agenda') return soonEvents(state.events).length > 0;
+    const x = extraById(v);
+    if (!x || x.kind !== 'agenda') return true;
+    const cols = colsOf(x), now = new Date();
+    if (cols.length) return cols.some((c, i) => colEvents(x, c, i).map(normalizeEvent).some((e) => e.e > now));
+    return soonEvents(extraEvents(x)).length > 0;
   }
 
   // Big Skreen Mode: the "next up" slide and the to-do slide (the main ones, and one for each extra widget).
