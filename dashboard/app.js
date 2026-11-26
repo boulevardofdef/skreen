@@ -1517,6 +1517,9 @@
     if (!list || list.classList.contains('sv-stage')) return;   // swiping slides size themselves
     const limit = list.getBoundingClientRect().bottom;
     Array.from(list.children).forEach((r) => { if (r.getBoundingClientRect().bottom > limit + 1) r.style.display = 'none'; });
+    const shown = Array.from(list.children).filter((r) => r.style.display !== 'none');
+    const last = shown[shown.length - 1];
+    if (last && last.classList.contains('sv-dayhead')) last.style.display = 'none';   // a day heading with none of its events under it
   }
 
   // Big type is sized from the screen, but some devices draw the font wider than expected.
@@ -1690,21 +1693,30 @@
   // Big Skreen Mode: the "next up" slide and the to-do slide (the main ones, and one for each extra widget).
   function agendaSlide(eventList, kicker) {
     const now = new Date();
-    const events = eventList.map(normalizeEvent).filter((e) => e.e > now).sort((a, b) => (a.allDay === b.allDay ? a.s - b.s : a.allDay ? -1 : 1));
     const today = startOfDay(now), tomorrow = addDays(today, 1), after = addDays(today, 2);
-    const soon = events.filter((e) => e.s < after).slice(0, alwaysTour() ? 6 : 4);   // Big Skreen Mode: three at a time, up to two screens of them
+    // Which day an event belongs to on this slide: one already under way counts as today.
+    const dayOf = (e) => (e.s < tomorrow ? 0 : 1);
+    const events = eventList.map(normalizeEvent).filter((e) => e.e > now && e.s < after)
+      .sort((a, b) => dayOf(a) - dayOf(b) || (a.allDay === b.allDay ? a.s - b.s : a.allDay ? -1 : 1));   // by day, all-day first within a day
+    const soon = events.slice(0, alwaysTour() ? 6 : 4);   // Big Skreen Mode: three at a time, up to two screens of them
     const rowHtml = (e) => {
       const running = !e.allDay && e.s <= now;
       const when = e.allDay ? 'All day' : fmtTime(e.s, { small: true });
-      const sub = [e.s >= tomorrow && !e.allDay ? 'Tomorrow' : '', placeOf(e) || (callOf(e) ? 'Video call' : e.calendar || '')].filter(Boolean).join(' · ');
+      const sub = placeOf(e) || (callOf(e) ? 'Video call' : e.calendar || '');
       return `<div class="row${running ? ' now' : ''}"><div class="rt">${when}</div><div class="rn"><span class="ttl">${esc(e.title)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>`;
     };
+    // A heading wherever a day starts (and at the top of every page), so today and tomorrow can't be confused from across the room.
+    const dayHead = (d) => {
+      const date = d ? tomorrow : today;
+      return `<div class="sv-dayhead${d ? '' : ' today'}">${d ? 'Tomorrow' : 'Today'} <span>\u00b7 ${esc(fmtDate(date, { weekday: 'long' }))}</span></div>`;
+    };
+    const withHeads = (list) => list.map((e, i) => (i === 0 || dayOf(e) !== dayOf(list[i - 1]) ? dayHead(dayOf(e)) : '') + rowHtml(e)).join('');
     if (alwaysTour() && soon.length) {
       const pages = [];
-      for (let i = 0; i < soon.length; i += 3) pages.push(soon.slice(i, i + 3).map(rowHtml).join(''));
+      for (let i = 0; i < soon.length; i += 3) pages.push(withHeads(soon.slice(i, i + 3)));
       return stageHtml(esc(kicker), pages, 'agenda');
     }
-    let rows = soon.map(rowHtml).join('');
+    let rows = withHeads(soon);
     if (!rows) rows = '<div class="empty-big">Nothing on the calendar</div>';
     return `<div class="kicker">${esc(kicker)}</div><div class="sv-list">${rows}</div>`;
   }
